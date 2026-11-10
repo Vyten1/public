@@ -60,6 +60,10 @@ button:disabled { opacity: 0.5; }
 .mfill.hot { background: var(--snore); }
 .mthr { position: absolute; top: 0; bottom: 0; width: 2px; background: currentColor; opacity: .8; }
 .mLast b.ok { color: var(--snore); }
+.calib { border: 1px solid var(--accent); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.calStep { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.calMsg { font-size: 22px; font-weight: 600; line-height: 1.25; }
+.calMsg .ok { color: var(--snore); }
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .stat b { display: block; font: 600 22px var(--mono); font-variant-numeric: tabular-nums; }
 .stat span { font-size: 12px; color: var(--muted); }
@@ -119,7 +123,7 @@ ul.tips { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13px; d
         <select id="facing"><option value="environment" selected data-i18n="optBack"></option><option value="user" data-i18n="optFront"></option></select>
       </label>
       <label><span data-i18n="lblSens"></span>
-        <select id="sens"><option value="14" data-i18n="optLow"></option><option value="10" selected data-i18n="optNormal"></option><option value="7" data-i18n="optHigh"></option></select>
+        <select id="sens"><option value="14" data-i18n="optLow"></option><option value="10" selected data-i18n="optNormal"></option><option value="7" data-i18n="optHigh"></option><option value="cal" data-i18n="optCal" hidden></option></select>
       </label>
     </div>
     <div class="meter" hidden>
@@ -131,6 +135,14 @@ ul.tips { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13px; d
       <p class="sub mHint"></p>
       <p class="sub mLast"></p>
     </div>
+    <div class="calib" id="calPanel" hidden>
+      <div class="calStep" id="calStep"></div>
+      <div class="calMsg" id="calMsg"></div>
+      <div class="progress" id="calBar"><div></div></div>
+      <p class="sub" id="calSub"></p>
+      <div class="row"><button id="calClose" class="small" data-i18n="calClose"></button></div>
+    </div>
+    <button id="btnCal" class="primary" data-i18n="btnCal"></button>
     <div class="row">
       <button id="btnPreview" data-i18n="btnTest"></button>
       <button id="btnStart" class="primary grow" data-i18n="btnStart"></button>
@@ -221,6 +233,14 @@ const T = {
     tip3: 'Keep Safari open on this page. Use “Dark screen” to black out the display.',
     tip4: 'A very dim night light helps a lot. In full darkness the photos will be black.',
     tip5: 'Turn on Do Not Disturb so notifications don’t interrupt.',
+    optCal: 'My calibration', btnCal: '🎙 Test setup (calibrate snore detection)', calClose: 'Close',
+    calStepN: 'Step {n} of 3',
+    calQuiet: '🤫 Please be completely silent now…', calQuietSub: 'Measuring the background noise ({s} s).',
+    calSnore: '😴 Now fake-snore! Once per breath, like when sleeping.', calSnoreSub: 'Heard so far: {n} snores ({s} s left). Aim for 5–6.',
+    calCheck: '🔇 Silent again – just let the room be normal.', calCheckSub: 'Checking that clocks or other room sounds are NOT counted ({s} s).',
+    calFail: 'I couldn’t hear enough snores ({n}). Try louder, put the phone closer, and run the test again.',
+    calDone: '<span class="ok">✓ Calibrated.</span>', calDoneSub: 'Background {bg} dB · your snores {sn} dB · trigger at {tr} dB. Room sounds counted by mistake: {fa}. Sensitivity is now set to “My calibration”.',
+    calDoneFa: ' I made it a bit stricter because of that.',
     mBg: 'background dB', mNow: 'current dB',
     mHint: 'Sounds above {t} dB are checked. Try a few fake snores (one per breath).',
     mLast: 'Last sound: {d} s, {db} dB – {v}',
@@ -271,6 +291,14 @@ const T = {
     tip3: 'Lass Safari mit dieser Seite geöffnet. Mit „Bildschirm abdunkeln“ wird das Display komplett schwarz.',
     tip4: 'Ein ganz schwaches Nachtlicht hilft enorm. In völliger Dunkelheit bleiben die Fotos schwarz.',
     tip5: 'Aktiviere den Fokus „Nicht stören“, damit dich keine Mitteilungen unterbrechen.',
+    optCal: 'Meine Kalibrierung', btnCal: '🎙 Einrichtung testen (Schnarcherkennung kalibrieren)', calClose: 'Schließen',
+    calStepN: 'Schritt {n} von 3',
+    calQuiet: '🤫 Bitte jetzt ganz still sein…', calQuietSub: 'Das Hintergrundgeräusch wird gemessen ({s} s).',
+    calSnore: '😴 Jetzt Schnarchen vortäuschen! Einmal pro Atemzug, wie im Schlaf.', calSnoreSub: 'Bisher gehört: {n} Schnarcher (noch {s} s). Ziel: 5–6.',
+    calCheck: '🔇 Wieder still – lass den Raum einfach ganz normal.', calCheckSub: 'Es wird geprüft, dass Uhren oder andere Raumgeräusche NICHT gezählt werden ({s} s).',
+    calFail: 'Ich konnte nicht genug Schnarcher hören ({n}). Schnarch lauter, leg das iPhone näher und starte den Test noch einmal.',
+    calDone: '<span class="ok">✓ Kalibriert.</span>', calDoneSub: 'Hintergrund {bg} dB · dein Schnarchen {sn} dB · Auslöser ab {tr} dB. Fälschlich gezählte Raumgeräusche: {fa}. Die Empfindlichkeit steht jetzt auf „Meine Kalibrierung“.',
+    calDoneFa: ' Deshalb habe ich die Erkennung etwas strenger eingestellt.',
     mBg: 'Hintergrund dB', mNow: 'aktuell dB',
     mHint: 'Geräusche über {t} dB werden geprüft. Schnarch ruhig ein paar Mal zur Probe (einmal pro Atemzug).',
     mLast: 'Letztes Geräusch: {d} s, {db} dB – {v}',
@@ -428,7 +456,21 @@ async function openCamera() {
   return S.stream;
 }
 
+let SHARED_CTX = null;
+function getCtx() {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!SHARED_CTX || SHARED_CTX.state === 'closed') SHARED_CTX = new AC();
+  try { SHARED_CTX.resume(); } catch (e) {}
+  return SHARED_CTX;
+}
+let CAL = null;
+try { CAL = JSON.parse(localStorage.getItem('sleepcam-cal') || 'null'); } catch (e) {}
+function sensThr() { const v = $('sens').value; return v === 'cal' && CAL ? CAL.thr : (+v || 10); }
+function limits() { return $('sens').value === 'cal' && CAL ? CAL : { low: 0.4, imp: 5 }; }
+if (CAL) $('sens').querySelector('[value=cal]').hidden = false;
+
 $('btnPreview').onclick = async () => {
+  getCtx();
   try { await openCamera(); await startAudio(true); } catch (e) { alertBox(tr('errCam', { e: e.message })); }
 };
 $('facing').addEventListener('change', () => { if (S.stream && !S.running) $('btnPreview').onclick(); });
@@ -524,9 +566,8 @@ const CLIP_RATE = 8000;          // stored clip sample rate
 const CLIP_SECS = 12;
 async function startAudio(restart) {
   if (S.audio && !restart) return;
-  if (S.audio) { try { S.audio.ctx.close(); } catch (e) {} }
-  const AC = window.AudioContext || window.webkitAudioContext;
-  const ctx = new AC();
+  if (S.audio) { try { S.audio.proc.disconnect(); S.audio.src.disconnect(); S.audio.proc.onaudioprocess = null; } catch (e) {} }
+  const ctx = getCtx();
   try { await ctx.resume(); } catch (e) {}
   const src = ctx.createMediaStreamSource(S.stream);
   const an = ctx.createAnalyser(); an.fftSize = 2048; an.smoothingTimeConstant = 0;
@@ -536,7 +577,7 @@ async function startAudio(restart) {
   const spec = new Float32Array(an.frequencyBinCount);
   const ring = new Int16Array(CLIP_RATE * CLIP_SECS);
   const A = S.audio = {
-    ctx, an, proc, spec, ring, ringPos: 0, ratio: ctx.sampleRate / CLIP_RATE, acc: 0, accN: 0, frac: 0,
+    ctx, src, an, proc, spec, ring, ringPos: 0, ratio: ctx.sampleRate / CLIP_RATE, acc: 0, accN: 0, frac: 0,
     floor: null, levelOverFloor: 0, ev: null, recent: [], lastClip: 0, lastLoudClip: 0,
     minute: null, live: [],
   };
@@ -575,7 +616,7 @@ async function startAudio(restart) {
     const lowShare = all > 0 ? lo / all : 0;
 
     const now = Date.now();
-    const thr = +$('sens').value;
+    const thr = A.thrOverride ?? sensThr(); const L = limits();
     if (over > thr) {
       if (!A.ev) A.ev = { start: now, end: now, peak: over, lowSum: 0, impSum: 0, n: 0, quiet: 0, gaps: 0 };
       const ev = A.ev;
@@ -591,9 +632,10 @@ async function startAudio(restart) {
         let v = 'vOk';
         if (len < 0.4 || ev.n < 4) v = 'vShort';
         else if (len > 3.5) v = 'vLong';
-        else if (impA > 3) v = 'vClick';
-        else if (low < 0.55) v = 'vHigh';
-        else if (fill < 0.75) v = 'vGaps';
+        else if (impA > L.imp) v = 'vClick';
+        else if (low < L.low) v = 'vHigh';
+        else if (fill < 0.6) v = 'vGaps';
+        if (A.onEvent) A.onEvent({ len, peak: ev.peak, low, imp: impA, v });
         A.last = { len, db: ev.peak + A.floor + 100, v };
         if (v === 'vOk') onBreathSound(now, ev.peak);
         else if (ev.peak > thr + 14 && now - A.lastLoudClip > 5 * 60e3) { A.lastLoudClip = now; saveClip(now, 'loud', ev.peak); }
@@ -630,7 +672,7 @@ setInterval(() => {
   const A = S.audio, live = A && S.stream?.getAudioTracks()[0]?.readyState === 'live';
   document.querySelectorAll('.meter').forEach(m => {
     m.hidden = !live; if (!live) return;
-    const bg = Math.max(0, A.floor + 100), nowDb = Math.max(0, A.dbNow + 100), trig = bg + (+$('sens').value);
+    const bg = Math.max(0, A.floor + 100), nowDb = Math.max(0, A.dbNow + 100), trig = bg + sensThr();
     m.querySelector('.mBg').textContent = bg.toFixed(0);
     m.querySelector('.mNow').textContent = nowDb.toFixed(0);
     const pct = d => Math.max(0, Math.min(100, (d - 20) / 80 * 100));
@@ -640,6 +682,75 @@ setInterval(() => {
     m.querySelector('.mLast').innerHTML = A.last ? tr('mLast', { d: A.last.len.toFixed(1), db: A.last.db.toFixed(0), v: tr(A.last.v) }) : '';
   });
 }, 250);
+
+async function phase(step, msgKey, subKey, secs, subVars) {
+  $('calStep').textContent = tr('calStepN', { n: step });
+  $('calMsg').innerHTML = tr(msgKey);
+  const bar = $('calBar').firstElementChild, t0 = Date.now();
+  while (Date.now() - t0 < secs * 1000) {
+    const left = Math.ceil(secs - (Date.now() - t0) / 1000);
+    $('calSub').textContent = tr(subKey, { s: left, ...(subVars ? subVars() : {}) });
+    bar.style.width = ((Date.now() - t0) / secs / 10) + '%';
+    await sleep(200);
+  }
+  bar.style.width = '100%';
+}
+$('calClose').onclick = () => { S.calAbort = true; $('calPanel').hidden = true; $('btnCal').hidden = false; };
+$('btnCal').onclick = async () => {
+  getCtx();
+  S.calAbort = false;
+  $('btnCal').hidden = true; $('calPanel').hidden = false; $('calBar').hidden = false;
+  $('calMsg').textContent = '…'; $('calStep').textContent = ''; $('calSub').textContent = '';
+  try { await openCamera(); await startAudio(true); } catch (e) { alertBox(tr('errCam', { e: e.message })); $('calClose').onclick(); return; }
+  const A = S.audio;
+  await sleep(600);
+  // 1) silence → background level
+  const quiet = [];
+  const qi = setInterval(() => { if (A.dbNow != null) quiet.push(A.dbNow); }, 100);
+  await phase(1, 'calQuiet', 'calQuietSub', 4);
+  clearInterval(qi);
+  if (S.calAbort) return;
+  quiet.sort((a, b) => a - b);
+  if (quiet.length) A.floor = quiet[Math.floor(quiet.length / 2)];
+  const bg = A.floor;
+  // 2) fake snores, with a low trigger so we hear everything
+  const evs = [];
+  A.thrOverride = 5; A.onEvent = e => { if (e.len >= 0.3 && e.len <= 4) evs.push(e); };
+  await phase(2, 'calSnore', 'calSnoreSub', 25, () => ({ n: evs.length }));
+  A.onEvent = null;
+  if (S.calAbort) { A.thrOverride = null; return; }
+  if (evs.length < 3) {
+    A.thrOverride = null;
+    $('calStep').textContent = ''; $('calMsg').textContent = tr('calFail', { n: evs.length }); $('calSub').textContent = ''; $('calBar').hidden = true;
+    $('btnCal').hidden = false; return;
+  }
+  // use the stronger snores (ignore stray little noises)
+  evs.sort((a, b) => b.peak - a.peak);
+  const top = evs.slice(0, Math.max(3, Math.ceil(evs.length * 0.7)));
+  const minPeak = Math.min(...top.map(e => e.peak));
+  const med = top[Math.floor(top.length / 2)].peak;
+  let cal = {
+    thr: Math.max(4, Math.min(25, minPeak * 0.6)),
+    low: Math.max(0.15, Math.min(0.5, Math.min(...top.map(e => e.low)) - 0.1)),
+    imp: Math.max(4, Math.min(10, Math.max(...top.map(e => e.imp)) * 1.4)),
+  };
+  // 3) silence again → count false alarms with the new settings
+  CAL = cal; A.thrOverride = null;
+  const prevSens = $('sens').value; $('sens').querySelector('[value=cal]').hidden = false; $('sens').value = 'cal';
+  let fa = 0; A.onEvent = e => { if (e.v === 'vOk') fa++; };
+  await phase(3, 'calCheck', 'calCheckSub', 8);
+  A.onEvent = null;
+  if (S.calAbort) { $('sens').value = prevSens; return; }
+  if (fa) cal = { ...cal, thr: Math.min(30, cal.thr + 4), imp: Math.max(3, cal.imp * 0.8), low: Math.min(0.6, cal.low + 0.05) };
+  CAL = cal;
+  try { localStorage.setItem('sleepcam-cal', JSON.stringify(cal)); } catch (e) {}
+  saveSettings();
+  A.recent = []; A.last = null;
+  $('calStep').textContent = ''; $('calBar').hidden = true;
+  $('calMsg').innerHTML = tr('calDone');
+  $('calSub').textContent = tr('calDoneSub', { bg: Math.max(0, bg + 100).toFixed(0), sn: Math.max(0, bg + med + 100).toFixed(0), tr: Math.max(0, bg + cal.thr + 100).toFixed(0), fa }) + (fa ? tr('calDoneFa') : '');
+  $('btnCal').hidden = false;
+};
 
 function flushMinute(m) {
   if (!S.night) return;
@@ -703,6 +814,7 @@ function drawChart(canvas, mins, t0, t1) {
 
 /* ---------------- Recording control ---------------- */
 $('btnStart').onclick = async () => {
+  getCtx();
   try {
     if (!S.stream || S.stream.getTracks().some(t => t.readyState !== 'live')) await openCamera();
   } catch (e) { alertBox(tr('errCamMic', { e: e.message })); return; }
@@ -760,7 +872,7 @@ $('btnStop').onclick = async () => {
   log(tr('logStopped'));
   queueRender(S.night.id, S.lastChunk);
   await S.rendering;
-  try { S.audio?.ctx.close(); } catch (e) {}
+  try { S.audio?.proc.disconnect(); } catch (e) {}
   S.audio = null;
   S.stream?.getTracks().forEach(t => t.stop()); S.stream = null;
   try { await S.wakeLock?.release(); } catch (e) {}
