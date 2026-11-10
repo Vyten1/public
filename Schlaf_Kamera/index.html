@@ -55,6 +55,11 @@ button:disabled { opacity: 0.5; }
 .chip.ok { color: var(--ok); border-color: var(--ok); }
 .chip.bad { color: var(--snore); border-color: var(--snore); }
 .chip.warn { color: var(--warn); border-color: var(--warn); }
+.mbar { position: relative; height: 10px; border-radius: 5px; background: var(--line, #333); overflow: hidden; margin-top: 8px; }
+.mfill { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--accent); transition: width .15s; }
+.mfill.hot { background: var(--snore); }
+.mthr { position: absolute; top: 0; bottom: 0; width: 2px; background: currentColor; opacity: .8; }
+.mLast b.ok { color: var(--snore); }
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .stat b { display: block; font: 600 22px var(--mono); font-variant-numeric: tabular-nums; }
 .stat span { font-size: 12px; color: var(--muted); }
@@ -117,6 +122,15 @@ ul.tips { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13px; d
         <select id="sens"><option value="14" data-i18n="optLow"></option><option value="10" selected data-i18n="optNormal"></option><option value="7" data-i18n="optHigh"></option></select>
       </label>
     </div>
+    <div class="meter" hidden>
+      <div class="stats" style="grid-template-columns:repeat(2,1fr)">
+        <div class="stat"><b class="mBg">–</b><span data-i18n="mBg"></span></div>
+        <div class="stat"><b class="mNow">–</b><span data-i18n="mNow"></span></div>
+      </div>
+      <div class="mbar"><div class="mfill"></div><div class="mthr"></div></div>
+      <p class="sub mHint"></p>
+      <p class="sub mLast"></p>
+    </div>
     <div class="row">
       <button id="btnPreview" data-i18n="btnTest"></button>
       <button id="btnStart" class="primary grow" data-i18n="btnStart"></button>
@@ -142,6 +156,15 @@ ul.tips { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13px; d
       <div class="stat"><b id="sPhotos">0</b><span data-i18n="statPhotos"></span></div>
       <div class="stat"><b id="sSnores">0</b><span data-i18n="statSnores"></span></div>
       <div class="stat"><b id="sLevel">–</b><span data-i18n="statLevel"></span></div>
+    </div>
+    <div class="meter" hidden>
+      <div class="stats" style="grid-template-columns:repeat(2,1fr)">
+        <div class="stat"><b class="mBg">–</b><span data-i18n="mBg"></span></div>
+        <div class="stat"><b class="mNow">–</b><span data-i18n="mNow"></span></div>
+      </div>
+      <div class="mbar"><div class="mfill"></div><div class="mthr"></div></div>
+      <p class="sub mHint"></p>
+      <p class="sub mLast"></p>
     </div>
     <canvas class="chart" id="liveChart"></canvas>
     <p class="sub" id="nextVid"></p>
@@ -198,6 +221,12 @@ const T = {
     tip3: 'Keep Safari open on this page. Use “Dark screen” to black out the display.',
     tip4: 'A very dim night light helps a lot. In full darkness the photos will be black.',
     tip5: 'Turn on Do Not Disturb so notifications don’t interrupt.',
+    mBg: 'background dB', mNow: 'current dB',
+    mHint: 'Sounds above {t} dB are checked. Try a few fake snores (one per breath).',
+    mLast: 'Last sound: {d} s, {db} dB – {v}',
+    vOk: '<b class="ok">snore-like ✓</b>', vShort: 'too short (click/tap?)', vLong: 'too long (steady noise)',
+    vHigh: 'too high-pitched', vClick: 'clicky/impulsive', vGaps: 'interrupted',
+    vRhythm: '<b class="ok">snoring rhythm detected ✓</b>',
     statPhotos: 'photos', statSnores: 'snore sounds', statLevel: 'dB over quiet',
     btnDark: 'Dark screen', btnStop: 'Stop & make video',
     nightHint: 'Recording. Tap to show controls.',
@@ -242,6 +271,12 @@ const T = {
     tip3: 'Lass Safari mit dieser Seite geöffnet. Mit „Bildschirm abdunkeln“ wird das Display komplett schwarz.',
     tip4: 'Ein ganz schwaches Nachtlicht hilft enorm. In völliger Dunkelheit bleiben die Fotos schwarz.',
     tip5: 'Aktiviere den Fokus „Nicht stören“, damit dich keine Mitteilungen unterbrechen.',
+    mBg: 'Hintergrund dB', mNow: 'aktuell dB',
+    mHint: 'Geräusche über {t} dB werden geprüft. Schnarch ruhig ein paar Mal zur Probe (einmal pro Atemzug).',
+    mLast: 'Letztes Geräusch: {d} s, {db} dB – {v}',
+    vOk: '<b class="ok">wie Schnarchen ✓</b>', vShort: 'zu kurz (Klicken/Ticken?)', vLong: 'zu lang (Dauergeräusch)',
+    vHigh: 'zu hoch im Klang', vClick: 'klickend/knackend', vGaps: 'unterbrochen',
+    vRhythm: '<b class="ok">Schnarch-Rhythmus erkannt ✓</b>',
     statPhotos: 'Fotos', statSnores: 'Schnarchgeräusche', statLevel: 'dB über Ruhepegel',
     btnDark: 'Bildschirm abdunkeln', btnStop: 'Stoppen & Video erstellen',
     nightHint: 'Aufnahme läuft. Tippen, um die Steuerung einzublenden.',
@@ -394,7 +429,7 @@ async function openCamera() {
 }
 
 $('btnPreview').onclick = async () => {
-  try { await openCamera(); } catch (e) { alertBox(tr('errCam', { e: e.message })); }
+  try { await openCamera(); await startAudio(true); } catch (e) { alertBox(tr('errCam', { e: e.message })); }
 };
 $('facing').addEventListener('change', () => { if (S.stream && !S.running) $('btnPreview').onclick(); });
 
@@ -510,11 +545,12 @@ async function startAudio(restart) {
 
   proc.onaudioprocess = (e) => {
     const x = e.inputBuffer.getChannelData(0);
-    const dt = x.length / ctx.sampleRate;
-    // downsample into ring buffer
-    let sq = 0;
+    // downsample into ring buffer; also split into 8 sub-blocks to spot clicks
+    let sq = 0, sub = 0, subMax = 0;
+    const subLen = x.length >> 3;
     for (let i = 0; i < x.length; i++) {
-      const s = x[i]; sq += s * s;
+      const s = x[i]; sq += s * s; sub += s * s;
+      if ((i + 1) % subLen === 0) { subMax = Math.max(subMax, sub); sub = 0; }
       A.acc += s; A.accN++; A.frac += 1;
       if (A.frac >= A.ratio) {
         A.frac -= A.ratio;
@@ -523,12 +559,16 @@ async function startAudio(restart) {
         A.acc = 0; A.accN = 0;
       }
     }
+    // impulsiveness: loudest sub-block vs. average (click ≈ 8, steady snore ≈ 1–2)
+    const imp = sq > 0 ? subMax / (sq / 8) : 1;
     const dbv = 10 * Math.log10(sq / x.length + 1e-12);
+    A.dbNow = dbv;
     if (A.floor == null) A.floor = dbv;
+    // floor follows quiet quickly, loud only very slowly
     A.floor += (dbv - A.floor) * (dbv < A.floor ? 0.05 : 0.002);
     const over = dbv - A.floor;
     A.levelOverFloor = over;
-    // spectrum: share of energy below 500 Hz (snoring is mostly low-pitched)
+    // spectrum: share of energy at 60–500 Hz (snoring is low-pitched, clicks are broadband)
     an.getFloatFrequencyData(spec);
     let lo = 0, all = 0;
     for (let b = b60; b < b4k; b++) { const p = Math.pow(10, spec[b] / 10); all += p; if (b < b500) lo += p; }
@@ -537,14 +577,27 @@ async function startAudio(restart) {
     const now = Date.now();
     const thr = +$('sens').value;
     if (over > thr) {
-      if (!A.ev) A.ev = { start: now, peak: over, lowSum: 0, n: 0 };
-      A.ev.peak = Math.max(A.ev.peak, over); A.ev.lowSum += lowShare; A.ev.n++;
+      if (!A.ev) A.ev = { start: now, end: now, peak: over, lowSum: 0, impSum: 0, n: 0, quiet: 0, gaps: 0 };
+      const ev = A.ev;
+      if (ev.quiet) { ev.gaps += ev.quiet; ev.quiet = 0; }
+      ev.end = now; ev.peak = Math.max(ev.peak, over); ev.lowSum += lowShare; ev.impSum += imp; ev.n++;
     } else if (A.ev) {
-      const ev = A.ev; A.ev = null;
-      const len = (now - ev.start) / 1000;
-      const low = ev.lowSum / ev.n;
-      if (len >= 0.3 && len <= 3.5 && low > 0.45) onBreathSound(now, ev.peak);
-      else if (ev.peak > thr + 14 && now - A.lastLoudClip > 5 * 60e3) { A.lastLoudClip = now; saveClip(now, 'loud', ev.peak); }
+      // allow short dips (≤ 2 blocks ≈ 0.2 s) inside one breath
+      if (++A.ev.quiet <= 2) { /* keep event open */ }
+      else {
+        const ev = A.ev; A.ev = null;
+        const len = (ev.end - ev.start) / 1000 + x.length / ctx.sampleRate;
+        const low = ev.lowSum / ev.n, impA = ev.impSum / ev.n, fill = ev.n / (ev.n + ev.gaps);
+        let v = 'vOk';
+        if (len < 0.4 || ev.n < 4) v = 'vShort';
+        else if (len > 3.5) v = 'vLong';
+        else if (impA > 3) v = 'vClick';
+        else if (low < 0.55) v = 'vHigh';
+        else if (fill < 0.75) v = 'vGaps';
+        A.last = { len, db: ev.peak + A.floor + 100, v };
+        if (v === 'vOk') onBreathSound(now, ev.peak);
+        else if (ev.peak > thr + 14 && now - A.lastLoudClip > 5 * 60e3) { A.lastLoudClip = now; saveClip(now, 'loud', ev.peak); }
+      }
     }
     // per-minute stats
     const mk = Math.floor(now / 60e3);
@@ -562,6 +615,8 @@ async function startAudio(restart) {
     let rhythmic = 0;
     for (let i = 1; i < A.recent.length; i++) { const g = (A.recent[i] - A.recent[i - 1]) / 1000; if (g >= 2 && g <= 9) rhythmic++; }
     if (rhythmic >= 3) {
+      A.last.v = 'vRhythm';
+      if (!S.running) return;           // test mode: only show the verdict
       S.snores++; lastSnoreAt = now;
       if (A.minute) A.minute.snores++;
       $('sSnores').textContent = S.snores;
@@ -570,6 +625,21 @@ async function startAudio(restart) {
   }
   renderChips();
 }
+
+setInterval(() => {
+  const A = S.audio, live = A && S.stream?.getAudioTracks()[0]?.readyState === 'live';
+  document.querySelectorAll('.meter').forEach(m => {
+    m.hidden = !live; if (!live) return;
+    const bg = Math.max(0, A.floor + 100), nowDb = Math.max(0, A.dbNow + 100), trig = bg + (+$('sens').value);
+    m.querySelector('.mBg').textContent = bg.toFixed(0);
+    m.querySelector('.mNow').textContent = nowDb.toFixed(0);
+    const pct = d => Math.max(0, Math.min(100, (d - 20) / 80 * 100));
+    const f = m.querySelector('.mfill'); f.style.width = pct(nowDb) + '%'; f.classList.toggle('hot', nowDb > trig);
+    m.querySelector('.mthr').style.left = pct(trig) + '%';
+    m.querySelector('.mHint').textContent = tr('mHint', { t: trig.toFixed(0) });
+    m.querySelector('.mLast').innerHTML = A.last ? tr('mLast', { d: A.last.len.toFixed(1), db: A.last.db.toFixed(0), v: tr(A.last.v) }) : '';
+  });
+}, 250);
 
 function flushMinute(m) {
   if (!S.night) return;
