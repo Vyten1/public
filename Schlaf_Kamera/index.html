@@ -1,0 +1,860 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0b0d14">
+<title>Sleep Cam</title>
+<style>
+/* Layout: one narrow column of cards; a full-screen black "night" overlay while recording. Deliberately dark-only (it runs in a bedroom). */
+:root {
+  --bg: #0b0d14;
+  --panel: #141826;
+  --line: #262b3d;
+  --fg: #dfe2ee;
+  --muted: #8a90a8;
+  --accent: #e0a458;   /* warm amber, easy on night eyes */
+  --snore: #d9725f;
+  --ok: #7fb58a;
+  --warn: #e0c158;
+  --font: ui-rounded, -apple-system, "SF Pro Rounded", system-ui, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 var(--font); -webkit-text-size-adjust: 100%; }
+body { padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+main { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+h1 { font-size: 28px; margin: 4px 0 0; letter-spacing: -0.01em; }
+h1 span { color: var(--accent); }
+header.top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+header.top > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+#btnLang { flex: none; margin-top: 6px; }
+h2 { font-size: 17px; margin: 0; }
+p { margin: 0; }
+.sub { color: var(--muted); font-size: 13px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+video#preview { width: 100%; aspect-ratio: 4/3; background: #000; border-radius: 10px; object-fit: cover; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+select, input[type=number] { font: 15px var(--font); background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 8px; width: 100%; }
+button { font: 600 15px var(--font); border: 0; border-radius: 10px; padding: 12px 16px; cursor: pointer; background: var(--line); color: var(--fg); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button.primary { background: var(--accent); color: #1a1206; }
+button.danger { background: transparent; color: var(--snore); border: 1px solid var(--snore); }
+button.small { padding: 7px 11px; font-size: 13px; }
+button:disabled { opacity: 0.5; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.row > button.grow { flex: 1; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { font-size: 12px; padding: 3px 9px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
+.chip.ok { color: var(--ok); border-color: var(--ok); }
+.chip.bad { color: var(--snore); border-color: var(--snore); }
+.chip.warn { color: var(--warn); border-color: var(--warn); }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat b { display: block; font: 600 22px var(--mono); font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12px; color: var(--muted); }
+.clock { font: 600 44px var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+canvas.chart { width: 100%; height: 110px; display: block; }
+.log { font: 12px var(--mono); color: var(--muted); max-height: 120px; overflow: auto; white-space: pre-wrap; }
+.night-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.clips { display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow: auto; }
+.clip { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.clip .t { font-family: var(--mono); min-width: 52px; }
+.tag { font-size: 11px; padding: 1px 7px; border-radius: 99px; background: var(--line); }
+.tag.snore { background: var(--snore); color: #1a0a06; }
+.vids video { width: 100%; border-radius: 10px; background: #000; }
+.vid { display: flex; flex-direction: column; gap: 6px; }
+details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+ul.tips { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
+#night { position: fixed; inset: 0; background: #000; z-index: 50; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; color: #2a2a2a; font: 600 40px var(--mono); }
+#night small { font: 13px var(--font); color: #222; }
+.progress { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.progress div { height: 100%; width: 0; background: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <div>
+      <h1 data-i18n-html="appName">Sleep <span>Cam</span></h1>
+      <p class="sub" data-i18n="intro" id="intro"></p>
+    </div>
+    <button class="small" id="btnLang" hidden></button>
+  </header>
+
+  <section class="card" id="langPick" hidden>
+    <h2>Sprache wählen · Choose language</h2>
+    <div class="row">
+      <button class="primary grow" data-lang="de">Deutsch</button>
+      <button class="primary grow" data-lang="en">English</button>
+    </div>
+  </section>
+
+  <section class="card" id="setup" hidden>
+    <video id="preview" playsinline muted autoplay></video>
+    <div class="grid">
+      <label><span data-i18n="lblInterval"></span>
+        <select id="interval"><option value="10">10 s</option><option value="20" selected>20 s</option><option value="30">30 s</option><option value="60">60 s</option></select>
+      </label>
+      <label><span data-i18n="lblChunk"></span>
+        <select id="chunkH"><option value="1" data-i18n="optH1"></option><option value="2" data-i18n="optH2"></option><option value="4" selected data-i18n="optH4"></option><option value="12" data-i18n="optEnd"></option></select>
+      </label>
+      <label><span data-i18n="lblFps"></span>
+        <select id="fps"><option value="8" data-i18n="optFps8"></option><option value="12" selected data-i18n="optFps12"></option><option value="24" data-i18n="optFps24"></option></select>
+      </label>
+      <label><span data-i18n="lblBright"></span>
+        <select id="bright"><option value="auto" selected data-i18n="optAuto"></option><option value="1" data-i18n="optOff"></option><option value="2">2×</option><option value="4">4×</option></select>
+      </label>
+      <label><span data-i18n="lblCamera"></span>
+        <select id="facing"><option value="environment" selected data-i18n="optBack"></option><option value="user" data-i18n="optFront"></option></select>
+      </label>
+      <label><span data-i18n="lblSens"></span>
+        <select id="sens"><option value="14" data-i18n="optLow"></option><option value="10" selected data-i18n="optNormal"></option><option value="7" data-i18n="optHigh"></option></select>
+      </label>
+    </div>
+    <div class="row">
+      <button id="btnPreview" data-i18n="btnTest"></button>
+      <button id="btnStart" class="primary grow" data-i18n="btnStart"></button>
+    </div>
+    <details>
+      <summary data-i18n="tipsTitle"></summary>
+      <ul class="tips">
+        <li data-i18n-html="tip1"></li>
+        <li data-i18n-html="tip2"></li>
+        <li data-i18n-html="tip3"></li>
+        <li data-i18n-html="tip4"></li>
+        <li data-i18n-html="tip5"></li>
+      </ul>
+    </details>
+  </section>
+
+  <section class="card" id="rec" hidden>
+    <div class="row" style="justify-content:space-between">
+      <div class="clock" id="clock">00:00:00</div>
+      <div class="chips" id="chips"></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="sPhotos">0</b><span data-i18n="statPhotos"></span></div>
+      <div class="stat"><b id="sSnores">0</b><span data-i18n="statSnores"></span></div>
+      <div class="stat"><b id="sLevel">–</b><span data-i18n="statLevel"></span></div>
+    </div>
+    <canvas class="chart" id="liveChart"></canvas>
+    <p class="sub" id="nextVid"></p>
+    <div class="progress" id="renderBar" hidden><div></div></div>
+    <div class="row">
+      <button id="btnDark" class="grow" data-i18n="btnDark"></button>
+      <button id="btnStop" class="danger grow" data-i18n="btnStop"></button>
+    </div>
+    <div class="log" id="log"></div>
+  </section>
+
+  <section id="nights" style="display:flex;flex-direction:column;gap:16px"></section>
+
+  <p class="sub" id="storage"></p>
+</main>
+
+<div id="night" hidden>
+  <div id="nightClock">00:00</div>
+  <small data-i18n="nightHint"></small>
+</div>
+
+<canvas id="grab" hidden></canvas>
+<canvas id="render" hidden></canvas>
+
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+const pad = (n) => String(n).padStart(2, '0');
+const hhmm = (t) => { const d = new Date(t); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+const hhmmss = (t) => { const d = new Date(t); return hhmm(t) + ':' + pad(d.getSeconds()); };
+const dur = (ms) => { const s = Math.floor(ms / 1000); return pad(Math.floor(s / 3600)) + ':' + pad(Math.floor(s / 60) % 60) + ':' + pad(s % 60); };
+
+function log(msg) {
+  const el = $('log');
+  el.textContent = hhmmss(Date.now()) + '  ' + msg + '\n' + el.textContent.slice(0, 4000);
+}
+
+/* ---------------- Language ---------------- */
+const T = {
+  en: {
+    title: 'Sleep Cam',
+    appName: 'Sleep <span>Cam</span>',
+    intro: 'Takes a photo every few seconds, listens for snoring, and turns each block of hours into a time-lapse video. Everything stays on this phone.',
+    switchTo: 'Deutsch',
+    lblInterval: 'Photo every', lblChunk: 'Video every', lblFps: 'Video speed', lblBright: 'Brighten dark photos', lblCamera: 'Camera', lblSens: 'Snore sensitivity',
+    optH1: '1 hour', optH2: '2 hours', optH4: '4 hours', optEnd: 'End of night only',
+    optFps8: '8 photos/s', optFps12: '12 photos/s', optFps24: '24 photos/s',
+    optAuto: 'Auto', optOff: 'Off', optBack: 'Back', optFront: 'Front', optLow: 'Low', optNormal: 'Normal', optHigh: 'High',
+    btnTest: 'Test camera', btnStart: 'Start night',
+    tipsTitle: 'Before you sleep',
+    tip1: 'Plug the phone in. Camera and mic all night use a lot of battery.',
+    tip2: 'Settings → Display &amp; Brightness → Auto-Lock → <b>Never</b>. If the screen locks, iOS stops the camera.',
+    tip3: 'Keep Safari open on this page. Use “Dark screen” to black out the display.',
+    tip4: 'A very dim night light helps a lot. In full darkness the photos will be black.',
+    tip5: 'Turn on Do Not Disturb so notifications don’t interrupt.',
+    statPhotos: 'photos', statSnores: 'snore sounds', statLevel: 'dB over quiet',
+    btnDark: 'Dark screen', btnStop: 'Stop & make video',
+    nightHint: 'Recording. Tap to show controls.',
+    chipCam: 'camera', chipMic: 'mic', chipWake: 'screen stays on', chipNoWake: 'set Auto-Lock to Never',
+    camStopped: 'Camera was stopped by the system', micStopped: 'Microphone was stopped by the system',
+    errCam: 'Could not open the camera: {e}. This page has to be opened over https in Safari, and camera and microphone access must be allowed.',
+    errCamMic: 'Could not open the camera or microphone: {e}. Open this page over https in Safari and allow access.',
+    errNoCam: 'This browser cannot use the camera here. Open the page over https in Safari.',
+    errNoRec: 'This browser cannot make videos (needs iOS 14.5 or newer).',
+    logVisible: 'Page visible again', logRestarted: 'Camera and microphone restarted',
+    logRestartFail: 'Restart failed: {e} (tap Stop, then Start night to continue)',
+    logHidden: 'Page in background: iOS may pause the camera and microphone',
+    logClipSnore: 'Saved snore clip', logClipLoud: 'Saved loud-noise clip',
+    logResumed: 'Night resumed', logStarted: 'Night started', logStopped: 'Stopped, making the last video',
+    logVidFail: 'Video failed: {e}', logFewPhotos: 'Not enough photos for a video',
+    logMaking: 'Making a video from {n} photos (about {s} s)', logVidReady: 'Video ready: {a}–{b} ({mb} MB)',
+    chartEmpty: 'Sound level appears here minute by minute',
+    nextAtStop: 'The video is made when you tap Stop.', nextAt: 'Next video is made at {t}.',
+    overlaySnore: 'snoring',
+    unfinished: 'unfinished', statSnoreMin: 'minutes with snoring', statSnoreClips: 'snore clips',
+    chartCaption: 'Bars show the loudest sound each minute. Red minutes had snoring.',
+    btnWhole: 'Make whole-night video', btnDelete: 'Delete night', btnDeleteConfirm: 'Tap again to delete',
+    clipsTitle: 'Sound clips ({n})', vidWhole: 'Whole night', vidPart: 'Part', btnSaveVid: 'Save video',
+    noVideo: 'No video yet.', noClips: 'No clips saved.', play: 'Play', pause: 'Pause', making: 'Making video…',
+    tagSnore: 'snoring', tagLoud: 'loud',
+    storage: 'Recordings use {mb} MB of storage on this phone.',
+    filePrefix: 'sleep', locale: 'en-GB',
+  },
+  de: {
+    title: 'Schlafkamera',
+    appName: 'Schlaf<span>kamera</span>',
+    intro: 'Macht alle paar Sekunden ein Foto, erkennt Schnarchen und erstellt aus jedem Abschnitt der Nacht ein Zeitraffervideo. Alle Daten bleiben auf diesem iPhone.',
+    switchTo: 'English',
+    lblInterval: 'Foto alle', lblChunk: 'Videos erstellen', lblFps: 'Videotempo', lblBright: 'Dunkle Fotos aufhellen', lblCamera: 'Kamera', lblSens: 'Schnarcherkennung',
+    optH1: 'Jede Stunde', optH2: 'Alle 2 Stunden', optH4: 'Alle 4 Stunden', optEnd: 'Nur am Ende der Nacht',
+    optFps8: '8 Fotos/s', optFps12: '12 Fotos/s', optFps24: '24 Fotos/s',
+    optAuto: 'Automatisch', optOff: 'Aus', optBack: 'Rückkamera', optFront: 'Frontkamera', optLow: 'Wenig empfindlich', optNormal: 'Normal', optHigh: 'Sehr empfindlich',
+    btnTest: 'Kamera testen', btnStart: 'Nacht starten',
+    tipsTitle: 'Vor dem Schlafengehen',
+    tip1: 'Schließ das iPhone ans Ladegerät an. Kamera und Mikrofon brauchen über Nacht viel Akku.',
+    tip2: 'Einstellungen → Anzeige &amp; Helligkeit → Automatische Sperre → <b>Nie</b>. Sobald sich der Bildschirm sperrt, stoppt iOS die Kamera.',
+    tip3: 'Lass Safari mit dieser Seite geöffnet. Mit „Bildschirm abdunkeln“ wird das Display komplett schwarz.',
+    tip4: 'Ein ganz schwaches Nachtlicht hilft enorm. In völliger Dunkelheit bleiben die Fotos schwarz.',
+    tip5: 'Aktiviere den Fokus „Nicht stören“, damit dich keine Mitteilungen unterbrechen.',
+    statPhotos: 'Fotos', statSnores: 'Schnarchgeräusche', statLevel: 'dB über Ruhepegel',
+    btnDark: 'Bildschirm abdunkeln', btnStop: 'Stoppen & Video erstellen',
+    nightHint: 'Aufnahme läuft. Tippen, um die Steuerung einzublenden.',
+    chipCam: 'Kamera', chipMic: 'Mikrofon', chipWake: 'Bildschirm bleibt an', chipNoWake: 'Automatische Sperre auf „Nie“ stellen',
+    camStopped: 'Die Kamera wurde vom System gestoppt', micStopped: 'Das Mikrofon wurde vom System gestoppt',
+    errCam: 'Die Kamera ließ sich nicht öffnen: {e}. Die Seite muss in Safari über https aufgerufen werden, und der Zugriff auf Kamera und Mikrofon muss erlaubt sein.',
+    errCamMic: 'Kamera oder Mikrofon ließen sich nicht öffnen: {e}. Ruf die Seite in Safari über https auf und erlaube den Zugriff.',
+    errNoCam: 'Dieser Browser kann hier nicht auf die Kamera zugreifen. Ruf die Seite in Safari über https auf.',
+    errNoRec: 'Dieser Browser kann keine Videos erstellen (dafür ist iOS 14.5 oder neuer nötig).',
+    logVisible: 'Seite wieder im Vordergrund', logRestarted: 'Kamera und Mikrofon neu gestartet',
+    logRestartFail: 'Neustart fehlgeschlagen: {e} (tippe auf „Stoppen“ und dann auf „Nacht starten“, um weiterzumachen)',
+    logHidden: 'Seite im Hintergrund: iOS pausiert eventuell Kamera und Mikrofon',
+    logClipSnore: 'Schnarch-Aufnahme gespeichert', logClipLoud: 'Aufnahme eines lauten Geräuschs gespeichert',
+    logResumed: 'Nacht fortgesetzt', logStarted: 'Nacht gestartet', logStopped: 'Gestoppt, das letzte Video wird erstellt',
+    logVidFail: 'Video konnte nicht erstellt werden: {e}', logFewPhotos: 'Zu wenige Fotos für ein Video',
+    logMaking: 'Erstelle Video aus {n} Fotos (ca. {s} s)', logVidReady: 'Video fertig: {a}–{b} Uhr ({mb} MB)',
+    chartEmpty: 'Hier erscheint der Geräuschpegel, Minute für Minute',
+    nextAtStop: 'Das Video wird erstellt, sobald du auf „Stoppen“ tippst.', nextAt: 'Das nächste Video wird um {t} Uhr erstellt.',
+    overlaySnore: 'Schnarchen',
+    unfinished: 'nicht beendet', statSnoreMin: 'Minuten mit Schnarchen', statSnoreClips: 'Schnarch-Aufnahmen',
+    chartCaption: 'Die Balken zeigen das lauteste Geräusch pro Minute. Rot markiert sind Minuten, in denen Schnarchen erkannt wurde.',
+    btnWhole: 'Video der ganzen Nacht erstellen', btnDelete: 'Nacht löschen', btnDeleteConfirm: 'Zum Löschen erneut tippen',
+    clipsTitle: 'Tonaufnahmen ({n})', vidWhole: 'Ganze Nacht', vidPart: 'Abschnitt', btnSaveVid: 'Video speichern',
+    noVideo: 'Noch kein Video.', noClips: 'Keine Aufnahmen gespeichert.', play: 'Abspielen', pause: 'Pause', making: 'Video wird erstellt …',
+    tagSnore: 'Schnarchen', tagLoud: 'laut',
+    storage: 'Die Aufnahmen belegen {mb} MB Speicher auf diesem iPhone.',
+    filePrefix: 'schlaf', locale: 'de-DE',
+  },
+};
+let LANG = null;
+try { LANG = localStorage.getItem('sleepcam-lang'); } catch (e) {}
+if (!T[LANG]) LANG = null;
+// `t` is used everywhere as a timestamp variable, so the translator is `tr`.
+function tr(key, vars) {
+  let s = T[LANG || 'en'][key] ?? T.en[key] ?? key;
+  if (vars) for (const k in vars) s = s.split('{' + k + '}').join(vars[k]);
+  return s;
+}
+function applyLang() {
+  document.documentElement.lang = LANG || 'en';
+  document.title = tr('title');
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = tr(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = tr(el.dataset.i18nHtml); });
+  $('btnLang').textContent = tr('switchTo');
+}
+function setLang(l) {
+  LANG = l;
+  try { localStorage.setItem('sleepcam-lang', l); } catch (e) {}
+  applyLang();
+  $('langPick').hidden = true;
+  $('nights').hidden = false; $('intro').hidden = false; $('storage').hidden = false;
+  if (!S.running) { $('setup').hidden = false; $('btnLang').hidden = false; }
+  renderChips();
+  if (S.running) tick();
+  renderNights();
+}
+document.querySelectorAll('[data-lang]').forEach(b => { b.onclick = () => setLang(b.dataset.lang); });
+$('btnLang').onclick = () => setLang(LANG === 'de' ? 'en' : 'de');
+
+/* ---------------- IndexedDB ---------------- */
+let dbp = null;
+function db() {
+  if (dbp) return dbp;
+  dbp = new Promise((res, rej) => {
+    const r = indexedDB.open('sleepcam', 1);
+    r.onupgradeneeded = () => {
+      const d = r.result;
+      d.createObjectStore('nights', { keyPath: 'id' });
+      const p = d.createObjectStore('photos', { keyPath: 'id', autoIncrement: true });
+      p.createIndex('night', 'night');
+      const c = d.createObjectStore('clips', { keyPath: 'id', autoIncrement: true });
+      c.createIndex('night', 'night');
+      const v = d.createObjectStore('videos', { keyPath: 'id', autoIncrement: true });
+      v.createIndex('night', 'night');
+      const m = d.createObjectStore('minutes', { keyPath: 'id', autoIncrement: true });
+      m.createIndex('night', 'night');
+    };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+  return dbp;
+}
+async function tx(store, mode, fn) {
+  const d = await db();
+  return new Promise((res, rej) => {
+    const t = d.transaction(store, mode);
+    const s = t.objectStore(store);
+    let out;
+    Promise.resolve(fn(s)).then(v => { out = v; });
+    t.oncomplete = () => res(out);
+    t.onerror = () => rej(t.error);
+    t.onabort = () => rej(t.error);
+  });
+}
+const req = (r) => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+const put = (store, val) => tx(store, 'readwrite', s => req(s.put(val)));
+const byNight = (store, night) => tx(store, 'readonly', s => req(s.index('night').getAll(night)));
+const allNights = () => tx('nights', 'readonly', s => req(s.getAll()));
+async function deleteNight(night) {
+  for (const store of ['photos', 'clips', 'videos', 'minutes']) {
+    await tx(store, 'readwrite', s => new Promise(res => {
+      const c = s.index('night').openKeyCursor(IDBKeyRange.only(night));
+      c.onsuccess = () => { const cur = c.result; if (cur) { s.delete(cur.primaryKey); cur.continue(); } else res(); };
+    }));
+  }
+  await tx('nights', 'readwrite', s => req(s.delete(night)));
+}
+async function photoMetaByNight(night) {
+  // photos without loading every blob into memory at once
+  return tx('photos', 'readonly', s => new Promise(res => {
+    const out = [];
+    const c = s.index('night').openCursor(IDBKeyRange.only(night));
+    c.onsuccess = () => { const cur = c.result; if (cur) { const v = cur.value; out.push({ id: v.id, t: v.t, chunk: v.chunk, db: v.db, snore: v.snore }); cur.continue(); } else res(out); };
+  }));
+}
+const getPhoto = (id) => tx('photos', 'readonly', s => req(s.get(id)));
+
+/* ---------------- Settings ---------------- */
+const SETTINGS = ['interval', 'chunkH', 'fps', 'bright', 'facing', 'sens'];
+function loadSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem('sleepcam-settings') || '{}');
+    for (const k of SETTINGS) if (s[k] != null) $(k).value = s[k];
+  } catch (e) {}
+}
+function saveSettings() {
+  try { localStorage.setItem('sleepcam-settings', JSON.stringify(Object.fromEntries(SETTINGS.map(k => [k, $(k).value])))); } catch (e) {}
+}
+SETTINGS.forEach(k => $(k).addEventListener('change', saveSettings));
+
+/* ---------------- State ---------------- */
+const S = {
+  stream: null, night: null, running: false,
+  photoTimer: null, tickTimer: null, wakeLock: null,
+  photos: 0, snores: 0, lastChunk: 0,
+  rendering: Promise.resolve(),
+  audio: null,
+};
+
+async function openCamera() {
+  if (S.stream) S.stream.getTracks().forEach(t => t.stop());
+  S.stream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: $('facing').value, width: { ideal: 1280 }, height: { ideal: 960 } },
+    audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+  });
+  $('preview').srcObject = S.stream;
+  try { await $('preview').play(); } catch (e) {}
+  S.stream.getTracks().forEach(t => t.addEventListener('ended', () => { log(t.kind === 'video' ? tr('camStopped') : tr('micStopped')); renderChips(); }));
+  return S.stream;
+}
+
+$('btnPreview').onclick = async () => {
+  try { await openCamera(); } catch (e) { alertBox(tr('errCam', { e: e.message })); }
+};
+$('facing').addEventListener('change', () => { if (S.stream && !S.running) $('btnPreview').onclick(); });
+
+function alertBox(msg) {
+  const p = document.createElement('p');
+  p.className = 'chip bad'; p.style.borderRadius = '10px'; p.style.padding = '10px';
+  p.textContent = msg;
+  $('setup').prepend(p);
+  setTimeout(() => p.remove(), 15000);
+}
+
+/* ---------------- Wake lock ---------------- */
+async function lockScreen() {
+  try {
+    if ('wakeLock' in navigator) {
+      S.wakeLock = await navigator.wakeLock.request('screen');
+      S.wakeLock.addEventListener('release', () => { S.wakeLock = null; renderChips(); });
+    }
+  } catch (e) { S.wakeLock = null; }
+  renderChips();
+}
+document.addEventListener('visibilitychange', async () => {
+  if (!S.running) return;
+  if (document.visibilityState === 'visible') {
+    log(tr('logVisible'));
+    await lockScreen();
+    const live = S.stream && S.stream.getTracks().every(t => t.readyState === 'live');
+    if (!live) {
+      try { await openCamera(); await startAudio(true); log(tr('logRestarted')); }
+      catch (e) { log(tr('logRestartFail', { e: e.message })); }
+    }
+    if (S.audio && S.audio.ctx.state !== 'running') { try { await S.audio.ctx.resume(); } catch (e) {} }
+  } else {
+    log(tr('logHidden'));
+  }
+  renderChips();
+});
+
+function renderChips() {
+  const v = S.stream?.getVideoTracks()[0], a = S.stream?.getAudioTracks()[0];
+  const chip = (txt, cls) => `<span class="chip ${cls}">${txt}</span>`;
+  $('chips').innerHTML =
+    chip(tr('chipCam'), v && v.readyState === 'live' ? 'ok' : 'bad') +
+    chip(tr('chipMic'), a && a.readyState === 'live' && S.audio?.ctx.state === 'running' ? 'ok' : 'bad') +
+    chip(S.wakeLock ? tr('chipWake') : tr('chipNoWake'), S.wakeLock ? 'ok' : 'warn');
+}
+
+/* ---------------- Photos ---------------- */
+let lastSnoreAt = 0;
+async function takePhoto() {
+  const v = $('preview');
+  if (!v.videoWidth) return;
+  const W = 640, H = Math.round(640 * v.videoHeight / v.videoWidth);
+  const c = $('grab'); c.width = W; c.height = H;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(v, 0, 0, W, H);
+  // brighten
+  const img = ctx.getImageData(0, 0, W, H), d = img.data;
+  let gain = 1;
+  const mode = $('bright').value;
+  if (mode === 'auto') {
+    let sum = 0, n = 0;
+    for (let i = 0; i < d.length; i += 64) { sum += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; n++; }
+    const mean = sum / n;
+    gain = Math.max(1, Math.min(8, 105 / Math.max(mean, 2)));
+  } else gain = +mode;
+  if (gain > 1.05) {
+    for (let i = 0; i < d.length; i += 4) { d[i] = d[i] * gain; d[i + 1] = d[i + 1] * gain; d[i + 2] = d[i + 2] * gain; }
+    ctx.putImageData(img, 0, 0);
+  }
+  const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.72));
+  if (!blob) return;
+  const t = Date.now();
+  const chunk = chunkOf(t);
+  const level = S.audio ? Math.max(0, S.audio.levelOverFloor) : 0;
+  await put('photos', { night: S.night.id, t, chunk, blob, db: Math.round(level), snore: t - lastSnoreAt < (+$('interval').value) * 1000 });
+  S.photos++;
+  $('sPhotos').textContent = S.photos;
+  if (chunk !== S.lastChunk) {
+    const done = S.lastChunk;
+    S.lastChunk = chunk;
+    queueRender(S.night.id, done);
+  }
+}
+function chunkOf(t) {
+  const h = +S.night.chunkH;
+  return Math.floor((t - S.night.start) / (h * 3600e3));
+}
+
+/* ---------------- Audio + snore detection ---------------- */
+const CLIP_RATE = 8000;          // stored clip sample rate
+const CLIP_SECS = 12;
+async function startAudio(restart) {
+  if (S.audio && !restart) return;
+  if (S.audio) { try { S.audio.ctx.close(); } catch (e) {} }
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const ctx = new AC();
+  try { await ctx.resume(); } catch (e) {}
+  const src = ctx.createMediaStreamSource(S.stream);
+  const an = ctx.createAnalyser(); an.fftSize = 2048; an.smoothingTimeConstant = 0;
+  const proc = ctx.createScriptProcessor(4096, 1, 1);
+  const mute = ctx.createGain(); mute.gain.value = 0;
+  src.connect(an); src.connect(proc); proc.connect(mute); mute.connect(ctx.destination);
+  const spec = new Float32Array(an.frequencyBinCount);
+  const ring = new Int16Array(CLIP_RATE * CLIP_SECS);
+  const A = S.audio = {
+    ctx, an, proc, spec, ring, ringPos: 0, ratio: ctx.sampleRate / CLIP_RATE, acc: 0, accN: 0, frac: 0,
+    floor: null, levelOverFloor: 0, ev: null, recent: [], lastClip: 0, lastLoudClip: 0,
+    minute: null, live: [],
+  };
+  const binHz = ctx.sampleRate / an.fftSize;
+  const b60 = Math.round(60 / binHz), b500 = Math.round(500 / binHz), b4k = Math.round(4000 / binHz);
+
+  proc.onaudioprocess = (e) => {
+    const x = e.inputBuffer.getChannelData(0);
+    const dt = x.length / ctx.sampleRate;
+    // downsample into ring buffer
+    let sq = 0;
+    for (let i = 0; i < x.length; i++) {
+      const s = x[i]; sq += s * s;
+      A.acc += s; A.accN++; A.frac += 1;
+      if (A.frac >= A.ratio) {
+        A.frac -= A.ratio;
+        const v = Math.max(-1, Math.min(1, A.acc / A.accN));
+        A.ring[A.ringPos] = v * 32767; A.ringPos = (A.ringPos + 1) % A.ring.length;
+        A.acc = 0; A.accN = 0;
+      }
+    }
+    const dbv = 10 * Math.log10(sq / x.length + 1e-12);
+    if (A.floor == null) A.floor = dbv;
+    A.floor += (dbv - A.floor) * (dbv < A.floor ? 0.05 : 0.002);
+    const over = dbv - A.floor;
+    A.levelOverFloor = over;
+    // spectrum: share of energy below 500 Hz (snoring is mostly low-pitched)
+    an.getFloatFrequencyData(spec);
+    let lo = 0, all = 0;
+    for (let b = b60; b < b4k; b++) { const p = Math.pow(10, spec[b] / 10); all += p; if (b < b500) lo += p; }
+    const lowShare = all > 0 ? lo / all : 0;
+
+    const now = Date.now();
+    const thr = +$('sens').value;
+    if (over > thr) {
+      if (!A.ev) A.ev = { start: now, peak: over, lowSum: 0, n: 0 };
+      A.ev.peak = Math.max(A.ev.peak, over); A.ev.lowSum += lowShare; A.ev.n++;
+    } else if (A.ev) {
+      const ev = A.ev; A.ev = null;
+      const len = (now - ev.start) / 1000;
+      const low = ev.lowSum / ev.n;
+      if (len >= 0.3 && len <= 3.5 && low > 0.45) onBreathSound(now, ev.peak);
+      else if (ev.peak > thr + 14 && now - A.lastLoudClip > 5 * 60e3) { A.lastLoudClip = now; saveClip(now, 'loud', ev.peak); }
+    }
+    // per-minute stats
+    const mk = Math.floor(now / 60e3);
+    if (!A.minute || A.minute.k !== mk) {
+      if (A.minute) flushMinute(A.minute);
+      A.minute = { k: mk, sum: 0, n: 0, max: 0, snores: 0 };
+    }
+    A.minute.sum += Math.max(0, over); A.minute.n++; A.minute.max = Math.max(A.minute.max, over);
+  };
+
+  function onBreathSound(now, peak) {
+    // Snoring repeats with each breath (every ~2-9 s). Look for that rhythm.
+    A.recent = A.recent.filter(t => now - t < 75e3);
+    A.recent.push(now);
+    let rhythmic = 0;
+    for (let i = 1; i < A.recent.length; i++) { const g = (A.recent[i] - A.recent[i - 1]) / 1000; if (g >= 2 && g <= 9) rhythmic++; }
+    if (rhythmic >= 3) {
+      S.snores++; lastSnoreAt = now;
+      if (A.minute) A.minute.snores++;
+      $('sSnores').textContent = S.snores;
+      if (now - A.lastClip > 90e3) { A.lastClip = now; setTimeout(() => saveClip(now, 'snore', peak), 3000); }
+    }
+  }
+  renderChips();
+}
+
+function flushMinute(m) {
+  if (!S.night) return;
+  const rec = { night: S.night.id, t: m.k * 60e3, avg: +(m.sum / Math.max(1, m.n)).toFixed(1), max: +m.max.toFixed(1), snores: m.snores };
+  put('minutes', rec).catch(() => {});
+  S.audio.live.push(rec);
+  if (S.audio.live.length > 240) S.audio.live.shift();
+}
+
+function ringToWav(A) {
+  const n = A.ring.length, out = new Int16Array(n);
+  for (let i = 0; i < n; i++) out[i] = A.ring[(A.ringPos + i) % n];
+  const buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+  const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVE'); w(12, 'fmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, CLIP_RATE, true); v.setUint32(28, CLIP_RATE * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+  w(36, 'data'); v.setUint32(40, n * 2, true);
+  new Int16Array(buf, 44).set(out);
+  return new Blob([buf], { type: 'audio/wav' });
+}
+async function saveClip(t, kind, peak) {
+  if (!S.audio || !S.night) return;
+  const count = (await byNightCount('clips', S.night.id));
+  if (count >= 400) return;
+  await put('clips', { night: S.night.id, t, kind, peak: Math.round(peak), blob: ringToWav(S.audio) });
+  log(kind === 'snore' ? tr('logClipSnore') : tr('logClipLoud'));
+}
+const byNightCount = (store, night) => tx(store, 'readonly', s => req(s.index('night').count(night)));
+
+/* ---------------- Live chart ---------------- */
+function drawChart(canvas, mins, t0, t1) {
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.clientWidth, H = canvas.clientHeight;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  const g = canvas.getContext('2d'); g.scale(dpr, dpr);
+  const css = getComputedStyle(document.documentElement);
+  const col = (n) => css.getPropertyValue(n).trim();
+  g.clearRect(0, 0, W, H);
+  const top = 6, bot = H - 18, maxDb = 40;
+  g.strokeStyle = col('--line'); g.lineWidth = 1;
+  for (const d of [0, 20, 40]) { const y = bot - (d / maxDb) * (bot - top); g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
+  if (!mins.length) { g.fillStyle = col('--muted'); g.font = '12px ' + col('--font'); g.fillText(tr('chartEmpty'), 4, H / 2); return; }
+  t0 = t0 ?? mins[0].t; t1 = Math.max(t1 ?? mins[mins.length - 1].t + 60e3, t0 + 60e3);
+  const x = (t) => (t - t0) / (t1 - t0) * W;
+  const bw = Math.max(1, W * 60e3 / (t1 - t0) - 0.5);
+  for (const m of mins) {
+    const h = Math.min(1, m.max / maxDb) * (bot - top);
+    g.fillStyle = m.snores ? col('--snore') : col('--accent');
+    g.globalAlpha = m.snores ? 0.95 : 0.45;
+    g.fillRect(x(m.t), bot - h, bw, h);
+  }
+  g.globalAlpha = 1;
+  g.fillStyle = col('--muted'); g.font = '11px ' + col('--mono');
+  const step = (t1 - t0) > 4 * 3600e3 ? 3600e3 : (t1 - t0) > 3600e3 ? 1800e3 : 600e3;
+  for (let t = Math.ceil(t0 / step) * step; t < t1; t += step) {
+    const xx = x(t); if (xx < 2 || xx > W - 34) continue;
+    g.fillText(hhmm(t), xx - 15, H - 4);
+  }
+}
+
+/* ---------------- Recording control ---------------- */
+$('btnStart').onclick = async () => {
+  try {
+    if (!S.stream || S.stream.getTracks().some(t => t.readyState !== 'live')) await openCamera();
+  } catch (e) { alertBox(tr('errCamMic', { e: e.message })); return; }
+  try { await navigator.storage?.persist?.(); } catch (e) {}
+  const now = Date.now();
+  let resume = null;
+  try { resume = JSON.parse(localStorage.getItem('sleepcam-active') || 'null'); } catch (e) {}
+  const nights = await allNights();
+  const prev = resume && nights.find(n => n.id === resume && !n.end && now - n.start < 14 * 3600e3);
+  S.night = prev || { id: 'n' + now, start: now, end: null, chunkH: +$('chunkH').value, interval: +$('interval').value, fps: +$('fps').value };
+  await put('nights', S.night);
+  try { localStorage.setItem('sleepcam-active', S.night.id); } catch (e) {}
+  S.photos = prev ? (await byNightCount('photos', S.night.id)) : 0;
+  S.snores = 0; S.lastChunk = chunkOf(now);
+  await startAudio(true);
+  await lockScreen();
+  S.running = true;
+  $('setup').hidden = true; $('rec').hidden = false; $('btnLang').hidden = true;
+  $('sPhotos').textContent = S.photos; $('sSnores').textContent = 0;
+  log(prev ? tr('logResumed') : tr('logStarted'));
+  takePhoto();
+  S.photoTimer = setInterval(takePhoto, S.night.interval * 1000);
+  S.tickTimer = setInterval(tick, 1000);
+  tick();
+};
+
+function tick() {
+  if (!S.running) return;
+  const now = Date.now();
+  $('clock').textContent = dur(now - S.night.start);
+  $('nightClock').textContent = hhmm(now);
+  $('sLevel').textContent = S.audio ? Math.max(0, S.audio.levelOverFloor).toFixed(0) : '–';
+  const next = S.night.start + (S.lastChunk + 1) * S.night.chunkH * 3600e3;
+  $('nextVid').textContent = S.night.chunkH >= 12 ? tr('nextAtStop') : tr('nextAt', { t: hhmm(next) });
+  if (now % 5 < 1 || !$('rec').hidden) {
+    const live = S.audio ? S.audio.live.slice() : [];
+    if (S.audio?.minute) { const m = S.audio.minute; live.push({ t: m.k * 60e3, max: m.max, snores: m.snores }); }
+    if (!$('rec').hidden) drawChart($('liveChart'), live);
+  }
+  if (now % 30000 < 1000) renderChips();
+}
+
+$('btnDark').onclick = () => { $('night').hidden = false; };
+$('night').onclick = () => { $('night').hidden = true; };
+
+$('btnStop').onclick = async () => {
+  if (!S.running) return;
+  S.running = false;
+  clearInterval(S.photoTimer); clearInterval(S.tickTimer);
+  if (S.audio?.minute) flushMinute(S.audio.minute);
+  S.night.end = Date.now();
+  await put('nights', S.night);
+  try { localStorage.removeItem('sleepcam-active'); } catch (e) {}
+  $('btnStop').disabled = true;
+  log(tr('logStopped'));
+  queueRender(S.night.id, S.lastChunk);
+  await S.rendering;
+  try { S.audio?.ctx.close(); } catch (e) {}
+  S.audio = null;
+  S.stream?.getTracks().forEach(t => t.stop()); S.stream = null;
+  try { await S.wakeLock?.release(); } catch (e) {}
+  $('btnStop').disabled = false;
+  $('rec').hidden = true; $('setup').hidden = false; $('btnLang').hidden = false;
+  renderNights();
+};
+
+/* ---------------- Video rendering ---------------- */
+function queueRender(night, chunk) {
+  S.rendering = S.rendering.then(() => renderVideo(night, chunk)).catch(e => log(tr('logVidFail', { e: e.message })));
+  return S.rendering;
+}
+function pickMime() {
+  const opts = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'];
+  return opts.find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || '';
+}
+async function renderVideo(night, chunk, onProgress) {
+  let meta = (await photoMetaByNight(night)).sort((a, b) => a.t - b.t);
+  if (chunk != null) meta = meta.filter(p => p.chunk === chunk);
+  if (meta.length < 2) { log(tr('logFewPhotos')); return; }
+  const nightRec = (await allNights()).find(n => n.id === night) || {};
+  const fps = nightRec.fps || +$('fps').value;
+  const bar = $('renderBar'); bar.hidden = false;
+  const prog = (f) => { bar.firstElementChild.style.width = (f * 100).toFixed(1) + '%'; onProgress?.(f); };
+  log(tr('logMaking', { n: meta.length, s: Math.ceil(meta.length / fps) }));
+  const first = await createImageBitmap((await getPhoto(meta[0].id)).blob);
+  const c = $('render'); c.width = first.width; c.height = first.height;
+  const g = c.getContext('2d');
+  const mime = pickMime();
+  const stream = c.captureStream(fps);
+  const rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 2_500_000 } : undefined);
+  const parts = [];
+  rec.ondataavailable = (e) => { if (e.data && e.data.size) parts.push(e.data); };
+  const stopped = new Promise(r => rec.onstop = r);
+  const draw = (bmp, p) => {
+    g.drawImage(bmp, 0, 0, c.width, c.height);
+    const fs = Math.round(c.width / 22);
+    g.fillStyle = 'rgba(0,0,0,0.55)'; g.fillRect(0, c.height - fs * 1.8, c.width, fs * 1.8);
+    g.fillStyle = '#fff'; g.font = `600 ${fs}px ui-monospace, Menlo, monospace`;
+    g.fillText(hhmm(p.t), fs * 0.6, c.height - fs * 0.55);
+    const bx = fs * 4.6, bw = c.width * 0.35, by = c.height - fs * 1.15, bh = fs * 0.5;
+    g.fillStyle = 'rgba(255,255,255,0.18)'; g.fillRect(bx, by, bw, bh);
+    g.fillStyle = p.snore ? '#d9725f' : '#e0a458'; g.fillRect(bx, by, bw * Math.min(1, (p.db || 0) / 40), bh);
+    if (p.snore) { g.fillStyle = '#d9725f'; g.fillText(tr('overlaySnore'), bx + bw + fs * 0.6, c.height - fs * 0.55); }
+  };
+  draw(first, meta[0]); first.close?.();
+  rec.start(1000);
+  let next = createImageBitmap((await getPhoto(meta[1]?.id || meta[0].id)).blob);
+  const frameMs = 1000 / fps;
+  let tNext = performance.now() + frameMs;
+  for (let i = 1; i < meta.length; i++) {
+    const bmp = await next;
+    if (i + 1 < meta.length) next = getPhoto(meta[i + 1].id).then(r => createImageBitmap(r.blob));
+    const wait = tNext - performance.now();
+    if (wait > 0) await sleep(wait);
+    draw(bmp, meta[i]); bmp.close?.();
+    tNext += frameMs;
+    if (i % 10 === 0) prog(i / meta.length);
+  }
+  await sleep(frameMs * 3);
+  rec.stop();
+  await stopped;
+  stream.getTracks().forEach(t => t.stop());
+  const type = (rec.mimeType || mime || 'video/mp4').split(';')[0];
+  const blob = new Blob(parts, { type });
+  await put('videos', { night, chunk: chunk ?? 'all', t0: meta[0].t, t1: meta[meta.length - 1].t, blob, type, frames: meta.length });
+  prog(1); setTimeout(() => { bar.hidden = true; }, 800);
+  log(tr('logVidReady', { a: hhmm(meta[0].t), b: hhmm(meta[meta.length - 1].t), mb: (blob.size / 1e6).toFixed(1) }));
+  if (!S.running) renderNights();
+}
+
+/* ---------------- Save / share ---------------- */
+async function saveBlob(blob, name) {
+  const file = new File([blob], name, { type: blob.type });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file] }); return; } catch (e) { if (e.name === 'AbortError') return; }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 60e3);
+}
+
+/* ---------------- Morning view ---------------- */
+const urls = [];
+let renderGen = 0;
+async function renderNights() {
+  const gen = ++renderGen;
+  const nights = (await allNights()).sort((a, b) => b.start - a.start);
+  const data = [];
+  for (const n of nights) data.push(await Promise.all([photoMetaByNight(n.id), byNight('clips', n.id), byNight('videos', n.id), byNight('minutes', n.id)]));
+  if (gen !== renderGen) return;
+  urls.splice(0).forEach(u => URL.revokeObjectURL(u));
+  const box = $('nights'); box.innerHTML = '';
+  for (const [i, n] of nights.entries()) {
+    const [meta, clips, vids, mins] = data[i];
+    const end = n.end || (meta.length ? meta[meta.length - 1].t : n.start);
+    const snoreMins = mins.filter(m => m.snores > 0).length;
+    const card = document.createElement('section'); card.className = 'card';
+    const d = new Date(n.start);
+    card.innerHTML = `
+      <div class="night-head"><h2>${d.toLocaleDateString(tr('locale'), { weekday: 'long', day: 'numeric', month: 'short' })}</h2>
+      <span class="sub">${hhmm(n.start)}–${hhmm(end)} · ${dur(end - n.start).slice(0, 5)} h${n.end ? '' : ' · ' + tr('unfinished')}</span></div>
+      <div class="stats">
+        <div class="stat"><b>${meta.length}</b><span>${tr('statPhotos')}</span></div>
+        <div class="stat"><b>${snoreMins}</b><span>${tr('statSnoreMin')}</span></div>
+        <div class="stat"><b>${clips.filter(c => c.kind === 'snore').length}</b><span>${tr('statSnoreClips')}</span></div>
+      </div>
+      <canvas class="chart"></canvas>
+      <p class="sub">${tr('chartCaption')}</p>
+      <div class="vids" style="display:flex;flex-direction:column;gap:12px"></div>
+      <div class="row"><button class="small mk">${tr('btnWhole')}</button><button class="small danger del">${tr('btnDelete')}</button></div>
+      <details><summary>${tr('clipsTitle', { n: clips.length })}</summary><div class="clips"></div></details>`;
+    box.appendChild(card);
+    drawChart(card.querySelector('canvas'), mins.sort((a, b) => a.t - b.t), n.start, end);
+    const vbox = card.querySelector('.vids');
+    vids.sort((a, b) => a.t0 - b.t0).forEach(v => {
+      const u = URL.createObjectURL(v.blob); urls.push(u);
+      const ext = v.type.includes('webm') ? 'webm' : 'mp4';
+      const el = document.createElement('div'); el.className = 'vid';
+      el.innerHTML = `<video src="${u}" controls playsinline preload="metadata"></video>
+        <div class="row" style="justify-content:space-between"><span class="sub">${v.chunk === 'all' ? tr('vidWhole') : tr('vidPart')} · ${hhmm(v.t0)}–${hhmm(v.t1)} · ${(v.blob.size / 1e6).toFixed(1)} MB</span>
+        <button class="small">${tr('btnSaveVid')}</button></div>`;
+      el.querySelector('button').onclick = () => saveBlob(v.blob, `${tr('filePrefix')}-${d.toISOString().slice(0, 10)}-${hhmm(v.t0).replace(':', '')}.${ext}`);
+      vbox.appendChild(el);
+    });
+    if (!vids.length) vbox.innerHTML = '<p class="sub">' + tr('noVideo') + '</p>';
+    const cbox = card.querySelector('.clips');
+    clips.sort((a, b) => a.t - b.t).forEach(c => {
+      const el = document.createElement('div'); el.className = 'clip';
+      el.innerHTML = `<span class="t">${hhmm(c.t)}</span><span class="tag ${c.kind === 'snore' ? 'snore' : ''}">${c.kind === 'snore' ? tr('tagSnore') : tr('tagLoud')}</span><button class="small">${tr('play')}</button>`;
+      let audio = null;
+      el.querySelector('button').onclick = (e) => {
+        if (!audio) { const u = URL.createObjectURL(c.blob); urls.push(u); audio = new Audio(u); audio.onended = () => e.target.textContent = tr('play'); }
+        if (audio.paused) { audio.play(); e.target.textContent = tr('pause'); } else { audio.pause(); e.target.textContent = tr('play'); }
+      };
+      cbox.appendChild(el);
+    });
+    if (!clips.length) cbox.innerHTML = '<p class="sub">' + tr('noClips') + '</p>';
+    card.querySelector('.mk').onclick = async (e) => {
+      e.target.disabled = true; e.target.textContent = tr('making');
+      await queueRender(n.id, null);
+    };
+    const del = card.querySelector('.del');
+    del.onclick = async () => {
+      if (del.dataset.armed) { await deleteNight(n.id); renderNights(); return; }
+      del.dataset.armed = '1'; del.textContent = tr('btnDeleteConfirm');
+      setTimeout(() => { delete del.dataset.armed; del.textContent = tr('btnDelete'); }, 4000);
+    };
+  }
+  try {
+    const est = await navigator.storage.estimate();
+    $('storage').textContent = tr('storage', { mb: (est.usage / 1e6).toFixed(0) });
+  } catch (e) {}
+}
+
+loadSettings();
+applyLang();
+if (LANG) { $('setup').hidden = false; $('btnLang').hidden = false; }
+else { $('langPick').hidden = false; $('nights').hidden = true; $('intro').hidden = true; $('storage').hidden = true; }
+if (!navigator.mediaDevices?.getUserMedia) alertBox(tr('errNoCam'));
+if (!window.MediaRecorder) alertBox(tr('errNoRec'));
+renderNights();
+renderChips();
+</script>
+</body>
+</html>
