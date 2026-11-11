@@ -2,21 +2,29 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>El Game</title>
 <style>
-:root{--bg:#0f1418;--fg:#e6edf3;--card:#1a2129;--mute:#8b98a5;--sel:#ffd84d}
+:root{--bg:#0f1418;--fg:#e6edf3;--card:#1a2129;--mute:#8b98a5;--del:#ff7a66}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:14px system-ui,sans-serif;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none}
-#bar{position:fixed;top:0;left:0;right:0;z-index:2;display:flex;flex-wrap:wrap;gap:6px;align-items:center;
- padding:calc(8px + env(safe-area-inset-top,0px)) max(10px,env(safe-area-inset-right,0px)) 8px max(10px,env(safe-area-inset-left,0px));background:rgba(15,20,24,.85)}
-#bar a,#bar button{font:inherit;font-weight:600;padding:8px 12px;border-radius:8px;border:0;background:var(--card);color:var(--fg);text-decoration:none}
+#bar{position:fixed;top:0;left:0;right:0;z-index:2;display:flex;flex-wrap:wrap;gap:5px;align-items:center;
+ padding:calc(6px + env(safe-area-inset-top,0px)) max(8px,env(safe-area-inset-right,0px)) 6px max(8px,env(safe-area-inset-left,0px));background:rgba(15,20,24,.85)}
+#bar a,#bar button{font:inherit;font-weight:600;padding:7px 10px;border-radius:8px;border:0;background:var(--card);color:var(--fg);text-decoration:none}
 #bar button.on{background:var(--fg);color:var(--bg)}
+#bar button[data-m=del].on{background:var(--del);color:#1a0d0a}
+#bar .sep{width:1px;height:22px;background:#2d3742;margin:0 2px}
 #hint{position:fixed;left:0;right:0;bottom:0;padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px));color:var(--mute);text-align:center;pointer-events:none}
 canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 </style></head><body>
 <canvas id="c"></canvas>
 <div id="bar">
- <a href="./">← Sensors</a>
- <button data-m="make" class="on">Make shape</button>
+ <a href="./">←</a>
+ <button data-m="make" class="on">Make</button>
  <button data-m="cord">Cords</button>
  <button data-m="move">Move</button>
+ <button data-m="pan">Pan</button>
+ <button data-m="del">Delete</button>
+ <span class="sep"></span>
+ <button id="zout" aria-label="Zoom out">−</button>
+ <button id="zin" aria-label="Zoom in">+</button>
+ <button id="zreset">1:1</button>
  <button id="clear">Clear</button>
 </div>
 <div id="hint"></div>
@@ -40,93 +48,173 @@ async function startSensors(){
 const sensorVec=()=>[].concat(L.acc,L.lin,L.gyro,L.ori,L.head,L.mag,L.grav);
 
 // ---------- deterministic mixing (no RNG: output depends only on inputs) ----------
-// p(F,k) in [0,1): every feature contributes with a fixed, made-up weight
 function p(F,k){let s=0;for(let j=0;j<F.length;j++){const w=Math.sin((k+1)*12.9898+(j+1)*78.233)*43.7;s+=F[j]*w;}
   const v=Math.sin(s)*43758.5453;return v-Math.floor(v);}
+const pi=(F,k,a,b)=>a+Math.floor(p(F,k)*(b-a+1)); // integer in [a,b]
 
 // ---------- shapes ----------
-const R=45; // max radius -> fits in ~100x100 px
+const R=45, TAU=Math.PI*2; // max radius -> fits in ~100x100 px
 function shapeFeatures(x,y,t){return sensorVec().concat([x,y,t,Math.sin(t*3.1)])}
+const polar=(fn,N=240,turns=1)=>{const o=[];for(let i=0;i<=N;i++){const th=i/N*TAU*turns,r=fn(th);o.push([Math.cos(th)*r,Math.sin(th)*r]);}return o;};
+const circle=(cx,cy,r,N=24)=>{const o=[];for(let i=0;i<=N;i++){const a=i/N*TAU;o.push([cx+Math.cos(a)*r,cy+Math.sin(a)*r]);}return o;};
+const gcd=(a,b)=>b?gcd(b,a%b):a;
+
+// Each family returns a list of paths: {pts, fill, closed}
+const FAMILIES=[
+ // 0 blob: sum of harmonics
+ F=>{const n=pi(F,50,2,9),H=[];for(let k=0;k<4;k++)H.push([n*(k+1)+pi(F,51+k,0,2),p(F,55+k)*0.6/(k+1),p(F,59+k)*TAU]);
+   return[{pts:polar(th=>{let r=1;for(const[f,a,ph]of H)r+=a*Math.sin(f*th+ph);return Math.abs(r)+.15;}),fill:1,closed:1}];},
+ // 1 superformula
+ F=>{const m=pi(F,50,2,12),n1=.2+p(F,51)*4,n2=.3+p(F,52)*5,n3=.3+p(F,53)*5,a=.6+p(F,54)*.8;
+   return[{pts:polar(th=>{const t=Math.abs(Math.cos(m*th/4)/a)**n2+Math.abs(Math.sin(m*th/4))**n3;return Math.min(4,t**(-1/n1));},360),fill:1,closed:1}];},
+ // 2 star polygon, optionally doubled
+ F=>{const k=pi(F,50,3,12),ir=.2+p(F,51)*.6,tw=p(F,52)*.6,o=[];
+   const star=(s,rot)=>{const q=[];for(let i=0;i<=k*2;i++){const r=(i%2?ir:1)*s,a=i/(k*2)*TAU+rot+(i%2?tw/k:0);q.push([Math.cos(a)*r,Math.sin(a)*r]);}return q;};
+   o.push({pts:star(1,0),fill:1,closed:1});if(p(F,53)>.5)o.push({pts:star(.55,TAU/(k*2)),fill:1,closed:1});return o;},
+ // 3 spirograph (hypotrochoid)
+ F=>{const Rr=pi(F,50,5,13),r=pi(F,51,2,Rr-1),d=(.3+p(F,52)*1.2)*r,turns=r/gcd(Rr,r);
+   const o=[];for(let i=0;i<=600;i++){const t=i/600*TAU*turns;o.push([(Rr-r)*Math.cos(t)+d*Math.cos((Rr-r)/r*t),(Rr-r)*Math.sin(t)-d*Math.sin((Rr-r)/r*t)]);}
+   return[{pts:o,fill:0,closed:1}];},
+ // 4 rose curve
+ F=>{const n=pi(F,50,2,7),d=pi(F,51,1,4),k=n/d,turns=d*(n*d%2?1:2);
+   return[{pts:polar(th=>Math.cos(k*th)+(p(F,52)>.6?.25:0),500,turns),fill:p(F,53)>.4,closed:1}];},
+ // 5 lissajous knot
+ F=>{const a=pi(F,50,1,6),b=pi(F,51,1,6)+(p(F,52)>.5?1:0),ph=p(F,53)*Math.PI,o=[];
+   for(let i=0;i<=500;i++){const t=i/500*TAU;o.push([Math.sin(a*t+ph),Math.sin(b*t)]);}return[{pts:o,fill:0,closed:1}];},
+ // 6 nested rotating polygons
+ F=>{const s=pi(F,50,3,8),n=pi(F,51,3,7),tw=(p(F,52)-.5)*1.2,o=[];
+   for(let j=0;j<n;j++){const r=1-j/n*.85,q=[];for(let i=0;i<=s;i++){const a=i/s*TAU+j*tw;q.push([Math.cos(a)*r,Math.sin(a)*r]);}o.push({pts:q,fill:j===0,closed:1});}return o;},
+ // 7 spiral arms
+ F=>{const arms=pi(F,50,1,6),turns=.6+p(F,51)*2,dir=p(F,52)>.5?1:-1,o=[];
+   for(let a=0;a<arms;a++){const q=[];for(let i=0;i<=120;i++){const t=i/120,th=dir*t*turns*TAU+a/arms*TAU;q.push([Math.cos(th)*t,Math.sin(th)*t]);}o.push({pts:q,fill:0,closed:0});}
+   o.push({pts:circle(0,0,.12),fill:1,closed:1});return o;},
+ // 8 ring of dots
+ F=>{const n=pi(F,50,5,14),rings=pi(F,51,1,3),o=[];
+   for(let r=0;r<rings;r++){const rr=1-r*.32,dr=(.08+p(F,52+r)*.14)*rr;for(let i=0;i<n-r*2;i++){const a=i/(n-r*2)*TAU+r*.3;o.push({pts:circle(Math.cos(a)*rr,Math.sin(a)*rr,dr,14),fill:1,closed:1});}}
+   o.push({pts:circle(0,0,.15+p(F,56)*.2),fill:1,closed:1});return o;},
+ // 9 branching snowflake
+ F=>{const arms=pi(F,50,3,8),br=pi(F,51,1,3),ang=.3+p(F,52)*.8,o=[];
+   for(let a=0;a<arms;a++){const A=a/arms*TAU,c=Math.cos(A),s=Math.sin(A);o.push({pts:[[0,0],[c,s]],fill:0,closed:0});
+     for(let b=1;b<=br;b++){const t=b/(br+1),L=(1-t)*.6,x=c*t,y=s*t;for(const sg of[-1,1])o.push({pts:[[x,y],[x+Math.cos(A+sg*ang)*L,y+Math.sin(A+sg*ang)*L]],fill:0,closed:0});}}
+   return o;},
+ // 10 crescent / eclipse
+ F=>{const off=.25+p(F,50)*.5,a=p(F,51)*TAU,o=[];const q=[];
+   for(let i=0;i<=120;i++){const t=i/120*TAU;q.push([Math.cos(t),Math.sin(t)]);}
+   o.push({pts:q,fill:1,closed:1});o.push({pts:circle(Math.cos(a)*off,Math.sin(a)*off,1-off*.6,60),fill:2,closed:1});return o;},
+ // 11 zigzag / sawtooth ring
+ F=>{const n=pi(F,50,6,24),amp=.15+p(F,51)*.45,sq=p(F,52)>.5;
+   return[{pts:polar(th=>{const ph=(th*n/TAU)%1;return 1-amp*(sq?(ph<.5?0:1):Math.abs(ph*2-1));},n*16),fill:1,closed:1}];},
+];
+
 function buildShape(s){
-  const F=s.F,n=2+Math.floor(p(F,0)*8),H=[];
-  for(let k=0;k<4;k++)H.push({f:n*(k+1)+Math.floor(p(F,10+k)*3),a:p(F,20+k)*(0.6/(k+1)),ph:p(F,30+k)*6.283});
-  const pts=[];let mx=0;
-  for(let i=0;i<=180;i++){const th=i/180*6.283;let r=1;for(const h of H)r+=h.a*Math.sin(h.f*th+h.ph);
-    r=Math.abs(r)+0.15;mx=Math.max(mx,r);pts.push([th,r]);}
-  s.pts=pts.map(([th,r])=>[Math.cos(th+p(F,3)*6.283)*r/mx*R,Math.sin(th+p(F,3)*6.283)*r/mx*R]);
+  const F=s.F,fam=Math.floor(p(F,0)*FAMILIES.length);let paths=FAMILIES[fam](F);
+  let mx=0;for(const P of paths)for(const[x,y]of P.pts)mx=Math.max(mx,Math.hypot(x,y));
+  const rot=p(F,3)*TAU,c=Math.cos(rot),sn=Math.sin(rot),sc=R/(mx||1),sq=.7+p(F,1)*.6; // slight squash
+  s.paths=paths.map(P=>({...P,pts:P.pts.map(([x,y])=>{x*=sq;y/=sq;return[(x*c-y*sn)*sc,(x*sn+y*c)*sc];})}));
   s.hue=Math.floor(p(F,4)*360);s.hue2=(s.hue+60+Math.floor(p(F,5)*180))%360;
-  s.inner=Math.floor(p(F,6)*4); // 0..3 extra decorations
-  s.spokes=3+Math.floor(p(F,7)*9);s.ir=0.2+p(F,8)*0.5;s.lw=1+p(F,9)*3;
+  s.lw=1+p(F,9)*3;s.alpha=.35+p(F,6)*.5;s.glow=p(F,7)>.6;s.fam=fam;
 }
 function drawShape(s,sel){
   ctx.save();ctx.translate(s.x,s.y);
-  ctx.beginPath();s.pts.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();
-  ctx.fillStyle=`hsla(${s.hue},80%,55%,.55)`;ctx.fill();
-  ctx.lineWidth=s.lw;ctx.strokeStyle=`hsl(${s.hue2},90%,70%)`;ctx.stroke();
-  if(s.inner&1){ctx.beginPath();for(let i=0;i<s.spokes;i++){const a=i/s.spokes*6.283;ctx.moveTo(0,0);ctx.lineTo(Math.cos(a)*R*s.ir*1.6,Math.sin(a)*R*s.ir*1.6);}ctx.stroke();}
-  if(s.inner&2){ctx.beginPath();ctx.arc(0,0,R*s.ir,0,6.283);ctx.stroke();}
-  if(sel){ctx.lineWidth=2;ctx.setLineDash([5,4]);ctx.strokeStyle='#ffd84d';ctx.beginPath();ctx.arc(0,0,R+6,0,6.283);ctx.stroke();ctx.setLineDash([]);}
+  if(s.glow){ctx.shadowColor=`hsl(${s.hue2},90%,60%)`;ctx.shadowBlur=12;}
+  ctx.lineWidth=s.lw;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle=`hsl(${s.hue2},90%,70%)`;
+  for(const P of s.paths){ctx.beginPath();P.pts.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));if(P.closed)ctx.closePath();
+    if(P.fill===1){ctx.fillStyle=`hsla(${s.hue},80%,55%,${s.alpha})`;ctx.fill();}
+    if(P.fill===2){ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--bg');ctx.fill();}
+    ctx.stroke();}
+  ctx.shadowBlur=0;
+  if(sel){ctx.lineWidth=2/view.z;ctx.setLineDash([5/view.z,4/view.z]);ctx.strokeStyle='#ffd84d';ctx.beginPath();ctx.arc(0,0,R+6,0,TAU);ctx.stroke();ctx.setLineDash([]);}
   ctx.restore();
 }
 
 // ---------- cords ----------
-// Quadratic curve A -> B that passes through C at t=0.5, plus a wiggle that is
-// zero at A, C and B and grows with the distance of C from the A-B midpoint.
+// Quadratic curve A -> B through C at t=0.5, plus a wiggle that is zero at A, C and B
+// and grows with the distance of C from the A-B midpoint.
 function buildCord(c){
   const A=shapes.find(s=>s.id===c.a),B=shapes.find(s=>s.id===c.b);if(!A||!B)return false;
   const mx=(A.x+B.x)/2,my=(A.y+B.y)/2,ab=Math.hypot(B.x-A.x,B.y-A.y)||1;
   const chaos=Math.min(2.5,Math.hypot(c.cx-mx,c.cy-my)/ab*2);
   const qx=2*c.cx-mx,qy=2*c.cy-my,F=c.F,W=[];
-  for(let k=0;k<5;k++)W.push({f:2+k*2+Math.floor(p(F,k)*5),a:(0.3+p(F,10+k))/(k+1),ph:p(F,20+k)*6.283});
+  for(let k=0;k<5;k++)W.push({f:2+k*2+Math.floor(p(F,k)*5),a:(0.3+p(F,10+k))/(k+1),ph:p(F,20+k)*TAU});
   const amp=chaos*(14+p(F,30)*26),pts=[];
   for(let i=0;i<=200;i++){const t=i/200,u=1-t;
     const x=u*u*A.x+2*u*t*qx+t*t*B.x,y=u*u*A.y+2*u*t*qy+t*t*B.y;
     const dx=2*u*(qx-A.x)+2*t*(B.x-qx),dy=2*u*(qy-A.y)+2*t*(B.y-qy),dl=Math.hypot(dx,dy)||1;
-    let w=0;for(const h of W)w+=h.a*Math.sin(h.f*t*6.283+h.ph);
+    let w=0;for(const h of W)w+=h.a*Math.sin(h.f*t*TAU+h.ph);
     const env=Math.sin(2*Math.PI*t)**2*amp;pts.push([x-dy/dl*w*env,y+dx/dl*w*env]);}
   c.pts=pts;c.hue=Math.floor(p(F,40)*360);c.lw=1.5+p(F,41)*2.5+chaos;c.chaos=chaos;return true;
 }
 function drawCord(c){
   ctx.beginPath();c.pts.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));
   ctx.lineWidth=c.lw;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle=`hsl(${c.hue},85%,65%)`;ctx.stroke();
-  ctx.fillStyle='rgba(255,255,255,.5)';ctx.beginPath();ctx.arc(c.cx,c.cy,3,0,6.283);ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,.5)';ctx.beginPath();ctx.arc(c.cx,c.cy,3/view.z,0,TAU);ctx.fill();
 }
 
-// ---------- state ----------
+// ---------- state & view ----------
 let shapes=[],cords=[],nextId=1,mode='make',selA=null,selB=null,active=null;
+const view={x:0,y:0,z:1}; // screen = world*z + (x,y)
 const cv=document.getElementById('c'),ctx=cv.getContext('2d'),hint=document.getElementById('hint');
-function resize(){const d=devicePixelRatio||1;cv.width=innerWidth*d;cv.height=innerHeight*d;ctx.setTransform(d,0,0,d,0,0);}
+const toW=(sx,sy)=>[(sx-view.x)/view.z,(sy-view.y)/view.z];
+function zoomAt(f,sx=innerWidth/2,sy=innerHeight/2){const nz=Math.min(4,Math.max(.1,view.z*f));
+  view.x=sx-(sx-view.x)*nz/view.z;view.y=sy-(sy-view.y)*nz/view.z;view.z=nz;}
+function resize(){const d=devicePixelRatio||1;cv.width=innerWidth*d;cv.height=innerHeight*d;}
 addEventListener('resize',resize);resize();
-function setHint(){hint.textContent=mode==='make'?'Press and hold anywhere. The shape changes while you hold.':
-  mode==='cord'?(selA==null?'Tap shape A':selB==null?'Tap shape B':'Tap point C – the cord goes through it'):'Drag a shape or a cord';}
+const HINTS={make:'Press and hold anywhere. The shape changes while you hold.',move:'Drag a shape or a cord',
+  pan:'Drag to move the canvas. Pinch or use − / + to zoom.',del:'Tap a shape or a cord to delete it'};
+function setHint(){hint.textContent=mode==='cord'?(selA==null?'Tap shape A':selB==null?'Tap shape B':'Press point C and slide – the cord goes through it'):HINTS[mode];}
 document.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{mode=b.dataset.m;selA=selB=null;
   document.querySelectorAll('[data-m]').forEach(x=>x.classList.toggle('on',x===b));setHint();});
 document.getElementById('clear').onclick=()=>{shapes=[];cords=[];selA=selB=null;setHint();};
+document.getElementById('zout').onclick=()=>zoomAt(1/1.4);
+document.getElementById('zin').onclick=()=>zoomAt(1.4);
+document.getElementById('zreset').onclick=()=>{view.x=view.y=0;view.z=1;};
 const hitShape=(x,y)=>[...shapes].reverse().find(s=>Math.hypot(s.x-x,s.y-y)<R);
-const hitCord=(x,y)=>[...cords].reverse().find(c=>c.pts.some(([px,py])=>Math.hypot(px-x,py-y)<18));
+const hitCord=(x,y)=>[...cords].reverse().find(c=>c.pts.some(([px,py])=>Math.hypot(px-x,py-y)<18/view.z));
 const refreshCords=id=>cords=cords.filter(c=>{if(id!=null&&c.a!==id&&c.b!==id)return true;c.F=sensorVec();return buildCord(c);});
 
+const touches=new Map();let pinch=null;
 cv.addEventListener('pointerdown',e=>{
-  startSensors();cv.setPointerCapture(e.pointerId);const x=e.clientX,y=e.clientY;
-  if(mode==='make'){const s={id:nextId++,x,y,t0:performance.now(),t:0};s.F=shapeFeatures(x,y,0);buildShape(s);shapes.push(s);active={kind:'grow',s};}
+  startSensors();cv.setPointerCapture(e.pointerId);touches.set(e.pointerId,[e.clientX,e.clientY]);
+  if(mode==='pan'){if(touches.size===2){const[a,b]=[...touches.values()];pinch={d:Math.hypot(a[0]-b[0],a[1]-b[1]),cx:(a[0]+b[0])/2,cy:(a[1]+b[1])/2};active=null;}
+    else active={kind:'pan',lx:e.clientX,ly:e.clientY};return;}
+  if(active)return; // ignore extra fingers in other modes
+  const[x,y]=toW(e.clientX,e.clientY);
+  if(mode==='make'){const s={id:nextId++,x,y,t0:performance.now(),t:0};s.F=shapeFeatures(x,y,0);buildShape(s);shapes.push(s);active={kind:'grow',s,pid:e.pointerId};}
   else if(mode==='cord'){const s=hitShape(x,y);
     if(selA==null){if(s)selA=s.id;}
     else if(selB==null){if(s&&s.id!==selA)selB=s.id;}
-    else{const c={a:selA,b:selB,cx:x,cy:y,F:sensorVec()};if(buildCord(c))cords.push(c);selA=selB=null;}
+    else{const c={a:selA,b:selB,cx:x,cy:y,F:sensorVec()};if(buildCord(c)){cords.push(c);active={kind:'cordC',c,pid:e.pointerId};}selA=selB=null;}
     setHint();}
-  else{const s=hitShape(x,y);if(s)active={kind:'shape',s,ox:x-s.x,oy:y-s.y};
-    else{const c=hitCord(x,y);if(c)active={kind:'cord',c,lx:x,ly:y};}}
+  else if(mode==='move'){const s=hitShape(x,y);if(s)active={kind:'shape',s,ox:x-s.x,oy:y-s.y,pid:e.pointerId};
+    else{const c=hitCord(x,y);if(c)active={kind:'cord',c,lx:x,ly:y,pid:e.pointerId};}}
+  else if(mode==='del'){const s=hitShape(x,y);
+    if(s){shapes=shapes.filter(q=>q!==s);cords=cords.filter(c=>c.a!==s.id&&c.b!==s.id);}
+    else{const c=hitCord(x,y);if(c)cords=cords.filter(q=>q!==c);}}
 });
-cv.addEventListener('pointermove',e=>{if(!active)return;const x=e.clientX,y=e.clientY;
+cv.addEventListener('pointermove',e=>{
+  if(touches.has(e.pointerId))touches.set(e.pointerId,[e.clientX,e.clientY]);
+  if(pinch&&touches.size>=2){const[a,b]=[...touches.values()],d=Math.hypot(a[0]-b[0],a[1]-b[1]),cx=(a[0]+b[0])/2,cy=(a[1]+b[1])/2;
+    view.x+=cx-pinch.cx;view.y+=cy-pinch.cy;zoomAt(d/pinch.d,cx,cy);pinch={d,cx,cy};return;}
+  if(!active)return;
+  if(active.kind==='pan'){view.x+=e.clientX-active.lx;view.y+=e.clientY-active.ly;active.lx=e.clientX;active.ly=e.clientY;return;}
+  if(e.pointerId!==active.pid)return;
+  const[x,y]=toW(e.clientX,e.clientY);
   if(active.kind==='grow'){active.s.x=x;active.s.y=y;}
+  else if(active.kind==='cordC'){active.c.cx=x;active.c.cy=y;}
   else if(active.kind==='shape'){const s=active.s;s.x=x-active.ox;s.y=y-active.oy;s.F=shapeFeatures(s.x,s.y,s.t);buildShape(s);refreshCords(s.id);}
-  else{const c=active.c;c.cx+=x-active.lx;c.cy+=y-active.ly;active.lx=x;active.ly=y;c.F=sensorVec();buildCord(c);}
+  else if(active.kind==='cord'){const c=active.c;c.cx+=x-active.lx;c.cy+=y-active.ly;active.lx=x;active.ly=y;c.F=sensorVec();buildCord(c);}
 });
-const end=()=>{active=null;};cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
+const end=e=>{touches.delete(e.pointerId);if(touches.size<2)pinch=null;
+  if(active&&(active.pid===e.pointerId||active.kind==='pan'))active=null;};
+cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
+cv.addEventListener('wheel',e=>{e.preventDefault();zoomAt(e.deltaY<0?1.1:1/1.1,e.clientX,e.clientY);},{passive:false});
 
 function frame(){
   if(active&&active.kind==='grow'){const s=active.s;s.t=(performance.now()-s.t0)/1000;s.F=shapeFeatures(s.x,s.y,s.t);buildShape(s);refreshCords(s.id);}
-  ctx.clearRect(0,0,innerWidth,innerHeight);
+  if(active&&active.kind==='cordC'){active.c.F=sensorVec();buildCord(active.c);}
+  const d=devicePixelRatio||1;
+  ctx.setTransform(d,0,0,d,0,0);ctx.clearRect(0,0,innerWidth,innerHeight);
+  ctx.setTransform(d*view.z,0,0,d*view.z,d*view.x,d*view.y);
   cords.forEach(drawCord);shapes.forEach(s=>drawShape(s,s.id===selA||s.id===selB));
   requestAnimationFrame(frame);
 }
