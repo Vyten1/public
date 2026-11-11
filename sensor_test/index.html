@@ -10,7 +10,9 @@ button{font:inherit;padding:10px 16px;border-radius:8px;border:0;background:var(
 .n{font-weight:600;display:flex;justify-content:space-between}
 .st{font-size:13px}.ok{color:var(--ok)}.no{color:var(--no)}
 .v{font:13px ui-monospace,monospace;font-variant-numeric:tabular-nums;margin-top:4px;white-space:pre}
+nav{display:flex;gap:8px;margin-bottom:14px}nav a{padding:8px 14px;border-radius:8px;background:var(--card);color:var(--fg);text-decoration:none;font-weight:600}nav a.on{background:var(--fg);color:var(--bg)}
 </style></head><body>
+<nav><a class="on" href="./">Sensors</a><a href="el_game.html">El game</a></nav>
 <h1>Motion Sensor Check</h1><p>Tap Start, then move the phone. Needs HTTPS.</p>
 <button id="go">Start</button><div id="list"></div>
 <script>
