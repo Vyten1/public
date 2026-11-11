@@ -8,6 +8,8 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:14px sy
  padding:calc(6px + env(safe-area-inset-top,0px)) max(8px,env(safe-area-inset-right,0px)) 6px max(8px,env(safe-area-inset-left,0px));background:rgba(15,20,24,.85)}
 #bar a,#bar button{font:inherit;font-weight:600;padding:7px 10px;border-radius:8px;border:0;background:var(--card);color:var(--fg);text-decoration:none}
 #bar button.on{background:var(--fg);color:var(--bg)}
+#bar button[data-m=str]{background:#ffb3b3;color:#3a0a0a}
+#bar button[data-m=str].on{background:#ff5c5c;color:#fff}
 #bar button[data-m=del].on{background:var(--del);color:#1a0d0a}
 #bar .sep{width:1px;height:22px;background:#2d3742;margin:0 2px}
 #hint{position:fixed;left:0;right:0;bottom:0;padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px));color:var(--mute);text-align:center;pointer-events:none}
@@ -18,6 +20,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
  <a href="./">←</a>
  <button data-m="make" class="on">Make</button>
  <button data-m="cord">Cords</button>
+ <button data-m="str">Strings</button>
  <button data-m="move">Move</button>
  <button data-m="pan">Pan</button>
  <button data-m="del">Delete</button>
@@ -134,19 +137,33 @@ function buildCord(c){
   const A=shapes.find(s=>s.id===c.a),B=shapes.find(s=>s.id===c.b);if(!A||!B)return false;
   const mx=(A.x+B.x)/2,my=(A.y+B.y)/2,ab=Math.hypot(B.x-A.x,B.y-A.y)||1;
   const chaos=Math.min(2.5,Math.hypot(c.cx-mx,c.cy-my)/ab*2);
-  const qx=2*c.cx-mx,qy=2*c.cy-my,F=c.F,W=[];
-  for(let k=0;k<5;k++)W.push({f:2+k*2+Math.floor(p(F,k)*5),a:(0.3+p(F,10+k))/(k+1),ph:p(F,20+k)*TAU});
-  const amp=chaos*(14+p(F,30)*26),pts=[];
-  for(let i=0;i<=200;i++){const t=i/200,u=1-t;
-    const x=u*u*A.x+2*u*t*qx+t*t*B.x,y=u*u*A.y+2*u*t*qy+t*t*B.y;
-    const dx=2*u*(qx-A.x)+2*t*(B.x-qx),dy=2*u*(qy-A.y)+2*t*(B.y-qy),dl=Math.hypot(dx,dy)||1;
-    let w=0;for(const h of W)w+=h.a*Math.sin(h.f*t*TAU+h.ph);
-    const env=Math.sin(2*Math.PI*t)**2*amp;pts.push([x-dy/dl*w*env,y+dx/dl*w*env]);}
-  c.pts=pts;c.hue=Math.floor(p(F,40)*360);c.lw=1.5+p(F,41)*2.5+chaos;c.chaos=chaos;return true;
+  const qx=2*c.cx-mx,qy=2*c.cy-my,F=c.F.concat([c.cx,c.cy]),N=200;
+  const wig=(seed)=>{const W=[];for(let k=0;k<5;k++)W.push([2+k*2+Math.floor(p(F,seed+k)*5),(0.3+p(F,seed+10+k))/(k+1),p(F,seed+20+k)*TAU]);
+    return t=>{let w=0;for(const[f,a,ph]of W)w+=a*Math.sin(f*t*TAU+ph);return w;};};
+  const amp=chaos*(14+p(F,30)*26),base=[],nrm=[];
+  for(let i=0;i<=N;i++){const t=i/N,u=1-t;
+    base.push([u*u*A.x+2*u*t*qx+t*t*B.x,u*u*A.y+2*u*t*qy+t*t*B.y]);
+    const dx=2*u*(qx-A.x)+2*t*(B.x-qx),dy=2*u*(qy-A.y)+2*t*(B.y-qy),dl=Math.hypot(dx,dy)||1;nrm.push([-dy/dl,dx/dl]);}
+  const env=t=>Math.sin(2*Math.PI*t)**2; // zero at A, C, B
+  const line=off=>base.map(([x,y],i)=>{const t=i/N,o=off(t);return[x+nrm[i][0]*o,y+nrm[i][1]*o];});
+  const w0=wig(0);c.chaos=chaos;
+  if(!c.multi){c.lines=[line(t=>w0(t)*env(t)*amp)];c.hue=Math.floor(p(F,40)*360);c.lw=[1.5+p(F,41)*2.5+chaos];return true;}
+  // multi-string: always red, 3-19 lines close together
+  const n=pi(F,60,3,19),gap=3+p(F,61)*5,harmonic=p(F,62)<.5,mode=pi(F,63,1,4);
+  c.lines=[];c.lw=[];c.light=[];c.harmonic=harmonic;
+  for(let j=0;j<n;j++){const k=j-(n-1)/2;
+    let off;
+    if(harmonic){ // smooth standing-wave like spacing: lines swell and pinch together
+      off=t=>w0(t)*env(t)*amp+k*gap*Math.sin(Math.PI*t)*(1+.6*Math.sin(mode*TAU*t));}
+    else{ // chaotic: every line gets its own wiggle from the sensor data
+      const wj=wig(100+j*31);off=t=>(w0(t)*.5+wj(t)*(.6+chaos))*env(t)*(amp*.8+18)+k*gap*Math.sin(Math.PI*t);}
+    c.lines.push(line(off));c.lw.push(1.2+p(F,70+j)*1.8);c.light.push(55+Math.floor(p(F,90+j)*20));}
+  return true;
 }
 function drawCord(c){
-  ctx.beginPath();c.pts.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));
-  ctx.lineWidth=c.lw;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle=`hsl(${c.hue},85%,65%)`;ctx.stroke();
+  ctx.lineCap='round';ctx.lineJoin='round';
+  c.lines.forEach((pts,j)=>{ctx.beginPath();pts.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));
+    ctx.lineWidth=c.lw[j];ctx.strokeStyle=c.multi?`hsla(${358+(j%3)*2},90%,${c.light[j]}%,.9)`:`hsl(${c.hue},85%,65%)`;ctx.stroke();});
   ctx.fillStyle='rgba(255,255,255,.5)';ctx.beginPath();ctx.arc(c.cx,c.cy,3/view.z,0,TAU);ctx.fill();
 }
 
@@ -161,7 +178,7 @@ function resize(){const d=devicePixelRatio||1;cv.width=innerWidth*d;cv.height=in
 addEventListener('resize',resize);resize();
 const HINTS={make:'Press and hold anywhere. The shape changes while you hold.',move:'Drag a shape or a cord',
   pan:'Drag to move the canvas. Pinch or use − / + to zoom.',del:'Tap a shape or a cord to delete it'};
-function setHint(){hint.textContent=mode==='cord'?(selA==null?'Tap shape A':selB==null?'Tap shape B':'Press point C and slide – the cord goes through it'):HINTS[mode];}
+function setHint(){hint.textContent=(mode==='cord'||mode==='str')?(selA==null?'Tap shape A':selB==null?'Tap shape B':'Press point C and slide – the cord goes through it'):HINTS[mode];}
 document.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{mode=b.dataset.m;selA=selB=null;
   document.querySelectorAll('[data-m]').forEach(x=>x.classList.toggle('on',x===b));setHint();});
 document.getElementById('clear').onclick=()=>{shapes=[];cords=[];selA=selB=null;setHint();};
@@ -169,7 +186,7 @@ document.getElementById('zout').onclick=()=>zoomAt(1/1.4);
 document.getElementById('zin').onclick=()=>zoomAt(1.4);
 document.getElementById('zreset').onclick=()=>{view.x=view.y=0;view.z=1;};
 const hitShape=(x,y)=>[...shapes].reverse().find(s=>Math.hypot(s.x-x,s.y-y)<R);
-const hitCord=(x,y)=>[...cords].reverse().find(c=>c.pts.some(([px,py])=>Math.hypot(px-x,py-y)<18/view.z));
+const hitCord=(x,y)=>[...cords].reverse().find(c=>c.lines.flat().some(([px,py])=>Math.hypot(px-x,py-y)<18/view.z));
 const refreshCords=id=>cords=cords.filter(c=>{if(id!=null&&c.a!==id&&c.b!==id)return true;c.F=sensorVec();return buildCord(c);});
 
 const touches=new Map();let pinch=null;
@@ -180,10 +197,10 @@ cv.addEventListener('pointerdown',e=>{
   if(active)return; // ignore extra fingers in other modes
   const[x,y]=toW(e.clientX,e.clientY);
   if(mode==='make'){const s={id:nextId++,x,y,t0:performance.now(),t:0};s.F=shapeFeatures(x,y,0);buildShape(s);shapes.push(s);active={kind:'grow',s,pid:e.pointerId};}
-  else if(mode==='cord'){const s=hitShape(x,y);
+  else if(mode==='cord'||mode==='str'){const s=hitShape(x,y);
     if(selA==null){if(s)selA=s.id;}
     else if(selB==null){if(s&&s.id!==selA)selB=s.id;}
-    else{const c={a:selA,b:selB,cx:x,cy:y,F:sensorVec()};if(buildCord(c)){cords.push(c);active={kind:'cordC',c,pid:e.pointerId};}selA=selB=null;}
+    else{const c={a:selA,b:selB,cx:x,cy:y,F:sensorVec(),multi:mode==='str'};if(buildCord(c)){cords.push(c);active={kind:'cordC',c,pid:e.pointerId};}selA=selB=null;}
     setHint();}
   else if(mode==='move'){const s=hitShape(x,y);if(s)active={kind:'shape',s,ox:x-s.x,oy:y-s.y,pid:e.pointerId};
     else{const c=hitCord(x,y);if(c)active={kind:'cord',c,lx:x,ly:y,pid:e.pointerId};}}
@@ -218,5 +235,18 @@ function frame(){
   cords.forEach(drawCord);shapes.forEach(s=>drawShape(s,s.id===selA||s.id===selB));
   requestAnimationFrame(frame);
 }
-setHint();frame();
+// ---------- local save (this browser only) ----------
+const KEY='elgame.v1';
+function save(){try{localStorage.setItem(KEY,JSON.stringify({nextId,view,
+  shapes:shapes.map(s=>({id:s.id,x:s.x,y:s.y,t:s.t,F:s.F})),
+  cords:cords.map(c=>({a:c.a,b:c.b,cx:c.cx,cy:c.cy,F:c.F,multi:!!c.multi}))}));}catch(e){}}
+function load(){try{const d=JSON.parse(localStorage.getItem(KEY));if(!d)return;
+  nextId=d.nextId||1;Object.assign(view,d.view||{});
+  shapes=d.shapes.map(s=>{buildShape(s);return s;});
+  cords=d.cords.filter(c=>buildCord(c));}catch(e){}}
+for(const ev of['pointerup','pointercancel'])cv.addEventListener(ev,()=>setTimeout(save,0));
+cv.addEventListener('wheel',()=>setTimeout(save,300));
+document.getElementById('bar').addEventListener('click',()=>setTimeout(save,0));
+addEventListener('pagehide',save);
+load();setHint();frame();
 </script></body></html>
