@@ -1,0 +1,39 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Motion Sensor Check</title>
+<style>
+:root{--bg:#f4f6f8;--fg:#14202b;--card:#fff;--ok:#1a8a4a;--no:#b3402e;--mute:#6b7785}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1418;--fg:#e6edf3;--card:#1a2129;--ok:#4fd18a;--no:#ff7a66;--mute:#8b98a5}}
+body{margin:0;padding:16px;background:var(--bg);color:var(--fg);font:15px system-ui,sans-serif}
+h1{font-size:20px;margin:0 0 4px}p{color:var(--mute);margin:0 0 12px}
+button{font:inherit;padding:10px 16px;border-radius:8px;border:0;background:var(--fg);color:var(--bg);margin-bottom:12px}
+.s{background:var(--card);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+.n{font-weight:600;display:flex;justify-content:space-between}
+.st{font-size:13px}.ok{color:var(--ok)}.no{color:var(--no)}
+.v{font:13px ui-monospace,monospace;font-variant-numeric:tabular-nums;margin-top:4px;white-space:pre}
+</style></head><body>
+<h1>Motion Sensor Check</h1><p>Tap Start, then move the phone. Needs HTTPS.</p>
+<button id="go">Start</button><div id="list"></div>
+<script>
+const S=[["acc","Accelerometer (with gravity)","m/s²"],["lin","Linear acceleration (no gravity)","m/s²"],["gyro","Gyroscope (rotation rate)","°/s"],["ori","Orientation (alpha/beta/gamma)","°"],["abs","Absolute orientation / compass","°"],["mag","Magnetometer","µT"],["grav","Gravity sensor","m/s²"]];
+const list=document.getElementById('list'),el={};
+for(const[k,n]of S){const d=document.createElement('div');d.className='s';d.innerHTML=`<div class="n">${n}<span class="st">waiting</span></div><div class="v">–</div>`;list.append(d);el[k]=d}
+const f=x=>x==null?'  —  ':(+x).toFixed(2).padStart(7);
+function set(k,txt){const d=el[k];d.querySelector('.st').textContent='working';d.querySelector('.st').className='st ok';d.querySelector('.v').textContent=txt}
+function no(k,why){const s=el[k].querySelector('.st');if(s.textContent!=='working'){s.textContent=why;s.className='st no'}}
+function xyz(o){return o?`x ${f(o.x)}  y ${f(o.y)}  z ${f(o.z)}`:null}
+document.getElementById('go').onclick=async()=>{
+ try{if(DeviceMotionEvent.requestPermission)await DeviceMotionEvent.requestPermission();
+     if(DeviceOrientationEvent.requestPermission)await DeviceOrientationEvent.requestPermission();}catch(e){}
+ addEventListener('devicemotion',e=>{
+  const a=e.accelerationIncludingGravity,l=e.acceleration,r=e.rotationRate;
+  if(a&&a.x!=null)set('acc',xyz(a));if(l&&l.x!=null)set('lin',xyz(l));
+  if(r&&r.alpha!=null)set('gyro',`α ${f(r.alpha)}  β ${f(r.beta)}  γ ${f(r.gamma)}`)});
+ addEventListener('deviceorientation',e=>{if(e.alpha!=null||e.beta!=null)set('ori',`α ${f(e.alpha)}  β ${f(e.beta)}  γ ${f(e.gamma)}`);
+  if(e.webkitCompassHeading!=null)set('abs',`heading ${f(e.webkitCompassHeading)}`)});
+ addEventListener('deviceorientationabsolute',e=>{if(e.alpha!=null)set('abs',`heading ${f(360-e.alpha)}`)});
+ const gen=[['mag','Magnetometer'],['grav','GravitySensor']];
+ for(const[k,c]of gen){if(!window[c]){no(k,'not supported by browser');continue}
+  try{const s=new window[c]({frequency:20});s.onreading=()=>set(k,xyz(s));s.onerror=e=>no(k,e.error.name);s.start()}catch(e){no(k,e.name)}}
+ setTimeout(()=>S.forEach(([k])=>no(k,'no data')),3000);
+};
+</script></body></html>
