@@ -8,11 +8,13 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:14px sy
  padding:calc(6px + env(safe-area-inset-top,0px)) max(8px,env(safe-area-inset-right,0px)) 6px max(8px,env(safe-area-inset-left,0px));background:rgba(15,20,24,.85)}
 #bar a,#bar button{font:inherit;font-weight:600;padding:7px 10px;border-radius:8px;border:0;background:var(--card);color:var(--fg);text-decoration:none}
 #bar button.on{background:var(--fg);color:var(--bg)}
-#bar button[data-m=str]{background:#ffb3b3;color:#3a0a0a}
-#bar button[data-m=str].on{background:#ff5c5c;color:#fff}
 #bar button[data-m=del].on{background:var(--del);color:#1a0d0a}
 #bar .sep{width:1px;height:22px;background:#2d3742;margin:0 2px}
 #hint{position:fixed;left:0;right:0;bottom:0;padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px));color:var(--mute);text-align:center;pointer-events:none}
+#ask{position:fixed;left:50%;bottom:calc(48px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:3;background:var(--card);border:1px solid #2d3742;border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;align-items:center;box-shadow:0 8px 30px rgba(0,0,0,.5);width:min(320px,calc(100% - 32px));box-sizing:border-box}
+#ask .row{display:flex;gap:10px}
+#ask button{font:inherit;font-weight:600;padding:9px 22px;border-radius:8px;border:0;background:#2d3742;color:var(--fg)}
+#ask #yes{background:var(--del);color:#1a0d0a}
 canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 </style></head><body>
 <canvas id="c"></canvas>
@@ -20,17 +22,21 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
  <a href="./">←</a>
  <button data-m="make" class="on">Make</button>
  <button data-m="cord">Cords</button>
+ <button data-m="cordp">Cords+</button>
  <button data-m="str">Strings</button>
  <button data-m="move">Move</button>
+ <button data-m="harm">Harmonise</button>
  <button data-m="pan">Pan</button>
  <button data-m="del">Delete</button>
  <span class="sep"></span>
  <button id="zout" aria-label="Zoom out">−</button>
  <button id="zin" aria-label="Zoom in">+</button>
  <button id="zreset">1:1</button>
+ <button id="undo">Undo</button>
  <button id="clear">Clear</button>
 </div>
 <div id="hint"></div>
+<div id="ask" hidden><div id="askq"></div><div class="row"><button id="yes">Yes</button><button id="no">No</button></div></div>
 <script>
 // ---------- live sensor data ----------
 const L={acc:[0,0,0],lin:[0,0,0],gyro:[0,0,0],ori:[0,0,0],head:[0],mag:[0,0,0],grav:[0,0,0]};
@@ -126,7 +132,8 @@ function drawShape(s,sel){
     if(P.fill===2){ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--bg');ctx.fill();}
     ctx.stroke();}
   ctx.shadowBlur=0;
-  if(sel){ctx.lineWidth=2/view.z;ctx.setLineDash([5/view.z,4/view.z]);ctx.strokeStyle='#ffd84d';ctx.beginPath();ctx.arc(0,0,R+6,0,TAU);ctx.stroke();ctx.setLineDash([]);}
+  if(sel==='del'){const T=performance.now()/8;for(let k=0;k<6;k++){const h=(k*60+T)%360;ctx.strokeStyle=`hsl(${h},100%,65%)`;ctx.shadowColor=ctx.strokeStyle;ctx.shadowBlur=16;ctx.lineWidth=3/view.z;ctx.beginPath();ctx.arc(0,0,R+6,k/6*TAU,(k+1)/6*TAU);ctx.stroke();}ctx.shadowBlur=0;}
+  else if(sel){ctx.lineWidth=2/view.z;ctx.setLineDash([5/view.z,4/view.z]);ctx.strokeStyle='#ffd84d';ctx.beginPath();ctx.arc(0,0,R+6,0,TAU);ctx.stroke();ctx.setLineDash([]);}
   ctx.restore();
 }
 
@@ -137,10 +144,10 @@ function buildCord(c){
   const A=shapes.find(s=>s.id===c.a),B=shapes.find(s=>s.id===c.b);if(!A||!B)return false;
   const mx=(A.x+B.x)/2,my=(A.y+B.y)/2,ab=Math.hypot(B.x-A.x,B.y-A.y)||1;
   const chaos=Math.min(2.5,Math.hypot(c.cx-mx,c.cy-my)/ab*2);
-  const qx=2*c.cx-mx,qy=2*c.cy-my,F=c.F.concat([c.cx,c.cy]),N=200;
+  const qx=2*c.cx-mx,qy=2*c.cy-my,F=c.F.concat([c.cx,c.cy,c.ht||0]),N=200,hl=c.harm||0;
   const wig=(seed)=>{const W=[];for(let k=0;k<5;k++)W.push([2+k*2+Math.floor(p(F,seed+k)*5),(0.3+p(F,seed+10+k))/(k+1),p(F,seed+20+k)*TAU]);
     return t=>{let w=0;for(const[f,a,ph]of W)w+=a*Math.sin(f*t*TAU+ph);return w;};};
-  const amp=chaos*(14+p(F,30)*26),base=[],nrm=[];
+  const amp=chaos*(14+p(F,30)*26)/(1+hl),base=[],nrm=[];
   for(let i=0;i<=N;i++){const t=i/N,u=1-t;
     base.push([u*u*A.x+2*u*t*qx+t*t*B.x,u*u*A.y+2*u*t*qy+t*t*B.y]);
     const dx=2*u*(qx-A.x)+2*t*(B.x-qx),dy=2*u*(qy-A.y)+2*t*(B.y-qy),dl=Math.hypot(dx,dy)||1;nrm.push([-dy/dl,dx/dl]);}
@@ -149,21 +156,23 @@ function buildCord(c){
   const w0=wig(0);c.chaos=chaos;
   if(!c.multi){c.lines=[line(t=>w0(t)*env(t)*amp)];c.hue=Math.floor(p(F,40)*360);c.lw=[1.5+p(F,41)*2.5+chaos];return true;}
   // multi-string: always red, 3-19 lines close together
-  const n=pi(F,60,3,19),gap=3+p(F,61)*5,harmonic=p(F,62)<.5,mode=pi(F,63,1,4);
+  const n=pi(F,60,3,19),gap=3+p(F,61)*5,harmonic=hl>0||p(F,62)<.5,mode=pi(F,63,1,4);
   c.lines=[];c.lw=[];c.light=[];c.harmonic=harmonic;
   for(let j=0;j<n;j++){const k=j-(n-1)/2;
     let off;
     if(harmonic){ // smooth standing-wave like spacing: lines swell and pinch together
       off=t=>w0(t)*env(t)*amp+k*gap*Math.sin(Math.PI*t)*(1+.6*Math.sin(mode*TAU*t));}
     else{ // chaotic: every line gets its own wiggle from the sensor data
-      const wj=wig(100+j*31);off=t=>(w0(t)*.5+wj(t)*(.6+chaos))*env(t)*(amp*.8+18)+k*gap*Math.sin(Math.PI*t);}
+      const wj=wig(100+j*31);off=t=>(w0(t)*.5+wj(t)*(.6+chaos))*env(t)*(amp*.8+18/(1+hl))+k*gap*Math.sin(Math.PI*t);}
     c.lines.push(line(off));c.lw.push(1.2+p(F,70+j)*1.8);c.light.push(55+Math.floor(p(F,90+j)*20));}
   return true;
 }
-function drawCord(c){
-  ctx.lineCap='round';ctx.lineJoin='round';
+function drawCord(c,hl){
+  ctx.lineCap='round';ctx.lineJoin='round';const T=performance.now()/8;
   c.lines.forEach((pts,j)=>{ctx.beginPath();pts.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));
-    ctx.lineWidth=c.lw[j];ctx.strokeStyle=c.multi?`hsla(${358+(j%3)*2},90%,${c.light[j]}%,.9)`:`hsl(${c.hue},85%,65%)`;ctx.stroke();});
+    ctx.lineWidth=c.lw[j];ctx.strokeStyle=c.multi?`hsla(${358+(j%3)*2},90%,${c.light[j]}%,.9)`:`hsl(${c.hue},85%,65%)`;
+    if(hl){const h=(j*360/c.lines.length+T)%360;ctx.strokeStyle=`hsl(${h},100%,65%)`;ctx.shadowColor=`hsl(${h},100%,60%)`;ctx.shadowBlur=16;ctx.lineWidth=c.lw[j]+1.5;}
+    ctx.stroke();ctx.shadowBlur=0;});
   ctx.fillStyle='rgba(255,255,255,.5)';ctx.beginPath();ctx.arc(c.cx,c.cy,3/view.z,0,TAU);ctx.fill();
 }
 
@@ -177,11 +186,26 @@ function zoomAt(f,sx=innerWidth/2,sy=innerHeight/2){const nz=Math.min(4,Math.max
 function resize(){const d=devicePixelRatio||1;cv.width=innerWidth*d;cv.height=innerHeight*d;}
 addEventListener('resize',resize);resize();
 const HINTS={make:'Press and hold anywhere. The shape changes while you hold.',move:'Drag a shape or a cord',
-  pan:'Drag to move the canvas. Pinch or use − / + to zoom.',del:'Tap a shape or a cord to delete it'};
-function setHint(){hint.textContent=(mode==='cord'||mode==='str')?(selA==null?'Tap shape A':selB==null?'Tap shape B':'Press point C and slide – the cord goes through it'):HINTS[mode];}
-document.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{mode=b.dataset.m;selA=selB=null;
+  pan:'Drag to move the canvas. Pinch or use − / + to zoom.',del:'Tap a shape or a cord to delete it',harm:'Press a cord or string to harmonise it. Hold longer for a different shape.'};
+const linking=()=>mode==='cord'||mode==='cordp'||mode==='str';
+function setHint(){hint.textContent=linking()?(selA==null?'Tap shape A':selB==null?'Tap shape B':mode==='cordp'?'Each tap makes a new cord through that point (switch mode to stop)':'Press point C and slide – the cord goes through it'):HINTS[mode];}
+document.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{mode=b.dataset.m;selA=selB=null;cancelAsk();
   document.querySelectorAll('[data-m]').forEach(x=>x.classList.toggle('on',x===b));setHint();});
-document.getElementById('clear').onclick=()=>{shapes=[];cords=[];selA=selB=null;setHint();};
+document.getElementById('clear').onclick=()=>{if(!shapes.length&&!cords.length)return;remember();shapes=[];cords=[];selA=selB=null;cancelAsk();setHint();};
+// ---------- undo ----------
+const snap=()=>JSON.stringify({nextId,shapes:shapes.map(s=>({id:s.id,x:s.x,y:s.y,t:s.t,F:s.F})),
+  cords:cords.map(c=>({a:c.a,b:c.b,cx:c.cx,cy:c.cy,F:c.F,multi:!!c.multi,harm:c.harm||0,ht:c.ht||0}))});
+function restore(str){const d=JSON.parse(str);nextId=d.nextId||1;shapes=d.shapes.map(s=>{buildShape(s);return s;});cords=d.cords.filter(c=>buildCord(c));}
+let history=[];const remember=()=>{history.push(snap());if(history.length>60)history.shift();};
+document.getElementById('undo').onclick=()=>{if(!history.length||active)return;restore(history.pop());selA=selB=null;cancelAsk();setHint();};
+// ---------- delete confirmation ----------
+let pending=null;const ask=document.getElementById('ask');
+function cancelAsk(){pending=null;ask.hidden=true;}
+function askDelete(obj){pending=obj;document.getElementById('askq').textContent='Do you really want to remove this '+(obj.s?'shape':obj.c.multi?'string':'cord')+'?';ask.hidden=false;}
+document.getElementById('no').onclick=cancelAsk;
+document.getElementById('yes').onclick=()=>{if(!pending)return;remember();
+  if(pending.s){const s=pending.s;shapes=shapes.filter(q=>q!==s);cords=cords.filter(c=>c.a!==s.id&&c.b!==s.id);}
+  else cords=cords.filter(q=>q!==pending.c);cancelAsk();save();};
 document.getElementById('zout').onclick=()=>zoomAt(1/1.4);
 document.getElementById('zin').onclick=()=>zoomAt(1.4);
 document.getElementById('zreset').onclick=()=>{view.x=view.y=0;view.z=1;};
@@ -196,17 +220,18 @@ cv.addEventListener('pointerdown',e=>{
     else active={kind:'pan',lx:e.clientX,ly:e.clientY};return;}
   if(active)return; // ignore extra fingers in other modes
   const[x,y]=toW(e.clientX,e.clientY);
-  if(mode==='make'){const s={id:nextId++,x,y,t0:performance.now(),t:0};s.F=shapeFeatures(x,y,0);buildShape(s);shapes.push(s);active={kind:'grow',s,pid:e.pointerId};}
-  else if(mode==='cord'||mode==='str'){const s=hitShape(x,y);
+  if(mode==='make'){remember();const s={id:nextId++,x,y,t0:performance.now(),t:0};s.F=shapeFeatures(x,y,0);buildShape(s);shapes.push(s);active={kind:'grow',s,pid:e.pointerId};}
+  else if(linking()){const s=hitShape(x,y);
     if(selA==null){if(s)selA=s.id;}
     else if(selB==null){if(s&&s.id!==selA)selB=s.id;}
-    else{const c={a:selA,b:selB,cx:x,cy:y,F:sensorVec(),multi:mode==='str'};if(buildCord(c)){cords.push(c);active={kind:'cordC',c,pid:e.pointerId};}selA=selB=null;}
+    else{remember();const c={a:selA,b:selB,cx:x,cy:y,F:sensorVec(),multi:mode==='str'};if(buildCord(c)){cords.push(c);active={kind:'cordC',c,pid:e.pointerId};}
+      if(mode!=='cordp')selA=selB=null;}
     setHint();}
-  else if(mode==='move'){const s=hitShape(x,y);if(s)active={kind:'shape',s,ox:x-s.x,oy:y-s.y,pid:e.pointerId};
+  else if(mode==='move'){const s=hitShape(x,y);if(s||hitCord(x,y))remember();if(s)active={kind:'shape',s,ox:x-s.x,oy:y-s.y,pid:e.pointerId};
     else{const c=hitCord(x,y);if(c)active={kind:'cord',c,lx:x,ly:y,pid:e.pointerId};}}
   else if(mode==='del'){const s=hitShape(x,y);
-    if(s){shapes=shapes.filter(q=>q!==s);cords=cords.filter(c=>c.a!==s.id&&c.b!==s.id);}
-    else{const c=hitCord(x,y);if(c)cords=cords.filter(q=>q!==c);}}
+    if(s)askDelete({s});else{const c=hitCord(x,y);if(c)askDelete({c});else cancelAsk();}}
+  else if(mode==='harm'){const c=hitCord(x,y);if(c){remember();c.harm=Math.min(4,(c.harm||0)+1);active={kind:'harm',c,t0:performance.now(),pid:e.pointerId};}}
 });
 cv.addEventListener('pointermove',e=>{
   if(touches.has(e.pointerId))touches.set(e.pointerId,[e.clientX,e.clientY]);
@@ -228,18 +253,19 @@ cv.addEventListener('wheel',e=>{e.preventDefault();zoomAt(e.deltaY<0?1.1:1/1.1,e
 
 function frame(){
   if(active&&active.kind==='grow'){const s=active.s;s.t=(performance.now()-s.t0)/1000;s.F=shapeFeatures(s.x,s.y,s.t);buildShape(s);refreshCords(s.id);}
+  if(active&&active.kind==='harm'){const c=active.c;c.ht=(performance.now()-active.t0)/1000;c.F=sensorVec();buildCord(c);}
   if(active&&active.kind==='cordC'){active.c.F=sensorVec();buildCord(active.c);}
   const d=devicePixelRatio||1;
   ctx.setTransform(d,0,0,d,0,0);ctx.clearRect(0,0,innerWidth,innerHeight);
   ctx.setTransform(d*view.z,0,0,d*view.z,d*view.x,d*view.y);
-  cords.forEach(drawCord);shapes.forEach(s=>drawShape(s,s.id===selA||s.id===selB));
+  cords.forEach(c=>drawCord(c,pending&&pending.c===c));shapes.forEach(s=>drawShape(s,pending&&pending.s===s?'del':(s.id===selA||s.id===selB)));
   requestAnimationFrame(frame);
 }
 // ---------- local save (this browser only) ----------
 const KEY='elgame.v1';
 function save(){try{localStorage.setItem(KEY,JSON.stringify({nextId,view,
   shapes:shapes.map(s=>({id:s.id,x:s.x,y:s.y,t:s.t,F:s.F})),
-  cords:cords.map(c=>({a:c.a,b:c.b,cx:c.cx,cy:c.cy,F:c.F,multi:!!c.multi}))}));}catch(e){}}
+  cords:cords.map(c=>({a:c.a,b:c.b,cx:c.cx,cy:c.cy,F:c.F,multi:!!c.multi,harm:c.harm||0,ht:c.ht||0}))}));}catch(e){}}
 function load(){try{const d=JSON.parse(localStorage.getItem(KEY));if(!d)return;
   nextId=d.nextId||1;Object.assign(view,d.view||{});
   shapes=d.shapes.map(s=>{buildShape(s);return s;});
