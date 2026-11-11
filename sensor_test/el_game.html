@@ -36,7 +36,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
  <button id="clear">Clear</button>
 </div>
 <div id="hint"></div>
-<div id="ask" hidden><div id="askq"></div><div class="row"><button id="yes">Yes</button><button id="no">No</button></div></div>
+<div id="ask" hidden><div id="askq"></div><div class="row"><button id="yes">Yes</button><button id="no">No</button><button id="next" hidden>Next</button></div></div>
 <script>
 // ---------- live sensor data ----------
 const L={acc:[0,0,0],lin:[0,0,0],gyro:[0,0,0],ori:[0,0,0],head:[0],mag:[0,0,0],grav:[0,0,0]};
@@ -144,10 +144,10 @@ function buildCord(c){
   const A=shapes.find(s=>s.id===c.a),B=shapes.find(s=>s.id===c.b);if(!A||!B)return false;
   const mx=(A.x+B.x)/2,my=(A.y+B.y)/2,ab=Math.hypot(B.x-A.x,B.y-A.y)||1;
   const chaos=Math.min(2.5,Math.hypot(c.cx-mx,c.cy-my)/ab*2);
-  const qx=2*c.cx-mx,qy=2*c.cy-my,F=c.F.concat([c.cx,c.cy,c.ht||0]),N=200,hl=c.harm||0;
+  const qx=2*c.cx-mx,qy=2*c.cy-my,F=c.F.concat([c.cx,c.cy,c.ht||0]),N=200;
   const wig=(seed)=>{const W=[];for(let k=0;k<5;k++)W.push([2+k*2+Math.floor(p(F,seed+k)*5),(0.3+p(F,seed+10+k))/(k+1),p(F,seed+20+k)*TAU]);
     return t=>{let w=0;for(const[f,a,ph]of W)w+=a*Math.sin(f*t*TAU+ph);return w;};};
-  const amp=chaos*(14+p(F,30)*26)/(1+hl),base=[],nrm=[];
+  const amp=chaos*(14+p(F,30)*26),base=[],nrm=[];
   for(let i=0;i<=N;i++){const t=i/N,u=1-t;
     base.push([u*u*A.x+2*u*t*qx+t*t*B.x,u*u*A.y+2*u*t*qy+t*t*B.y]);
     const dx=2*u*(qx-A.x)+2*t*(B.x-qx),dy=2*u*(qy-A.y)+2*t*(B.y-qy),dl=Math.hypot(dx,dy)||1;nrm.push([-dy/dl,dx/dl]);}
@@ -156,14 +156,14 @@ function buildCord(c){
   const w0=wig(0);c.chaos=chaos;
   if(!c.multi){c.lines=[line(t=>w0(t)*env(t)*amp)];c.hue=Math.floor(p(F,40)*360);c.lw=[1.5+p(F,41)*2.5+chaos];return true;}
   // multi-string: always red, 3-19 lines close together
-  const n=pi(F,60,3,19),gap=3+p(F,61)*5,harmonic=hl>0||p(F,62)<.5,mode=pi(F,63,1,4);
+  const n=pi(F,60,3,19),gap=3+p(F,61)*5,harmonic=p(F,62)<.5,mode=pi(F,63,1,4);
   c.lines=[];c.lw=[];c.light=[];c.harmonic=harmonic;
   for(let j=0;j<n;j++){const k=j-(n-1)/2;
     let off;
     if(harmonic){ // smooth standing-wave like spacing: lines swell and pinch together
       off=t=>w0(t)*env(t)*amp+k*gap*Math.sin(Math.PI*t)*(1+.6*Math.sin(mode*TAU*t));}
     else{ // chaotic: every line gets its own wiggle from the sensor data
-      const wj=wig(100+j*31);off=t=>(w0(t)*.5+wj(t)*(.6+chaos))*env(t)*(amp*.8+18/(1+hl))+k*gap*Math.sin(Math.PI*t);}
+      const wj=wig(100+j*31);off=t=>(w0(t)*.5+wj(t)*(.6+chaos))*env(t)*(amp*.8+18)+k*gap*Math.sin(Math.PI*t);}
     c.lines.push(line(off));c.lw.push(1.2+p(F,70+j)*1.8);c.light.push(55+Math.floor(p(F,90+j)*20));}
   return true;
 }
@@ -186,7 +186,7 @@ function zoomAt(f,sx=innerWidth/2,sy=innerHeight/2){const nz=Math.min(4,Math.max
 function resize(){const d=devicePixelRatio||1;cv.width=innerWidth*d;cv.height=innerHeight*d;}
 addEventListener('resize',resize);resize();
 const HINTS={make:'Press and hold anywhere. The shape changes while you hold.',move:'Drag a shape or a cord',
-  pan:'Drag to move the canvas. Pinch or use − / + to zoom.',del:'Tap a shape or a cord to delete it',harm:'Press a cord or string to harmonise it. Hold longer for a different shape.'};
+  pan:'Drag to move the canvas. Pinch or use − / + to zoom.',del:'Tap a shape or a cord to delete it',harm:'Press a cord or string to reroll its look. It stays in place. Hold time changes the result.'};
 const linking=()=>mode==='cord'||mode==='cordp'||mode==='str';
 function setHint(){hint.textContent=linking()?(selA==null?'Tap shape A':selB==null?'Tap shape B':mode==='cordp'?'Each tap makes a new cord through that point (switch mode to stop)':'Press point C and slide – the cord goes through it'):HINTS[mode];}
 document.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{mode=b.dataset.m;selA=selB=null;cancelAsk();
@@ -194,18 +194,24 @@ document.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{mode=b.dataset.m
 document.getElementById('clear').onclick=()=>{if(!shapes.length&&!cords.length)return;remember();shapes=[];cords=[];selA=selB=null;cancelAsk();setHint();};
 // ---------- undo ----------
 const snap=()=>JSON.stringify({nextId,shapes:shapes.map(s=>({id:s.id,x:s.x,y:s.y,t:s.t,F:s.F})),
-  cords:cords.map(c=>({a:c.a,b:c.b,cx:c.cx,cy:c.cy,F:c.F,multi:!!c.multi,harm:c.harm||0,ht:c.ht||0}))});
+  cords:cords.map(c=>({a:c.a,b:c.b,cx:c.cx,cy:c.cy,F:c.F,multi:!!c.multi,ht:c.ht||0}))});
 function restore(str){const d=JSON.parse(str);nextId=d.nextId||1;shapes=d.shapes.map(s=>{buildShape(s);return s;});cords=d.cords.filter(c=>buildCord(c));}
 let history=[];const remember=()=>{history.push(snap());if(history.length>60)history.shift();};
 document.getElementById('undo').onclick=()=>{if(!history.length||active)return;restore(history.pop());selA=selB=null;cancelAsk();setHint();};
 // ---------- delete confirmation ----------
 let pending=null;const ask=document.getElementById('ask');
-function cancelAsk(){pending=null;ask.hidden=true;}
-function askDelete(obj){pending=obj;document.getElementById('askq').textContent='Do you really want to remove this '+(obj.s?'shape':obj.c.multi?'string':'cord')+'?';ask.hidden=false;}
-document.getElementById('no').onclick=cancelAsk;
-document.getElementById('yes').onclick=()=>{if(!pending)return;remember();
+function cancelAsk(){pending=null;cands=[];ask.hidden=true;}
+let cands=[],ci=0;
+function askDelete(list){cands=list;ci=0;showAsk();}
+function showAsk(){pending=cands[ci];const o=pending,n=cands.length;
+  document.getElementById('askq').textContent='Do you really want to remove this '+(o.s?'shape':o.c.multi?'string':'cord')+'?'+(n>1?` (${ci+1} of ${n} here)`:'');
+  document.getElementById('next').hidden=n<2;ask.hidden=false;}
+const tap=(id,fn)=>{const b=document.getElementById(id);b.addEventListener('pointerdown',e=>e.stopPropagation());b.onclick=e=>{e.stopPropagation();fn();};};
+tap('next',()=>{if(!cands.length)return;ci=(ci+1)%cands.length;showAsk();});
+tap('no',cancelAsk);
+tap('yes',()=>{if(!pending){cancelAsk();return;}remember();
   if(pending.s){const s=pending.s;shapes=shapes.filter(q=>q!==s);cords=cords.filter(c=>c.a!==s.id&&c.b!==s.id);}
-  else cords=cords.filter(q=>q!==pending.c);cancelAsk();save();};
+  else cords=cords.filter(q=>q!==pending.c);cancelAsk();save();});
 document.getElementById('zout').onclick=()=>zoomAt(1/1.4);
 document.getElementById('zin').onclick=()=>zoomAt(1.4);
 document.getElementById('zreset').onclick=()=>{view.x=view.y=0;view.z=1;};
@@ -230,8 +236,10 @@ cv.addEventListener('pointerdown',e=>{
   else if(mode==='move'){const s=hitShape(x,y);if(s||hitCord(x,y))remember();if(s)active={kind:'shape',s,ox:x-s.x,oy:y-s.y,pid:e.pointerId};
     else{const c=hitCord(x,y);if(c)active={kind:'cord',c,lx:x,ly:y,pid:e.pointerId};}}
   else if(mode==='del'){const s=hitShape(x,y);
-    if(s)askDelete({s});else{const c=hitCord(x,y);if(c)askDelete({c});else cancelAsk();}}
-  else if(mode==='harm'){const c=hitCord(x,y);if(c){remember();c.harm=Math.min(4,(c.harm||0)+1);active={kind:'harm',c,t0:performance.now(),pid:e.pointerId};}}
+    const list=[...shapes].reverse().filter(s=>Math.hypot(s.x-x,s.y-y)<R).map(s=>({s}))
+      .concat([...cords].reverse().filter(c=>c.lines.flat().some(([px,py])=>Math.hypot(px-x,py-y)<18/view.z)).map(c=>({c})));
+    if(list.length)askDelete(list);else cancelAsk();}
+  else if(mode==='harm'){const c=hitCord(x,y);if(c){remember();active={kind:'harm',c,t0:performance.now(),pid:e.pointerId};}}
 });
 cv.addEventListener('pointermove',e=>{
   if(touches.has(e.pointerId))touches.set(e.pointerId,[e.clientX,e.clientY]);
@@ -265,7 +273,7 @@ function frame(){
 const KEY='elgame.v1';
 function save(){try{localStorage.setItem(KEY,JSON.stringify({nextId,view,
   shapes:shapes.map(s=>({id:s.id,x:s.x,y:s.y,t:s.t,F:s.F})),
-  cords:cords.map(c=>({a:c.a,b:c.b,cx:c.cx,cy:c.cy,F:c.F,multi:!!c.multi,harm:c.harm||0,ht:c.ht||0}))}));}catch(e){}}
+  cords:cords.map(c=>({a:c.a,b:c.b,cx:c.cx,cy:c.cy,F:c.F,multi:!!c.multi,ht:c.ht||0}))}));}catch(e){}}
 function load(){try{const d=JSON.parse(localStorage.getItem(KEY));if(!d)return;
   nextId=d.nextId||1;Object.assign(view,d.view||{});
   shapes=d.shapes.map(s=>{buildShape(s);return s;});
