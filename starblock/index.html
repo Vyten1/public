@@ -264,12 +264,6 @@ body.down #downFx { display: grid; }
   <div class="card">
     <div class="eyebrow">Low Earth orbit · 15 missions + co-op</div>
     <h1>Starblock</h1>
-    <p>Fifteen missions above Earth, plus a co-op only one. Pick one, or play them all in a random order. Mine blocks, bridge gaps, repair turrets and keep the aliens off you. Every mission hides three secret caches under glowing amber rune stones, and has a bonus objective and up to three stars.</p>
-    <div class="ctrls">
-      <div><b>Phone</b>Left thumb: move. Right thumb: look. Big button: use tool (drag it to aim). Arrow: jump. Bottom bar: switch tool. To bridge, hold blocks, look down at the edge and tap.</div>
-      <div><b>Keyboard</b>Click to aim · WASD move · Space jump · 1 pickaxe · 2 space gun · 3 minigun · 4 blocks · 5 turret · 6 rockets · 7 freeze ray (once found) · hold mouse to use · co-op chat Z X C.</div>
-      <div><b>Abilities</b>Left edge buttons, or Q E R T G: dash, shield, EMP nova, stasis field, nano repair. Each recharges after use.</div>
-    </div>
     <div class="pick" id="pick">
       <label class="sel"><span>Mission</span><select id="lvlSel"><option value="-1">All 15 · random order</option></select></label>
       <div class="seg" id="diffSel" role="radiogroup" aria-label="Difficulty"><button data-d="0" role="radio">EASY</button><button data-d="1" role="radio">NORMAL</button><button data-d="2" role="radio">HARD</button><button data-d="3" role="radio">INSANE</button></div>
@@ -281,6 +275,12 @@ body.down #downFx { display: grid; }
         <input id="coopCode" inputmode="numeric" maxlength="2" placeholder="00" aria-label="Game code"><button id="joinBtn" class="cta ghost">JOIN</button></div>
       <label class="sel"><span>Co-op mission</span><select id="coopLvl"><option value="-1">Same as the mission picker above</option><optgroup label="Co-op only" id="coopOnly"></optgroup></select></label>
       <div id="coopMsg" role="status"></div>
+    </div>
+    <p>Fifteen missions above Earth, plus a co-op only one. Pick one, or play them all in a random order. Mine blocks, bridge gaps, repair turrets and keep the aliens off you. Every mission hides three secret caches under glowing amber rune stones, and has a bonus objective and up to three stars.</p>
+    <div class="ctrls">
+      <div><b>Phone</b>Left thumb: move. Right thumb: look. Big button: use tool (drag it to aim). Arrow: jump. Bottom bar: switch tool. To bridge, hold blocks, look down at the edge and tap.</div>
+      <div><b>Keyboard</b>Click to aim · WASD move · Space jump · 1 pickaxe · 2 space gun · 3 minigun · 4 blocks · 5 turret · 6 rockets · 7 freeze ray (once found) · hold mouse to use · co-op chat Z X C.</div>
+      <div><b>Abilities</b>Left edge buttons, or Q E R T G: dash, shield, EMP nova, stasis field, nano repair. Each recharges after use.</div>
     </div>
     <div class="hint" id="rotHint">Best in landscape. <span id="firstMission"></span></div>
   </div>
@@ -1940,12 +1940,28 @@ function podDown(i) {
   const n = podsLeft(); toast(n ? `Engine down! ${n} left` : 'All engines down! The mothership is falling!', 2.5);
   if (!n) { b.dead = true; b.fall = 0; }
 }
+function chaseTargets() {
+  const b = LS.boss; if (!b || b.dead) return [];
+  const out = b.pods.map((p, i) => p.hp > 0 ? { p: p.m.getWorldPosition(new V3()), r: 1.6, hit: (d) => podHit(i, d) } : null).filter(Boolean);
+  // the hull itself: hits anywhere on it damage the nearest engine at half strength
+  const c = b.g.position, hull = (d, end) => hullHit(d, end);
+  out.push({ p: c.clone(), r: 5.5, hit: hull });
+  for (let k = 0; k < 4; k++) { const a = k / 2 * Math.PI; out.push({ p: new V3(c.x + Math.cos(a) * 7, c.y, c.z + Math.sin(a) * 7), r: 2.4, hit: hull }); }
+  return out;
+}
+function hullHit(d, end) {
+  const b = LS.boss; if (!b || b.dead || b.hullT === clock) return; b.hullT = clock;
+  let bi = -1, bd = 1e9; b.pods.forEach((p, i) => { if (p.hp <= 0) return; const q = p.m.getWorldPosition(new V3()).distanceTo(end || b.g.position); if (q < bd) { bd = q; bi = i; } });
+  b.hullFlash = 0.1; if (bi >= 0) podHit(bi, d * 0.5);
+  if (clock - (LS.hullTip || -99) > 8) { LS.hullTip = clock; toast('Hull hit! Aim at the orange engine pods for full damage.', 2.2); }
+}
 function updChase(dt) {
   const b = LS.boss; if (!b) return;
   if (!isGuest() && !b.dead && state === 'play') b.t = Math.min(1, b.t + dt / 200);
   if (!b.dead) b.g.position.lerpVectors(CHASE_A, CHASE_B, b.t);
   else { b.fall += dt; b.g.position.y -= dt * (3 + b.fall * 4); b.g.rotation.z += dt * 0.4; if (Math.random() < dt * 12) burst(b.g.position.clone().add(new V3((Math.random() - 0.5) * 14, 0, (Math.random() - 0.5) * 14)), 0xff7a3a, 20, 6, 0); if (b.fall > 2.5 && !b.boomed) { b.boomed = true; for (let k = 0; k < 4; k++) burst(b.g.position, 0xffd166, 150, 14, 0); sfx.boom(); b.g.visible = false; if (!isGuest() && state === 'play') winAll(); } }
   b.body.rotation.y += dt * 0.3;
+  if (b.hullFlash > 0) { b.hullFlash -= dt; b.body.children[0].material.emissive.setHex(b.hullFlash > 0 ? 0xff5a6a : 0x000000); }
   for (const p of b.pods) if (p.flash > 0) { p.flash -= dt; p.m.material.emissive.setHex(p.flash > 0 ? 0xffffff : 0x6a2a00); }
   if (isGuest() || b.dead) return;
   b.dropT -= dt;
@@ -2037,7 +2053,7 @@ const LEVELS = [
     bonus: () => ['Grab both upgrade cores', LS.orbs && LS.orbs.every((o) => o.got) ? 1 : 0] },
   { name: 'Defend the lander', brief: 'The jump drive needs 2:30 to charge. Keep the aliens off your ship.', gen: genDefend, setup: setupDefend,
     update: updDefend, hud: hudDefend, target: () => ship.position, canWin: () => false, defend: true, dropMul: 0.55, maxAliens: 9, par: 190,
-    saucers: [[22, 11, 0.14], [27, 15, -0.12], [32, 9, 0.1]], sc: [0, 0, 0], tip: 'Repair the third turret. Pick an upgrade when the drive hits 33% and 66%.', sGate: 8,
+    saucers: [[22, 12, 0.14], [27, 16, -0.12], [32, 14, 0.1]], sc: [0, 0, 0], tip: 'Repair the third turret. Pick an upgrade when the drive hits 33% and 66%.', sGate: 8,
     mix: { biter: 45, spitter: 30, shield: 10, swarm: 5, boom: 10 },
     bonus: () => ['Keep the hull above 50%', LS.hull > 200 ? 2 : -1],
     netOut: () => [r2(LS.charge), Math.round(LS.hull), LS.upDone || 0, LS.hullMul || 1, LS.turretCd || 0.4],
@@ -2128,7 +2144,7 @@ const LEVELS = [
   { name: 'Mothership chase', brief: 'A giant saucer is crossing the sky. Destroy its four engine pods before it gets away.', gen: genChase, setup: setupChase, update: updChase, hud: hudChase, target: tgtChase, par: 200,
     saucers: [[22, 13, 0.14], [28, 16, -0.12]], sc: [0, 0, 0], mix: { biter: 40, spitter: 35, shield: 10, swarm: 15 }, tip: 'Long shots work: the gun reaches the pods. The minigun and rockets shred them faster.',
     items: () => [{ kind: 'rocket', p: ground(6.5, -5.5) }],
-    targets: () => LS.boss && !LS.boss.dead ? LS.boss.pods.map((p, i) => p.hp > 0 ? { p: p.m.getWorldPosition(new V3()), r: 1.4, hit: (d) => podHit(i, d) } : null).filter(Boolean) : [],
+    targets: chaseTargets,
     onSaucerDown: () => { LS.escorts = (LS.escorts || 0) + 1; },
     bonus: () => ['Shoot down 3 escort saucers', (LS.escorts || 0) >= 3 ? 1 : 0],
     netOut: () => { const b = LS.boss; return [r2(b.t), ...b.pods.map((p) => Math.max(0, Math.round(p.hp))), b.dead ? 1 : 0, LS.escorts || 0]; },
