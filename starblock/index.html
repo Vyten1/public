@@ -1943,7 +1943,16 @@ function setupRover() {
 function roverDmg(d) {
   if (isGuest()) return;
   LS.rhp -= d; if (Math.random() < 0.2) burst(LS.rover.c, 0xff8a5a, 5, 2);
-  if (LS.rhp <= 0) failMission('The rover was destroyed. Mission restarts.');
+  if (LS.rhp <= 0) { roverReset(); netOp(['L', 'rreset']); }
+}
+// truck destroyed: a new truck at the start and everyone back at the ship; built blocks stay
+function roverReset() {
+  const r = LS.rover; if (!r) return;
+  burst(r.c, 0xff7a3a, 60, 7, 1); sfx.boom();
+  r.c.x = -21; LS.rhp = 300; LS.wait = false; LS.lost = true;
+  for (const a of aliens) if (a.pos.distanceTo(r.c) < 12) a.hp = 0;
+  aliens = aliens.filter((a) => { if (a.hp <= 0) { scene.remove(a.mesh); return false; } return true; });
+  player.down = 0; respawn('The truck was destroyed! A new truck starts again. Your blocks stay.');
 }
 function updRover(dt) {
   const r = LS.rover; if (!r) return;
@@ -2439,11 +2448,12 @@ const LEVELS = [
     bonus: () => ['Grab 3 energy balls on the outside', cellsGot() >= 3 ? 1 : 0] },
   { name: 'Escort the rover', brief: 'A slow truck drives across the rock. Fill the holes in front of it (2 blocks wide), shoot the green alien web, and keep the aliens away.', gen: genRover, setup: setupRover, update: updRover, hud: hudRover, par: 200,
     target: () => LS.rover.c, saucers: [[24, 12, 0.12], [30, 15, -0.14]], sc: [0, 0, 0], mix: { biter: 40, spitter: 25, boom: 20, shield: 15 },
-    sky: { earth: [700, 820, -500], es: 0.4, hemi: [0x9fb4d6, 0x2a2230, 0.55] }, tip: 'Red aliens blow up and hurt the truck a lot. Shoot them early.',
+    sky: { earth: [700, 820, -500], es: 0.4, hemi: [0x9fb4d6, 0x2a2230, 0.55] }, tip: 'Aliens go for the truck. Keep them away and fill holes 2 blocks wide.',
     aiTarget: (a, dBest) => (dBest > 4 || a.kind === 'boom' || a.kind === 'brute') && LS.rover ? { p: LS.rover.c, reach: 2.2, hurt: (d) => roverDmg(d) } : null,
     boltHit: (p) => { const r = LS.rover; if (r && Math.abs(p.x - r.c.x) < r.hx + 0.2 && Math.abs(p.y - r.c.y) < r.hy + 0.2 && Math.abs(p.z - r.c.z) < r.hz + 0.2) { roverDmg(12); return true; } return false; },
     boomHit: (p) => { if (LS.rover && p.distanceTo(LS.rover.c) < 4) roverDmg(50); },
-    bonus: () => ['Truck health above 75% at the end', LS.rhp > 225 ? 2 : -1],
+    bonus: () => ['Truck health above 75% at the end', LS.lost ? -1 : LS.rhp > 225 ? 2 : -1],
+    onOp: (k) => { if (k === 'rreset') roverReset(); },
     netOut: () => [Math.round(LS.rhp), LS.wait ? 1 : 0], netIn: (X) => { if (Array.isArray(X) && X.every(fin)) { LS.rhp = X[0]; LS.wait = !!X[1]; } } },
   { name: 'Gravity flip station', brief: 'Every 20 seconds you fall up to the ceiling, then down again. Cover the holes in the floor and the ceiling.', gen: genGravity, setup: setupGravity, update: updGravity, par: 180,
     hud: () => ['Cross the gravity hall', `Gravity flips in ${Math.ceil(LS.fT)} s · holes in the floor and in the ceiling`], target: () => new V3(26.5, LS.g ? 10.5 : 1.5, 0.5),
@@ -2505,7 +2515,7 @@ const run = { order: [0, 1, 2, 3, 4, 5, 6], i: 0 };
 // difficulty scales how many aliens come and how fast; pickLv -1 = all solo missions in random order; pickCoop: co-op panel choice
 const DIFF = [{ n: 'Easy', m: 0.6 }, { n: 'Normal', m: 1 }, { n: 'Hard', m: 1.6 }, { n: 'Insane', m: 2.4 }];
 let diff = 1, pickLv = -1, pickCoop = -1;
-const VERSION = 'v2.2';
+const VERSION = 'v2.3';
 document.querySelectorAll('.ver').forEach((e) => { e.textContent = VERSION; });
 const cleanName = (n) => String(n || '').replace(/[^\p{L}\p{N} _.!?-]/gu, '').trim().slice(0, 12);
 let myName = ''; try { myName = cleanName(localStorage.getItem('starblock.name')); } catch (e) {}
@@ -3118,7 +3128,8 @@ function killAlien(a) {
 }
 
 function pickKind() {
-  const mx = L.mix || { biter: 45, spitter: 35, shield: 8, swarm: 6, boom: 6 };
+  const mx = Object.assign({}, L.mix || { biter: 45, spitter: 35, shield: 8, swarm: 6 });
+  delete mx.boom; // exploding aliens broke blocks (bridges): removed from every mission
   let r = Math.random() * Object.values(mx).reduce((s, w) => s + w, 0);
   for (const [k, w] of Object.entries(mx)) { r -= w; if (r <= 0) return k; }
   return 'biter';
