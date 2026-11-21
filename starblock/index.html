@@ -2515,7 +2515,7 @@ const run = { order: [0, 1, 2, 3, 4, 5, 6], i: 0 };
 // difficulty scales how many aliens come and how fast; pickLv -1 = all solo missions in random order; pickCoop: co-op panel choice
 const DIFF = [{ n: 'Easy', m: 0.6 }, { n: 'Normal', m: 1 }, { n: 'Hard', m: 1.6 }, { n: 'Insane', m: 2.4 }];
 let diff = 1, pickLv = -1, pickCoop = -1;
-const VERSION = 'v2.3';
+const VERSION = 'v2.4';
 document.querySelectorAll('.ver').forEach((e) => { e.textContent = VERSION; });
 const cleanName = (n) => String(n || '').replace(/[^\p{L}\p{N} _.!?-]/gu, '').trim().slice(0, 12);
 let myName = ''; try { myName = cleanName(localStorage.getItem('starblock.name')); } catch (e) {}
@@ -2970,6 +2970,16 @@ const GUN = { dmg: 1, spread: 0, color: 0x7dffbf, flash: true }, MINI = { dmg: 0
 const CARGUN = { dmg: 1.1, spread: 0.012, color: 0xff9f5a, flash: true };
 const SMG = { dmg: 0.6, spread: 0.025, color: 0xffd166, flash: false, smg: true };
 const FREEZE = { dmg: 0.25, spread: 0, color: 0x9ff3ff, flash: false, freeze: true };
+function shieldHole(a) { // place the hole from the alien id, so host and guests see the same spot
+  const h = a.mesh.userData.hole; if (!h) return;
+  const rnd = mulberry32((a.id + 1) * 7919), an = rnd() * Math.PI * 2, rad = 0.1 + rnd() * 0.3;
+  h.position.set(Math.cos(an) * rad, Math.sin(an) * rad, 0.662);
+}
+function shieldHoleHit(a, eye, dir) { // does the shot go through the hole?
+  const h = a.mesh.userData.hole; if (!h) return false;
+  h.getWorldPosition(qv); const d = qv.clone().sub(eye), t = d.dot(dir);
+  return t > 0 && d.addScaledVector(dir, -t).length() < 0.26;
+}
 function shieldBlocks(a, dir) { // shielded aliens block shots from the front
   if (a.kind !== 'shield') return false;
   const f = a.face || (fin(a.netYaw) ? new V3(Math.sin(a.netYaw), 0, Math.cos(a.netYaw)) : null);
@@ -3071,7 +3081,7 @@ function fireGun(eye, o) {
   let vh = raycast(eye, camDir, 70); if (vh && vh.t === 0) vh = raycast(eye, camDir, 70, vh); // eye inside a block (lift, tight spot): ignore that block
   const maxT = vh ? vh.t : 110;
   let best = null, bt = maxT;
-  for (const a of aliens) { const t = raySphere(eye, camDir, a.pos, a.kind === 'brute' ? 1 : 0.6); if (t >= 0 && t < bt) { bt = t; best = { a }; } }
+  for (const a of aliens) { const t = raySphere(eye, camDir, a.pos, a.kind === 'brute' ? 1 : a.kind === 'shield' ? 0.9 : 0.6); if (t >= 0 && t < bt) { bt = t; best = { a }; } }
   for (const s of saucers) { if (s.dead) continue; const t = raySphere(eye, camDir, s.mesh.position, 2.9); if (t >= 0 && t < bt) { bt = t; best = { s }; } }
   const q = LS.q;
   if (q && !q.dead) {
@@ -3085,8 +3095,9 @@ function fireGun(eye, o) {
   if (o.flash) { sfx.laser(); recoil = Math.max(recoil, 1); muzzleFlash.visible = true; } else if (o.smg) { sfx.mini(); recoil = Math.max(recoil, 0.5); muzzleFlash.visible = true; } else if (o.freeze) tone(2400, 1700, 0.08, 'sine', 0.025); else { sfx.mini(); recoil = Math.max(recoil, 0.35); }
   if (best && best.a) {
     const a = best.a;
-    if (shieldBlocks(a, camDir) && !o.big) { burst(end, 0x9fd8ff, 8, 3, 1); sfx.hit(); hitAlien(a, o.dmg * 0.2, camDir, 0); if (clock - (LS.shTip || -99) > 6) { LS.shTip = clock; toast('The shield soaks most of the damage. Hit it from behind or the side!', 2.5); } }
-    else { burst(end, o.freeze ? 0x9ff3ff : a.spitter ? 0x4fb3ff : 0x5dffa8, 10, 3, 2); sfx.hit(); if (o.freeze) freezeAlien(a); hitAlien(a, o.dmg, camDir, o.freeze ? 0 : 3 * o.dmg); }
+    if (shieldBlocks(a, camDir) && !o.big && !shieldHoleHit(a, eye, camDir)) { burst(end, 0x9fd8ff, 8, 3, 1); sfx.hit(); hitAlien(a, o.dmg * 0.2, camDir, 0); if (clock - (LS.shTip || -99) > 6) { LS.shTip = clock; toast('The shield soaks most of the damage. Shoot the small hole, or hit it from behind or the side!', 2.5); } }
+    else { if (a.kind === 'shield' && shieldBlocks(a, camDir)) { burst(end, 0xff8a3a, 14, 3, 1); if (clock - (LS.holeTip || -99) > 8) { LS.holeTip = clock; toast('Through the hole! Full damage.', 1.5); } }
+      burst(end, o.freeze ? 0x9ff3ff : a.spitter ? 0x4fb3ff : 0x5dffa8, 10, 3, 2); sfx.hit(); if (o.freeze) freezeAlien(a); hitAlien(a, o.dmg, camDir, o.freeze ? 0 : 3 * o.dmg); }
   } else if (best && best.s) { if (o.freeze) freezeSaucer(best.s); hitSaucer(best.s, o.dmg, end); } else if (best && best.q !== undefined) queenHit(best.q, o.dmg, end);
   else if (best && best.tg) best.tg.hit(o.dmg, end);
   else if (vh && vh.type === EGG) breakBlock(vh);
@@ -3146,6 +3157,12 @@ function spawnAlien(pos, kind, single) {
     a.hp = 4; u.mat.color.setHex(0x7a8cff); u.emi = 0x141f5a;
     const pl = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.07, 6), new THREE.MeshPhongMaterial({ color: 0xbfe4ff, emissive: 0x2a5d9a, transparent: true, opacity: 0.8, flatShading: true }));
     pl.rotation.x = Math.PI / 2; pl.position.z = 0.62; m.add(pl);
+    m.scale.setScalar(1.5);
+    // weak spot: a small hole in the shield, at a different place on every alien
+    const hole = new THREE.Group();
+    hole.add(new THREE.Mesh(new THREE.CircleGeometry(0.1, 14), new THREE.MeshBasicMaterial({ color: 0x05070d })));
+    const rim = new THREE.Mesh(new THREE.RingGeometry(0.1, 0.145, 18), new THREE.MeshBasicMaterial({ color: 0xff8a3a })); rim.position.z = 0.001; hole.add(rim);
+    u.hole = hole; u.holeRim = rim; m.add(hole); shieldHole(a);
   }
   if (kind === 'swarm') {
     m.scale.setScalar(0.5); a.hp = 1; u.mat.color.setHex(0xffa04a); u.emi = 0x5a2a00;
@@ -3168,7 +3185,7 @@ function guestAlien(a, dt, eye, chest) {
   a.t += dt;
   if (a.tgt) { a.pos.lerp(a.tgt, Math.min(1, dt * 10)); if (a.pos.distanceTo(a.tgt) > 5) a.pos.copy(a.tgt); }
   const u = a.mesh.userData; u.mat.color.setHex(a.netFrozen ? 0xbff6ff : u.col);
-  if (!a.netFrozen && !a.spitter && a.kind !== 'boom' && a.pos.distanceTo(chest) < (a.kind === 'brute' ? 1.8 : a.kind === 'swarm' ? 1.0 : 1.25)) hurt((a.kind === 'brute' ? 35 : a.kind === 'swarm' ? 6 : 20) * dt);
+  if (!a.netFrozen && !a.spitter && a.kind !== 'boom' && a.pos.distanceTo(chest) < (a.kind === 'brute' ? 1.8 : a.kind === 'swarm' ? 1.0 : a.kind === 'shield' ? 1.6 : 1.25)) hurt((a.kind === 'brute' ? 35 : a.kind === 'swarm' ? 6 : 20) * dt);
   a.mesh.position.set(a.pos.x, a.pos.y + Math.sin(a.t * 3) * 0.12, a.pos.z);
   if (a.kind === 'shield' && fin(a.netYaw)) a.mesh.rotation.set(0, a.netYaw, 0); else a.mesh.lookAt(eye);
   a.mesh.userData.tents.forEach((t, i) => t.rotation.z = Math.sin(a.t * 6 + i * 2) * 0.35);
@@ -3233,7 +3250,7 @@ function updateWorldEntities(dt, eye) {
       want.copy(to).multiplyScalar(3.6);
       if (dist < 2.4) { a.fuse += dt; au.mat.emissive.setHex(Math.sin(clock * 30) > 0 ? 0xffffff : au.emi); if (a.fuse > 0.9) { alienBlast(a); continue; } } else a.fuse = Math.max(0, a.fuse - dt);
     } else if (!a.spitter) {
-      const reach = tt === 'ship' ? 3 : tt && tt.reach ? tt.reach : a.kind === 'brute' ? 1.8 : a.kind === 'swarm' ? 1.0 : 1.25;
+      const reach = tt === 'ship' ? 3 : tt && tt.reach ? tt.reach : a.kind === 'brute' ? 1.8 : a.kind === 'swarm' ? 1.0 : a.kind === 'shield' ? 1.6 : 1.25;
       if (dist > reach - 0.25) want.copy(to).multiplyScalar(a.kind === 'brute' ? 2.2 : a.kind === 'swarm' ? 5.2 : a.kind === 'shield' ? 2.6 : 3.1);
       if (a.kind === 'swarm') want.y += Math.sin(a.t * 4) * 1.5;
       if (dist < reach) { const dmg = (a.kind === 'brute' ? 35 : a.kind === 'swarm' ? 6 : 20) * dt; if (tt === 'ship') shipDamage(dmg); else if (tt === 'crew') { /* their own page takes the damage */ } else if (tt && tt.hurt) tt.hurt(dmg); else if (tt && tt.head) damageTurret(tt, dmg); else if (!tt) hurt(dmg); }
@@ -3898,7 +3915,7 @@ function mirrorHost(hp, dt) {
       if (!Array.isArray(e) || !Number.isInteger(e[0]) || ![e[2], e[3], e[4]].every(fin)) continue;
       seen.add(e[0]);
       let a = aliens.find((q) => q.id === e[0]);
-      if (!a) { a = spawnAlien(new V3(e[2], e[3], e[4]), KIND[e[1]] || 'biter', true); a.id = e[0]; a.tgt = new V3(); a.emerge = 0; }
+      if (!a) { a = spawnAlien(new V3(e[2], e[3], e[4]), KIND[e[1]] || 'biter', true); a.id = e[0]; a.tgt = new V3(); a.emerge = 0; shieldHole(a); }
       a.tgt.set(e[2], e[3], e[4]); a.netHp = e[5]; a.netFrozen = e[6] ? 1 : 0; a.netYaw = e[7];
     }
     for (const a of aliens) if (!seen.has(a.id)) {
