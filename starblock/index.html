@@ -2698,7 +2698,7 @@ function fireGun(eye, o) {
   if (o.flash) { sfx.laser(); recoil = Math.max(recoil, 1); muzzleFlash.visible = true; } else if (o.freeze) tone(2400, 1700, 0.08, 'sine', 0.025); else { sfx.mini(); recoil = Math.max(recoil, 0.35); }
   if (best && best.a) {
     const a = best.a;
-    if (shieldBlocks(a, camDir) && !o.big) { burst(end, 0x9fd8ff, 8, 3, 1); sfx.hit(); if (clock - (LS.shTip || -99) > 6) { LS.shTip = clock; toast('Its shield blocks shots from the front. Hit it from behind or the side!', 2.5); } }
+    if (shieldBlocks(a, camDir) && !o.big) { burst(end, 0x9fd8ff, 8, 3, 1); sfx.hit(); hitAlien(a, o.dmg * 0.2, camDir, 0); if (clock - (LS.shTip || -99) > 6) { LS.shTip = clock; toast('The shield soaks most of the damage. Hit it from behind or the side!', 2.5); } }
     else { burst(end, o.freeze ? 0x9ff3ff : a.spitter ? 0x4fb3ff : 0x5dffa8, 10, 3, 2); sfx.hit(); if (o.freeze) freezeAlien(a); hitAlien(a, o.dmg, camDir, o.freeze ? 0 : 3 * o.dmg); }
   } else if (best && best.s) hitSaucer(best.s, o.dmg, end); else if (best && best.q !== undefined) queenHit(best.q, o.dmg, end);
   else if (best && best.tg) best.tg.hit(o.dmg, end);
