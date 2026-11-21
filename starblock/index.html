@@ -2066,7 +2066,7 @@ const LEVELS = [
     },
     onOp: (k, a) => { if (k === 'up' && Number.isInteger(a[0]) && Number.isInteger(a[1])) defUp(a[0], a[1], false); else if (k === 'final') toast('FINAL WAVE! Hold them off!', 3); } },
   { name: 'Derelict station', brief: 'No air, no power. Restart the generators, find three keycards, open the vault. Stay out of the drone’s sight.', gen: genStation,
-    setup: () => { setupStation(); stationSetupExtra(); }, update: updStationAll, hud: hudStation, target: tgtStation, o2: true, saucers: [], sc: [0, 0, 0], dark: true, par: 330,
+    setup: () => { setupStation(); stationSetupExtra(); }, update: updStationAll, hud: hudStation, target: tgtStation, o2: true, saucers: [], sc: [0, 0, 0], dark: true, aura: true, par: 330,
     tip: 'Green-cross stations refill oxygen. Yellow-bolt generators restart with the pickaxe.',
     mix: { biter: 55, spitter: 25, shield: 10, swarm: 10, boom: 0 },
     items: () => [{ kind: 'charge', p: new V3(-8.5, 1.6, 0.5) }],
@@ -2675,7 +2675,9 @@ function updateItems(dt) {
 const cellsGot = () => (LS.items || []).filter((q) => q.kind === 'cell' && q.got).length;
 // headlamp for dark missions
 const lamp = new THREE.SpotLight(0xe8f4ff, 0, 30, 0.62, 0.45, 1.1); camera.add(lamp); lamp.position.set(0, 0, 0); lamp.target.position.set(0, 0, -1); camera.add(lamp.target); scene.add(camera);
-function setDark(on) { lamp.intensity = on ? 2.2 : 0; LS.dark = on; if (on) { hemi.intensity = 0.09; sun.intensity = 0.06; } else applySky(); }
+// soft glow around the player in missions that ask for it (about 4 blocks)
+const aura = new THREE.PointLight(0xdfeaff, 0, 5.5, 1.2); camera.add(aura); aura.position.set(0, -0.3, 0);
+function setDark(on) { lamp.intensity = on ? 2.2 : 0; aura.intensity = on && L.aura ? 1.4 : 0; LS.dark = on; if (on) { hemi.intensity = 0.09; sun.intensity = 0.06; } else applySky(); }
 const shotDir = new V3();
 function fireGun(eye, o) {
   const camDir = shotDir.copy(camDirW);
