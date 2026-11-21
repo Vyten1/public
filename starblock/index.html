@@ -2111,7 +2111,7 @@ const LEVELS = [
     bonus: () => ['Mine all 5 glowing comet shards', cellsLeft(LS.shards, SHARD) === 0 ? 1 : 0],
     netOut: () => [Math.round(LS.time)], netIn: (X) => { if (Array.isArray(X) && fin(X[0]) && Math.abs(LS.time - X[0]) > 1.5) LS.time = X[0]; } },
   { name: 'Hive tunnels', brief: 'Go down into an infested asteroid. Burn the egg sacs before they hatch, then get out.', gen: genHive, setup: setupHive, update: updHive, hud: hudHive, target: tgtHive, par: 300,
-    saucers: [], sc: [0, 0, 0], dark: true, mix: { biter: 45, swarm: 30, shield: 10, boom: 15 }, tip: 'Your helmet light is on. A rocket launcher waits in the central chamber.',
+    saucers: [], sc: [0, 0, 0], dark: true, aura: true, mix: { biter: 45, swarm: 30, shield: 10, boom: 15 }, tip: 'Your helmet light is on. A rocket launcher waits in the central chamber.',
     items: () => { let y = -1; while (!get(0, y - 1, 0) && y > -9) y--; return [{ kind: 'rocket', p: new V3(0.5, y + 0.9, 0.5) }]; },
     bonus: () => ['Burn every egg sac (none hatch)', LS.hatched > 0 ? -1 : cellsLeft(LS.eggCells, EGG) === 0 ? 1 : 0],
     netOut: () => [LS.hatched], netIn: (X) => { if (Array.isArray(X) && Number.isInteger(X[0])) LS.hatched = X[0]; },
