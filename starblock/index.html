@@ -24,6 +24,11 @@
   color-scheme: dark;
 }
 [hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+#hud, .overlay .card { zoom: var(--uiz, 1); }
+#nameIn { font: 600 14px var(--font-hud); color: var(--text); background: rgba(3,8,20,.6); border: 2px solid var(--panel-line); border-radius: 6px; padding: 8px 10px; width: 150px; text-transform: none; letter-spacing: .04em; }
+#nameIn:focus { outline: none; border-color: var(--green); }
+.ver { opacity: .8; }
 html, body { height: 100%; margin: 0; overflow: hidden; background: var(--void); color: var(--text); }
 body {
   font-family: var(--font-hud);
@@ -35,9 +40,11 @@ body {
 #hud { position: fixed; inset: 0; pointer-events: none; }
 
 /* top bar */
+#pauseBtn { position: absolute; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 2px); transform: translateX(-50%); pointer-events: auto; z-index: 5;
+  font: 700 12px var(--font-hud); letter-spacing: .12em; padding: 3px 14px; border-radius: 0 0 8px 8px; border: 1px solid var(--panel-line); border-top: 0; background: var(--panel); color: var(--text); cursor: pointer; }
 #top {
   position: absolute; left: 0; right: 0; top: 0;
-  padding: calc(env(safe-area-inset-top, 0px) + 10px) max(14px, env(safe-area-inset-right, 0px)) 0 max(14px, env(safe-area-inset-left, 0px));
+  padding: calc(env(safe-area-inset-top, 0px) + 26px) max(14px, env(safe-area-inset-right, 0px)) 0 max(14px, env(safe-area-inset-left, 0px));
   display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
 }
 .chip {
@@ -50,7 +57,7 @@ body {
 #hpbar { height: 6px; margin-top: 4px; background: rgba(255,255,255,0.12); border-radius: 3px; overflow: hidden; }
 #o2wrap .bar { height: 6px; margin-top: 4px; background: rgba(255,255,255,0.12); border-radius: 3px; overflow: hidden; }
 #o2fill { height: 100%; width: 100%; background: linear-gradient(90deg, #9fd8ff, #e4f3ff); }
-#banner { position: absolute; left: 50%; top: 16%; transform: translateX(-50%); text-align: center; opacity: 0; transition: opacity .6s; width: min(86vw, 560px); text-shadow: 0 0 10px rgba(0,0,0,.95); }
+#banner { position: absolute; left: 50%; top: 27%; transform: translateX(-50%); text-align: center; opacity: 0; transition: opacity .6s; width: min(86vw, 560px); text-shadow: 0 0 10px rgba(0,0,0,.95); }
 #banner.show { opacity: 1; }
 #bnEye { font-size: 11px; letter-spacing: .3em; color: var(--blue); text-transform: uppercase; }
 #bnName { font-size: 30px; font-weight: 700; line-height: 1.1; color: var(--green); }
@@ -207,10 +214,11 @@ body.down #downFx { display: grid; }
 <canvas id="c"></canvas>
 <div id="touch"></div>
 <div id="hud" hidden>
+  <button id="pauseBtn" aria-label="Pause">II PAUSE</button>
   <div id="top">
-    <div id="suit" class="chip"><div class="lbl">Suit integrity</div><div id="hpbar"><div id="hpfill"></div></div><div id="o2wrap" hidden><div class="lbl" style="margin-top:5px">Oxygen</div><div class="bar o2"><div id="o2fill"></div></div></div></div>
+    <div id="suit" class="chip"><div class="lbl">Health</div><div id="hpbar"><div id="hpfill"></div></div><div id="o2wrap" hidden><div class="lbl" style="margin-top:5px">Air</div><div class="bar o2"><div id="o2fill"></div></div></div></div>
     <div id="objective" class="chip"><b id="objMain">Reach the artifact</b><span id="objSub">Mine rock · build a bridge</span><span id="objBonus"></span></div>
-    <div id="stats" class="chip">Aliens <b id="kills">0</b><br>Time <b id="time">0:00</b><br>Secrets <b id="secrets">0/3</b></div>
+    <div id="stats" class="chip">Aliens <b id="kills">0</b><br>Time <b id="time">0:00</b><br>Hidden <b id="secrets">0/3</b></div>
   </div>
   <div id="carry" hidden>◆ ARTIFACT SECURED</div>
   <div id="marker"><div class="gem"></div><div id="mdist">0 m</div></div>
@@ -245,7 +253,7 @@ body.down #downFx { display: grid; }
       <svg viewBox="0 0 24 24"><path d="M2 9h12v6H2z" fill="#dbe8f5"></path><circle cx="17" cy="12" r="3.2" fill="#9ff3ff"></circle><path d="M20 12h3M19.5 9.5l2-2M19.5 14.5l2 2" stroke="#e4f3ff" stroke-width="1.5"></path><path d="M5 15h3l-1 5H5z" fill="#2d6fb8"></path></svg></button>
   </div>
   <div id="chat" hidden><button data-m="0">HELP!</button><button data-m="1">HERE</button><button data-m="2">FOLLOW ME</button></div>
-  <div id="upg" hidden><div class="lbl">Upgrade the defence · first tap wins</div><div class="row"><button data-u="0">LANDER SHIELD</button><button data-u="1">FAST TURRETS</button><button data-u="2">+15 BLOCKS</button></div></div>
+  <div id="upg" hidden><div class="lbl">Pick an upgrade · first tap wins</div><div class="row"><button data-u="0">LANDER SHIELD</button><button data-u="1">FAST TURRETS</button><button data-u="2">+15 BLOCKS</button></div></div>
   <div id="abil">
     <button class="ab ready" data-ab="0" aria-label="Thruster dash"><svg viewBox="0 0 24 24"><path d="M3 12h7M2 8h5M2 16h5" stroke="#9fd8ff" stroke-width="2" stroke-linecap="round"/><path d="M10 6l11 6-11 6 3-6z" fill="#4fb3ff"/></svg><span class="t"></span><span class="key">Q</span></button>
     <button class="ab ready" data-ab="1" aria-label="Energy shield"><svg viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z" fill="#2d6fb8"/><path d="M12 5l5 2v4c0 3.4-2.2 6.2-5 7.6z" fill="#9fd8ff"/></svg><span class="t"></span><span class="key">E</span></button>
@@ -257,32 +265,44 @@ body.down #downFx { display: grid; }
   <div id="toast" class="chip"></div>
   <div id="crew" class="chip" hidden></div>
 </div>
-<div id="shieldFx"></div><div id="stasisFx"></div><div id="stormFx"></div><div id="downFx"><b>DOWN</b><span>A crewmate can revive you: they stand next to you</span></div>
+<div id="shieldFx"></div><div id="stasisFx"></div><div id="stormFx"></div><div id="downFx"><b>DOWN</b><span>A friend can save you: they stand next to you</span></div>
 <div id="vignette"></div>
 
 <div id="menu" class="overlay">
   <div class="card">
-    <div class="eyebrow">Low Earth orbit · 15 missions + co-op</div>
+    <div class="eyebrow">Space missions · <span class="ver"></span></div>
     <h1>Starblock</h1>
+    <label class="sel"><span>Your name</span><input id="nameIn" maxlength="12" placeholder="Pilot" autocomplete="off" spellcheck="false" aria-label="Your name"></label>
     <div class="pick" id="pick">
-      <label class="sel"><span>Mission</span><select id="lvlSel"><option value="-1">All 15 · random order</option></select></label>
+      <label class="sel"><span>First mission</span><select id="lvlSel"><option value="-1">Random</option></select></label>
       <div class="seg" id="diffSel" role="radiogroup" aria-label="Difficulty"><button data-d="0" role="radio">EASY</button><button data-d="1" role="radio">NORMAL</button><button data-d="2" role="radio">HARD</button><button data-d="3" role="radio">INSANE</button></div>
     </div>
-    <div class="row"><button id="start" class="cta">LAUNCH</button><button id="coopBtn" class="cta ghost">CO-OP</button></div>
+    <div class="row"><button id="start" class="cta">START</button><button id="coopBtn" class="cta ghost">CO-OP</button></div>
     <div id="coop" hidden>
-      <div class="hint">Co-op: everyone plays the host's mission and difficulty. One phone hosts, the others join with the two-digit code.</div>
+      <div class="hint">Play together. One phone is the host. The others type the host's 2-digit code and join.</div>
       <div class="row"><button id="hostBtn" class="cta">HOST</button><span class="hint">or</span>
         <input id="coopCode" inputmode="numeric" maxlength="2" placeholder="00" aria-label="Game code"><button id="joinBtn" class="cta ghost">JOIN</button></div>
-      <label class="sel"><span>Co-op mission</span><select id="coopLvl"><option value="-1">Same as the mission picker above</option><optgroup label="Co-op only" id="coopOnly"></optgroup></select></label>
+      <label class="sel"><span>Co-op mission</span><select id="coopLvl"><option value="-1">Same as above</option><optgroup label="Co-op only" id="coopOnly"></optgroup></select></label>
       <div id="coopMsg" role="status"></div>
     </div>
-    <p>Fifteen missions above Earth, plus a co-op only one. Pick one, or play them all in a random order. Mine blocks, bridge gaps, repair turrets and keep the aliens off you. Every mission hides three secret caches under glowing amber rune stones, and has a bonus objective and up to three stars.</p>
+    <p>You pick the first mission. After that the missions come in a random order. Dig blocks, build bridges, fix turrets and shoot the aliens. Every mission has 3 hidden boxes under orange glowing stones, a bonus goal, and up to 3 stars.</p>
     <div class="ctrls">
-      <div><b>Phone</b>Left thumb: move. Right thumb: look. Big button: use tool (drag it to aim). Arrow: jump. Bottom bar: switch tool. To bridge, hold blocks, look down at the edge and tap.</div>
-      <div><b>Keyboard</b>Click to aim · WASD move · Space jump · 1 pickaxe · 2 space gun · 3 minigun · 4 blocks · 5 turret · 6 rockets · 7 freeze ray (once found) · hold mouse to use · co-op chat Z X C.</div>
-      <div><b>Abilities</b>Left edge buttons, or Q E R T G: dash, shield, EMP nova, stasis field, nano repair. Each recharges after use.</div>
+      <div><b>Phone</b>Left thumb: walk. Right thumb: look around. Big button: use your tool (drag it to aim). Arrow: jump. Bottom bar: change tool. To build a bridge: pick blocks, look down at the edge and tap.</div>
+      <div><b>Keyboard</b>Click to aim · WASD walk · Space jump · 1 pickaxe · 2 gun · 3 minigun · 4 blocks · 5 turret · 6 rockets · 7 freeze gun · hold mouse to use · P pause · co-op chat Z X C.</div>
+      <div><b>Powers</b>Buttons on the left, or Q E R T G: dash, shield, shock wave, slow time, heal. Each one needs time to load again.</div>
     </div>
-    <div class="hint" id="rotHint">Best in landscape. <span id="firstMission"></span></div>
+    <div class="hint" id="rotHint">Best with the phone sideways. <span id="firstMission"></span></div>
+  </div>
+</div>
+
+<div id="pause" class="overlay" hidden>
+  <div class="card">
+    <div class="eyebrow">Paused · <span class="ver"></span></div>
+    <h1>Pause</h1>
+    <div class="hint" id="pauseNote"></div>
+    <div class="row"><button id="resumeBtn" class="cta">GO ON</button></div>
+    <label class="sel"><span>Change mission</span><select id="pauseLvl"></select></label>
+    <div class="row"><button id="pauseGo" class="cta ghost">PLAY THIS MISSION</button></div>
   </div>
 </div>
 
@@ -802,6 +822,21 @@ function makeTurretModel() {
   g.userData = { head, headMat, lamp };
   return g;
 }
+function makeAlienTurretModel() { // big organic alien gun pod (mothership defences)
+  const g = new THREE.Group(), skin = phong(0x2fbf5a, { emissive: 0x0c3a18, shininess: 30 }), dark = phong(0x1a6a34, { shininess: 20 });
+  const base = new THREE.Mesh(new THREE.SphereGeometry(0.62, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), dark); g.add(base);
+  for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2, l = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.8, 6), skin); l.position.set(Math.cos(a) * 0.55, 0.12, Math.sin(a) * 0.55); l.rotation.set(Math.sin(a) * 1.2, 0, -Math.cos(a) * 1.2); g.add(l); }
+  const stalk = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.24, 0.9, 8), skin); stalk.position.y = 0.75; g.add(stalk);
+  const head = new THREE.Group(); head.rotation.order = 'YXZ'; head.position.y = 1.4; g.add(head);
+  const headMat = phong(0x46e07a, { emissive: 0x0f5a2a, shininess: 80 });
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.42, 14, 10), headMat); bulb.scale.set(1, 0.85, 1.25); head.add(bulb);
+  for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2, sp = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.32, 5), dark); sp.position.set(Math.cos(a) * 0.36, Math.sin(a) * 0.3, -0.15); sp.rotation.set(Math.sin(a) * 1.4, 0, -Math.cos(a) * 1.4); head.add(sp); }
+  const mouth = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.17, 0.4, 8, 1, true), dark); mouth.rotation.x = Math.PI / 2; mouth.position.z = 0.55; head.add(mouth);
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 8), basic(0xb8ff3a)); lamp.position.set(0, 0.22, 0.32); head.add(lamp);
+  g.scale.setScalar(1.25);
+  g.userData = { head, headMat, lamp, alien: true };
+  return g;
+}
 function makeMinigun() {
   const g = new THREE.Group();
   g.add(new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 0.34), phong(0x1d3a5e)));
@@ -1025,11 +1060,11 @@ let hasMinigun = false, spin = 0, built = 0;
 let shake = 0, hasRocket = false, hasFreeze = false, hasCharge = false, charge = 0, prevAct = false, rockets = [], revivePrompt = '';
 // abilities: dash, shield, EMP nova, stasis, nano repair
 const ABIL = [
-  { name: 'Thruster dash', cd: 5, dur: 0 },
-  { name: 'Energy shield', cd: 16, dur: 5 },
-  { name: 'EMP nova', cd: 20, dur: 0 },
-  { name: 'Stasis field', cd: 24, dur: 6 },
-  { name: 'Nano repair', cd: 30, dur: 0 },
+  { name: 'Dash', cd: 5, dur: 0 },
+  { name: 'Shield', cd: 16, dur: 5 },
+  { name: 'Shock wave', cd: 20, dur: 0 },
+  { name: 'Slow time', cd: 24, dur: 6 },
+  { name: 'Heal', cd: 30, dur: 0 },
 ];
 const abCd = [0, 0, 0, 0, 0], abOn = [0, 0, 0, 0, 0];
 let abUsed = 0, dashAt = -9;
@@ -1085,15 +1120,15 @@ function mothershipBreak(hit) {
     if (!g.alive || get(g.x, g.y, g.z) === GEN || get(g.x, g.y + 1, g.z) === GEN) continue;
     g.alive = false; burst(g.v, 0x5dffa8, 60, 6, 0); sfx.boom();
     const left = LS.gens.filter((q) => q.alive).length;
-    if (left) toast(`Shield generator down · ${left} left`);
-    else { box(-1, 3, -1, 1, 3, 1, AIR); meshDirty = true; toast('Shield down! The core hatch is open.', 3.5); }
+    if (left) toast(`Shield tower broken · ${left} left`);
+    else { box(-1, 3, -1, 1, 3, 1, AIR); meshDirty = true; toast('Shield is off! The door to the core is open.', 3.5); }
   }
 }
 function hudMothership() {
-  if (LS.sd !== undefined) return ['ESCAPE! Self-destruct', `${Math.ceil(LS.sd)} s · get back to your ship`];
+  if (LS.sd !== undefined) return ['RUN! The ship will blow up', `${Math.ceil(LS.sd)} s · go back to your ship`];
   const n = LS.gens.filter((g) => g.alive).length;
-  if (n) return ['Destroy the shield generators', `${n} of 3 left · mine the glowing pylons`];
-  if (!carrying) return ['Drop into the core', 'The jump pad down there launches you back out'];
+  if (n) return ['Break the shield towers', `${n} of 3 left · dig the glowing towers`];
+  if (!carrying) return ['Jump into the core', 'The pad down there throws you back up'];
 }
 function tgtMothership() { const g = LS.gens.filter((q) => q.alive); return g.length ? nearest(g.map((q) => q.v)) : null; }
 
@@ -1186,7 +1221,7 @@ function setupField() {
 
 function updField(dt) {
   const s = LS.sw;
-  if (s && Math.hypot(player.pos.x - s[0] - 0.5, player.pos.z - s[2] - 0.5) < 2.5 && !LS.swTip) { LS.swTip = true; toast('Yellow switch: the middle shuttle only moves while something holds it down. Stand on it, or put a block on it!', 4); }
+  if (s && Math.hypot(player.pos.x - s[0] - 0.5, player.pos.z - s[2] - 0.5) < 2.5 && !LS.swTip) { LS.swTip = true; toast('Yellow button: the middle platform only moves when something is on the button. Stand on it or put a block on it!', 4); }
   for (const o of LS.orbs) {
     if (o.got) continue;
     o.m.rotation.y += dt * 2; o.m.position.y = o.p.y + Math.sin(clock * 2.5) * 0.15;
@@ -1199,7 +1234,7 @@ function updField(dt) {
 }
 function hudField() {
   const n = LS.orbs.filter((o) => !o.got).length;
-  return ['Cross the field to your ship', 'Ride the shuttle platforms' + (n ? ` · ${n} upgrade core${n > 1 ? 's' : ''} on the way` : '')];
+  return ['Cross the field to your ship', 'Ride the moving platforms' + (n ? ` · ${n} power core${n > 1 ? 's' : ''} on the way` : '')];
 }
 
 // --- 5: defend the lander
@@ -1240,16 +1275,16 @@ function updDefend(dt) {
   if (isGuest()) return;
   if (LS.charge < 1) {
     LS.charge = Math.min(1, LS.charge + dt / 150);
-    if (LS.charge >= 1) { toast('Jump drive charged! Get in the ship and hold on for 2 seconds.', 3.5); sfx.pickup(); }
+    if (LS.charge >= 1) { toast('Engine ready! Stand in the ship for 2 seconds.', 3.5); sfx.pickup(); }
     LS.brute -= dt;
     if (LS.brute <= 0 && aliens.length < capA(9)) {
       LS.brute = 18 / DM();
       const s = saucers.find((q) => !q.dead);
       const p = s ? s.mesh.position.clone().add(new V3(0, -2, 0)) : new V3(0, 18, 0);
-      spawnAlien(p, 'brute'); sfx.drop(); toast('A brute dropped in. It smashes blocks!', 2);
+      spawnAlien(p, 'brute'); sfx.drop(); toast('A big alien landed. It breaks blocks!', 2);
     }
     if (LS.charge >= 0.8 && !LS.final) {
-      LS.final = true; netOp(['L', 'final']); toast('FINAL WAVE! Hold them off!', 3); sfx.drop();
+      LS.final = true; netOp(['L', 'final']); toast('LAST WAVE! Hold on!', 3); sfx.drop();
       const s = saucers.filter((q) => !q.dead);
       for (let k = 0; k < 2; k++) spawnAlien((s[k % Math.max(1, s.length)] ? s[k % s.length].mesh.position.clone() : new V3(0, 18, 0)).add(new V3(0, -2, 0)), 'brute');
       for (let k = 0; k < capA(4); k++) spawnAlien(new V3((Math.random() - 0.5) * 20, 14, (Math.random() - 0.5) * 20));
@@ -1300,7 +1335,7 @@ function stationKey(k, mine) {
   if (k.got) return;
   k.got = true; k.m.visible = false; LS.got++; sfx.pickup(); burst(k.p, 0x5dffa8, 40, 4, 0);
   if (mine) netOp(['c', LS.keys.indexOf(k)]);
-  if (LS.got === 3) { box(14, 1, -1, 14, 3, 1, AIR); meshDirty = true; toast('All three keycards! The vault door is open.', 3.5); }
+  if (LS.got === 3) { box(14, 1, -1, 14, 3, 1, AIR); meshDirty = true; toast('All 3 keycards! The vault door is open.', 3.5); }
   else toast(mine ? `Keycard ${LS.got} of 3` : `A crewmate found keycard ${LS.got} of 3`);
 }
 function updStation(dt) {
@@ -1312,7 +1347,7 @@ function updStation(dt) {
   let refill = player.pos.distanceTo(ship.position) < 6;
   for (const c of LS.o2) if (c.distanceTo(player.pos) < 2.8) refill = true;
   o2 = refill ? Math.min(100, o2 + 45 * dt) : Math.max(0, o2 - 2.6 * dt);
-  if (o2 <= 0) { hurt(10 * dt); if (!LS.warned) { toast('Out of oxygen! Find a green-cross O2 station.', 3); LS.warned = true; } }
+  if (o2 <= 0) { hurt(10 * dt); if (!LS.warned) { toast('No air left! Find a green cross box.', 3); LS.warned = true; } }
   else if (o2 > 25) LS.warned = false;
   if (isGuest()) return;
   LS.spawnT -= dt;
@@ -1325,8 +1360,8 @@ function updStation(dt) {
   }
 }
 function hudStation() {
-  if (LS.got < 3) return ['Find 3 keycards', `${LS.got} of 3 · the roof one needs the jump pad in the hub`];
-  if (!carrying) return ['Open the vault', 'East corridor · grab the artifact'];
+  if (LS.got < 3) return ['Find 3 keycards', `${LS.got} of 3 · for the one on the roof, use the jump pad in the middle`];
+  if (!carrying) return ['Open the vault', 'East hall · grab the artifact'];
 }
 function tgtStation() { const k = LS.keys.filter((q) => !q.got); return k.length ? nearest(k.map((q) => q.p)) : null; }
 
@@ -1423,10 +1458,10 @@ function queenDie() {
     artifact.position.set(7.5, t + 1.5, 0.5); artifact.visible = true;
     for (const a of aliens) a.hp = 0;
   }
-  toast('The Hive Queen is down! Grab her heart crystal.', 4);
+  toast('The Queen is dead! Grab her crystal.', 4);
 }
 function hudQueen() {
-  const q = LS.q; if (q && !q.dead) return ['Defeat the Hive Queen', `${Math.ceil(q.hp / q.max * 100)}% · shoot the glowing weak spot · EMP stuns her`];
+  const q = LS.q; if (q && !q.dead) return ['Beat the Hive Queen', `${Math.ceil(q.hp / q.max * 100)}% · shoot the glowing weak spot · shock wave stuns her`];
 }
 function tgtQueen() { const q = LS.q; return q && !q.dead ? q.g.position : null; }
 
@@ -1442,13 +1477,13 @@ const ground = (x, z, dy = 1.6) => { const t = topAt(Math.floor(x), Math.floor(z
 
 // --- K-7
 function updK7() {
-  if (LS.nestCells && LS.nestCells.length && !LS.nestDone && cellsLeft(LS.nestCells, NEST) === 0) { LS.nestDone = true; toast('Alien nest destroyed! The saucers have nothing left to drop.', 3.5); sfx.pickup(); }
+  if (LS.nestCells && LS.nestCells.length && !LS.nestDone && cellsLeft(LS.nestCells, NEST) === 0) { LS.nestDone = true; toast('Alien nest broken! The saucers have no more aliens to drop.', 3.5); sfx.pickup(); }
 }
 
 // --- mothership: self-destruct after the core is taken
 function updMothership(dt) {
   mothershipBreak({ type: GEN });
-  if (!isGuest() && (carrying || netCarried) && LS.sd === undefined) { LS.sd = 60; netOp(['L', 'sd']); toast('SELF-DESTRUCT! 60 seconds to get off the mothership!', 3.5); }
+  if (!isGuest() && (carrying || netCarried) && LS.sd === undefined) { LS.sd = 60; netOp(['L', 'sd']); toast('The ship will blow up in 60 seconds! Get out!', 3.5); }
   if (LS.sd !== undefined && state === 'play') {
     const before = Math.ceil(LS.sd); LS.sd = Math.max(0, LS.sd - dt);
     if (Math.ceil(LS.sd) !== before) tone(880, 880, 0.08, 'square', LS.sd < 10 ? 0.07 : 0.035);
@@ -1489,7 +1524,7 @@ function updWorm(dt) {
   const near = Math.hypot(player.pos.x - w.x, player.pos.z - w.z);
   if (w.st === 1) {
     if (Math.random() < dt * 30) burst(new V3(w.x + (Math.random() - 0.5) * 3, w.y0 + 0.2, w.z + (Math.random() - 0.5) * 3), 0x8a93a8, 3, 2, 4);
-    if (near < 14) { shake = Math.max(shake, 0.12); if (!w.warned) { w.warned = true; toast('Rumbling underground… move!', 1.6); } }
+    if (near < 14) { shake = Math.max(shake, 0.12); if (!w.warned) { w.warned = true; toast('The ground shakes… move!', 1.6); } }
   } else w.warned = false;
   w.g.visible = w.st === 2;
   if (w.st === 2) {
@@ -1527,11 +1562,11 @@ function powerOn(i, mine) {
   if (!LS.pow || LS.pow[i]) return;
   LS.pow[i] = true; const [x, y, z] = LS.pwrCells[i]; burst(cellV(x, y, z), 0xffd166, 40, 4, 0); sfx.repair();
   if (mine) netOp(['L', 'pwr', i]);
-  if (LS.pow.every(Boolean)) { setDark(false); box(-1, 1, 13, 1, 3, 13, AIR); meshDirty = true; toast('Power restored! Lights on and the north wing door is open.', 3.5); }
-  else toast('Generator running · 1 of 2', 2);
+  if (LS.pow.every(Boolean)) { setDark(false); box(-1, 1, 13, 1, 3, 13, AIR); meshDirty = true; toast('Power is back! The lights are on and the north door is open.', 3.5); }
+  else toast('Power box on · 1 of 2', 2);
 }
 function droneAlarm(mine) {
-  toast('ALARM! The security drone spotted you and called reinforcements!', 3);
+  toast('ALARM! The drone saw you and called more aliens!', 3);
   for (let k = 0; k < 3; k++) tone(700, 1100, 0.25, 'square', 0.06, k * 0.3);
   LS.alarmT = 3; if (mine) netOp(['L', 'alarm']);
 }
@@ -1540,7 +1575,7 @@ function droneHit(dmg) {
   burst(d.g.position, 0xffc857, 8, 3, 1); sfx.hit();
   if (isGuest()) { netOp(['L', 'drone', dmg]); return; }
   d.hp -= dmg;
-  if (d.hp <= 0) { d.alive = false; d.g.visible = false; burst(d.g.position, 0xff3a4a, 60, 6, 2); sfx.boom(); toast('Security drone destroyed.', 2.5); }
+  if (d.hp <= 0) { d.alive = false; d.g.visible = false; burst(d.g.position, 0xff3a4a, 60, 6, 2); sfx.boom(); toast('Drone destroyed.', 2.5); }
 }
 function updDrone(dt) {
   const d = LS.drone; if (!d) return;
@@ -1582,10 +1617,10 @@ function queenExtra(dt) {
       LS.hatchT = 20 / Math.max(0.6, DM());
       const left = LS.eggCells.filter(([x, y, z]) => get(x, y, z) === EGG), [x, y, z] = left[Math.floor(Math.random() * left.length)];
       set(x, y, z, AIR); myEdit(x, y, z, AIR); meshDirty = true; LS.hatched++;
-      spawnAlien(cellV(x, y, z), 'biter'); burst(cellV(x, y, z), 0xb6ff5a, 40, 4, 2); netOp(['L', 'hatch']); toast('An egg sac hatched!', 2);
+      spawnAlien(cellV(x, y, z), 'biter'); burst(cellV(x, y, z), 0xb6ff5a, 40, 4, 2); netOp(['L', 'hatch']); toast('An egg hatched!', 2);
     }
     if (!q.p2 && q.hp < q.max / 2) {
-      q.p2 = true; netOp(['L', 'p2']); toast('The Queen lands! The ground cracks and her tentacles slam down.', 3.5); sfx.boom();
+      q.p2 = true; netOp(['L', 'p2']); toast('The Queen lands! The ground breaks and her tentacles hit hard.', 3.5); sfx.boom();
       for (const [cx, cz] of [[3, 4], [11, -3], [6, -6], [10, 5]]) for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
         const x = cx + dx, z = cz + dz, t = topAt(x, z); if (t === null) continue;
         for (let k = 0; k < 2; k++) { const b = get(x, t - k, z); if (b && b !== EGG && b !== ARTIFACT && b !== CACHE && b !== RUNE) { set(x, t - k, z, AIR); myEdit(x, t - k, z, AIR); } }
@@ -1602,7 +1637,7 @@ function queenExtra(dt) {
     s.t -= dt; ring.visible = s.t > 0; ring.position.set(s.x, s.y, s.z); ring.scale.setScalar(1 + Math.max(0, s.t) * 0.4); ring.material.opacity = 0.5 + Math.sin(clock * 20) * 0.3;
     if (s.t <= 0 && !s.done) {
       s.done = true; burst(new V3(s.x, s.y, s.z), 0x1f8c7c, 60, 6, 4); sfx.boom(); shake = 0.3;
-      if (Math.hypot(player.pos.x - s.x, player.pos.z - s.z) < 2.6 && Math.abs(player.pos.y - s.y) < 3) { hurt(30); toast('Tentacle slam!', 1.4); }
+      if (Math.hypot(player.pos.x - s.x, player.pos.z - s.z) < 2.6 && Math.abs(player.pos.y - s.y) < 3) { hurt(30); toast('Watch out, tentacles!', 1.4); }
     }
   } else ring.visible = false;
 }
@@ -1633,7 +1668,7 @@ function newDrop() {
   for (let k = 0; k < 60; k++) {
     const a = Math.random() * 6.28, r = 3 + Math.random() * 6, x = Math.floor(Math.cos(a) * r), z = Math.floor(Math.sin(a) * r), t = topAt(x, z);
     if (t === null || get(x, t + 1, z)) continue;
-    LS.dropId++; LS.drop = { id: LS.dropId, x: x + 0.5, y: t + 1.3, z: z + 0.5, h: 16 }; toast('A supply drop is coming down!', 2.2); return;
+    LS.dropId++; LS.drop = { id: LS.dropId, x: x + 0.5, y: t + 1.3, z: z + 0.5, h: 16 }; toast('A supply box is falling down!', 2.2); return;
   }
 }
 function updStorm(dt) {
@@ -1643,7 +1678,7 @@ function updStorm(dt) {
     else { LS.sT -= dt; if (LS.sT <= 0) LS.storm = 7; }
   }
   const warn = LS.storm <= 0 && LS.sT < 8, on = LS.storm > 0;
-  if (warn && !LS.warned) { LS.warned = true; toast('SOLAR STORM incoming! Dig in or hide behind rock.', 3); tone(500, 300, 0.5, 'sawtooth', 0.05); }
+  if (warn && !LS.warned) { LS.warned = true; toast('SUN STORM coming! Dig a hole or hide behind rock.', 3); tone(500, 300, 0.5, 'sawtooth', 0.05); }
   if (!warn) LS.warned = false;
   $('stormFx').style.opacity = on ? 0.95 : warn ? 0.18 + 0.15 * Math.sin(clock * 6) : 0;
   hemi.color.setHex(on ? 0xffa060 : 0x7cc4ff);
@@ -1663,7 +1698,7 @@ function updStorm(dt) {
     if (d.h <= 0 && state === 'play' && player.pos.distanceTo(new V3(d.x, d.y - 0.3, d.z)) < 1.9) {
       LS.taken = d.id; blocks += 5; player.hp = Math.min(100, player.hp + 25); sfx.pickup(); burst(m.position, 0xffd166, 40, 4, 0);
       if (host) takeDrop(d.id); else netOp(['L', 'take', d.id]);
-      toast(`Supply drop! +5 blocks, suit patched (${Math.min(5, LS.got + (host ? 0 : 1))}/5)`, 2.5);
+      toast(`Supply box! +5 blocks, health back (${Math.min(5, LS.got + (host ? 0 : 1))}/5)`, 2.5);
     }
   }
   if (state === 'play' && LS.got >= 5 && player.pos.distanceTo(ship.position) < 5.2) winAll();
@@ -1748,7 +1783,7 @@ function updHive(dt) {
     LS.hatchT = 25 / Math.max(0.6, DM());
     const [x, y, z] = left[Math.floor(Math.random() * left.length)];
     set(x, y, z, AIR); myEdit(x, y, z, AIR); meshDirty = true; LS.hatched++;
-    spawnAlien(cellV(x, y, z), Math.random() < 0.5 ? 'swarm' : 'biter'); burst(cellV(x, y, z), 0xb6ff5a, 40, 4, 2); netOp(['L', 'hatch']); toast('An egg sac hatched!', 2);
+    spawnAlien(cellV(x, y, z), Math.random() < 0.5 ? 'swarm' : 'biter'); burst(cellV(x, y, z), 0xb6ff5a, 40, 4, 2); netOp(['L', 'hatch']); toast('An egg hatched!', 2);
   }
   LS.spT -= dt;
   if (LS.spT <= 0 && aliens.length < capA(6)) {
@@ -1791,6 +1826,12 @@ function hudSats() {
 }
 function tgtSats() { const b = satList().filter((t) => t.hp <= 0); return b.length ? nearest(b.map((t) => t.head)) : nearest(satList().map((t) => t.head)); }
 
+function textSprite(text, color, w) {
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 64; const c = cv.getContext('2d');
+  c.fillStyle = 'rgba(3,8,20,.75)'; c.fillRect(0, 0, 512, 64); c.strokeStyle = color; c.lineWidth = 4; c.strokeRect(2, 2, 508, 60);
+  c.font = '700 34px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = color; c.fillText(text, 256, 33);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), transparent: true })); sp.scale.set(w, w / 8, 1); return sp;
+}
 // --- 12: space elevator
 const ELEV_FLOORS = [-19, -9, 1, 11, 21];
 function genElevator() {
@@ -1810,12 +1851,34 @@ function setupElevator() {
   blocks += 25;
   const lift = (x, z, y0, y1, ph) => addMover({ c: new V3(x, y0 - 0.25, z), ph, edge: 0xffc857,
     move: (m, dt) => { m.ph += dt; const span = y1 - y0, Tt = span / 2, per = 2 * (Tt + 2), q = m.ph % per;
-      const u = q < 2 ? 0 : q < 2 + Tt ? sm((q - 2) / Tt) : q < 4 + Tt ? 1 : 1 - sm((q - 4 - Tt) / Tt); m.c.y = y0 - 0.25 + span * u; } });
-  lift(8.5, 0.5, -18, -8, 0); lift(-7.5, 0.5, 2, 12, 3); lift(0.5, 8.5, 12, 22, 1); lift(0.5, -3.5, 22, 27, 5);
+      const u = q < 2 ? 0 : q < 2 + Tt ? sm((q - 2) / Tt) : q < 4 + Tt ? 1 : 1 - sm((q - 4 - Tt) / Tt); m.c.y = y0 - 0.25 + span * u; m.goingUp = q < 2 + Tt; } });
+  LS.lifts = [lift(8.5, 0.5, -18, -8, 0), lift(-7.5, 0.5, 2, 12, 3), lift(0.5, 8.5, 12, 22, 1), lift(0.5, -3.5, 22, 27, 5)];
+  // faint energy field showing where each lift travels, with arrows for its next direction
+  LS.fields = [];
+  for (const [m, y0, y1] of [[LS.lifts[0], -18, -8], [LS.lifts[1], 2, 12], [LS.lifts[2], 12, 22], [LS.lifts[3], 22, 27]]) {
+    const h = y1 - y0 + 2.2, col = new THREE.Mesh(new THREE.BoxGeometry(3, h, 3), basic(0xffc857, { transparent: true, opacity: 0.1, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+    col.position.set(m.c.x, y0 - 0.5 + h / 2, m.c.z); lvlG.add(col);
+    const arrows = [];
+    for (let k = 0; k < 3; k++) { const a = new THREE.Mesh(new THREE.ConeGeometry(0.45, 0.6, 4), basic(0xffe08a, { transparent: true, opacity: 0.45, depthWrite: false })); lvlG.add(a); arrows.push(a); }
+    LS.fields.push({ m, y0, y1, arrows });
+  }
+  // the broken lift between floors 2 and 3: crashed platform, dead field and a sign
+  const wreck = new THREE.Mesh(new THREE.BoxGeometry(3, 0.5, 3), phong(0x5a4a3a)); wreck.position.set(-6.6, -7.55, 0.6); wreck.rotation.set(0.25, 0.3, 0.45); lvlG.add(wreck);
+  wreck.add(new THREE.LineSegments(new THREE.EdgesGeometry(wreck.geometry), new THREE.LineBasicMaterial({ color: 0xff5a3a })));
+  const dead = new THREE.Mesh(new THREE.BoxGeometry(3, 11, 3), basic(0xff4a3a, { transparent: true, opacity: 0.05, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+  dead.position.set(-7.5, -3, 0.5); lvlG.add(dead);
+  const sign = textSprite('LIFT BROKEN · BUILD STAIRS', '#ffb15a', 4.6); sign.position.set(-4.5, -5.6, 0.5); lvlG.add(sign);
+  LS.wreck = wreck; LS.deadField = dead;
   LS.cp = 0; LS.spT = 8;
 }
 function updElevator(dt) {
   const p = player.pos;
+  for (const f of LS.fields || []) {
+    const m = f.m; if (isGuest()) { const dy = m.c.y - (f.py ?? m.c.y); if (Math.abs(dy) > 0.002) m.goingUp = dy > 0; f.py = m.c.y; }
+    const up = m.goingUp !== false, span = f.y1 - f.y0 + 1.5;
+    f.arrows.forEach((a, k) => { const u = ((clock * 0.35 + k / 3) % 1); a.position.set(m.c.x, f.y0 + (up ? u : 1 - u) * span, m.c.z); a.rotation.z = up ? 0 : Math.PI; a.material.opacity = 0.45 * Math.sin(u * Math.PI); });
+  }
+  if (LS.deadField) { LS.deadField.material.opacity = Math.random() < 0.08 ? 0.12 : 0.04; if (Math.random() < dt * 1.5) burst(new V3(-6.6 + (Math.random() - 0.5) * 2, -7.3, 0.6 + (Math.random() - 0.5) * 2), 0xffc857, 6, 3, 1); }
   for (let k = ELEV_FLOORS.length - 1; k > LS.cp; k--) {
     const F = ELEV_FLOORS[k];
     if (p.y > F + 0.9 && p.y < F + 2 && Math.abs(p.x) < 6 && Math.abs(p.z) < 6 && player.onGround) { LS.cp = k; spawn.set(3.5, F + 1, 3.5); toast(`Checkpoint: floor ${k + 1} of 5`, 2); sfx.pickup(); break; }
@@ -1829,7 +1892,7 @@ function updElevator(dt) {
     spawnAlien(new V3(c.x + Math.cos(a) * 12, c.y + 1 + Math.random() * 3, c.z + Math.sin(a) * 12));
   }
 }
-function hudElevator() { return ['Climb to the top station', `Floor ${LS.cp + 1} of 5 · ride the outside lifts · one floor has no lift: build stairs`]; }
+function hudElevator() { return ['Climb to the top station', `Floor ${LS.cp + 1} of 5 · ride the lifts · one lift is broken: build stairs`]; }
 
 // --- 13: escort the rover
 function genRover() {
@@ -1872,13 +1935,13 @@ function roverDmg(d) {
 function updRover(dt) {
   const r = LS.rover; if (!r) return;
   r.mesh.userData.wheels.forEach((w) => { w.rotation.y -= r.delta.x * 3; });
-  if (LS.wait && !LS.waitTip) { LS.waitTip = true; toast('The rover is stuck! Bridge the gap (or clear the rock) in front of it.', 3); }
+  if (LS.wait && !LS.waitTip) { LS.waitTip = true; toast('The truck is stuck! Fill the hole or break the rock in front of it.', 3); }
   if (!LS.wait) LS.waitTip = false;
   if (!isGuest() && r.c.x >= 25 && state === 'play') winAll();
 }
 function hudRover() {
   const pct = Math.round((LS.rover.c.x + 21) / 46 * 100);
-  return ['Escort the rover', `${clamp(pct, 0, 100)}% of the way · hull ${Math.max(0, Math.ceil(LS.rhp / 3))}%` + (LS.wait ? ' · STUCK: bridge the gap!' : '')];
+  return ['Protect the truck', `${clamp(pct, 0, 100)}% of the way · health ${Math.max(0, Math.ceil(LS.rhp / 3))}%` + (LS.wait ? ' · STUCK: fill the hole!' : '')];
 }
 
 // --- 14: gravity flip station
@@ -1895,7 +1958,7 @@ function setupGravity() { LS.g = 0; LS.fT = 20; }
 function updGravity(dt) {
   if (!isGuest()) { LS.fT -= dt; if (LS.fT <= 0) { LS.fT = 20; LS.g = 1 - LS.g; } }
   if (!!LS.g !== player.flip) { setFlip(!!LS.g); toast(LS.g ? 'Gravity flipped! You fall to the ceiling.' : 'Gravity back to normal.', 2); sfx.drop(); shake = 0.25; }
-  if (LS.fT < 3 && !LS.warned) { LS.warned = true; toast('Gravity flips in 3…', 2); tone(600, 900, 0.3, 'square', 0.05); }
+  if (LS.fT < 3 && !LS.warned) { LS.warned = true; toast('Gravity turns in 3…', 2); tone(600, 900, 0.3, 'square', 0.05); }
   if (LS.fT >= 3) LS.warned = false;
   if (state === 'play' && player.pos.x > 25.5) winAll();
   if (isGuest()) return;
@@ -1953,7 +2016,7 @@ function hullHit(d, end) {
   const b = LS.boss; if (!b || b.dead || b.hullT === clock) return; b.hullT = clock;
   let bi = -1, bd = 1e9; b.pods.forEach((p, i) => { if (p.hp <= 0) return; const q = p.m.getWorldPosition(new V3()).distanceTo(end || b.g.position); if (q < bd) { bd = q; bi = i; } });
   b.hullFlash = 0.1; if (bi >= 0) podHit(bi, d * 0.5);
-  if (clock - (LS.hullTip || -99) > 8) { LS.hullTip = clock; toast('Hull hit! Aim at the orange engine pods for full damage.', 2.2); }
+  if (clock - (LS.hullTip || -99) > 8) { LS.hullTip = clock; toast('You hit the body. Hit the orange engines for full damage.', 2.2); }
 }
 function updChase(dt) {
   const b = LS.boss; if (!b) return;
@@ -1970,6 +2033,241 @@ function updChase(dt) {
 }
 function hudChase() { const b = LS.boss; return b.dead ? ['It is going down!', 'Stand clear'] : ['Stop the mothership', `${podsLeft()}/4 engines left · ${Math.floor(b.t * 100)}% across the sky · shoot the orange engine pods`]; }
 function tgtChase() { const b = LS.boss; const a = b.pods.filter((p) => p.hp > 0).map((p) => p.m.getWorldPosition(new V3())); return a.length ? nearest(a) : b.g.position; }
+
+// --- 17: road war (fix the car, then ride it to the base while alien cars attack)
+const ROAD_PTS = [[-24, -24], [24, -24], [24, -8], [-24, -8], [-24, 8], [24, 8], [24, 24], [-17, 24]];
+let ROAD = null; // dense samples along the road: { x, z, d } (d = distance from the start)
+function buildRoad() {
+  if (ROAD) return ROAD;
+  const out = [], R = 5, P = ROAD_PTS.map(([x, z]) => new V3(x + 0.5, 0, z + 0.5));
+  const push = (v) => { const l = out[out.length - 1]; out.push({ x: v.x, z: v.z, d: l ? l.d + Math.hypot(v.x - l.x, v.z - l.z) : 0 }); };
+  push(P[0]);
+  for (let i = 1; i < P.length; i++) {
+    const a = P[i - 1], b = P[i], c = P[i + 1];
+    const din = b.clone().sub(a).normalize(), end = c ? b.clone().addScaledVector(din, -R) : b;
+    const st = out[out.length - 1], seg = Math.hypot(end.x - st.x, end.z - st.z), n = Math.max(1, Math.ceil(seg / 0.5));
+    for (let k = 1; k <= n; k++) push(new V3(st.x + (end.x - st.x) * k / n, 0, st.z + (end.z - st.z) * k / n));
+    if (c) { // rounded corner
+      const dout = c.clone().sub(b).normalize(), q0 = end, q2 = b.clone().addScaledVector(dout, R);
+      for (let k = 1; k <= 12; k++) { const u = k / 12, w0 = (1 - u) * (1 - u), w1 = 2 * u * (1 - u), w2 = u * u; push(new V3(q0.x * w0 + b.x * w1 + q2.x * w2, 0, q0.z * w0 + b.z * w1 + q2.z * w2)); }
+    }
+  }
+  ROAD = out; return out;
+}
+function roadAt(d) { // position and heading at distance d along the road
+  const r = buildRoad(); d = clamp(d, 0, r[r.length - 1].d);
+  let lo = 0, hi = r.length - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (r[m].d <= d) lo = m; else hi = m; }
+  const a = r[lo], b = r[hi], u = b.d > a.d ? (d - a.d) / (b.d - a.d) : 0;
+  return { x: a.x + (b.x - a.x) * u, z: a.z + (b.z - a.z) * u, yaw: Math.atan2(b.x - a.x, b.z - a.z) };
+}
+const roadLen = () => { const r = buildRoad(); return r[r.length - 1].d; };
+function roadDist(x, z) { let m = 1e9; for (const p of buildRoad()) { const d = (p.x - x) ** 2 + (p.z - z) ** 2; if (d < m) m = d; } return Math.sqrt(m); }
+function genRoad() {
+  world.fill(0);
+  for (let x = -31; x <= 31; x++) for (let z = -31; z <= 31; z++) {
+    const rd = roadDist(x + 0.5, z + 0.5);
+    let top = 0;
+    if (rd > 4.5) top = Math.floor(Math.max(0, vnoise(x * 0.16, 0, z * 0.16, 1717) * 6 - 2.2) * Math.min(1, (rd - 4.5) / 3));
+    for (let y = -4; y <= top; y++) set(x, y, z, y === top ? (rd < 2.8 ? ALLOY : REGO) : ROCK);
+    if (rd >= 2.8 && rd < 3.3 && top === 0) set(x, 0, z, PANEL); // road edge
+  }
+  // dashed centre line
+  buildRoad().forEach((p, i) => { if (i % 6 < 3) set(Math.floor(p.x), 0, Math.floor(p.z), CRYSTAL); });
+  // wrecks and boulders beside the road
+  for (const [x, z] of [[-6, -29], [12, -19], [-14, -3], [5, 3], [-2, 13], [16, 19], [28, 15], [-29, 0]]) { const t = topAt(x, z); box(x - 1, t + 1, z - 1, x, t + 2, z, ROCK); }
+  // the three car parts: one on the ground, one on a tall rock, one buried in a rock mound
+  box(-30, 1, -19, -28, 4, -17, ROCK);
+  box(-18, 1, -20, -14, 4, -16, ROCK); box(-17, 1, -19, -15, 3, -17, AIR);
+  // the base at the end of the road
+  box(-22, 0, 20, -14, 0, 28, ALLOY); box(-22, 1, 28, -14, 3, 28, PANEL); box(-22, 1, 20, -22, 3, 28, PANEL);
+  box(-22, 1, 20, -14, 8, 27, AIR); box(-22, 1, 28, -14, 3, 28, PANEL); box(-22, 1, 20, -22, 3, 28, PANEL);
+  shipPos.set(-19, 1, 25); spawn.set(-23.5, 2.4, -23.5);
+}
+function makeRoadCar() {
+  const g = new THREE.Group(), paint = phong(0xc8412a, { shininess: 80 }), dark = phong(0x2a2f3a), chrome = phong(0xdbe8f5, { shininess: 120 });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.75, 5.6), paint); body.position.y = 0.85; g.add(body);
+  const hood = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.25, 1.8), paint); hood.position.set(0, 1.3, 1.8); hood.rotation.x = 0.12; g.add(hood);
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(2.7, 0.18, 3.4), dark); deck.position.set(0, 1.3, -0.9); g.add(deck);
+  const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.05, 5.62), basic(0xffd166)); stripe.position.set(0, 1.24, 0); g.add(stripe);
+  // spiked ram on the front
+  const ram = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.5, 0.3), chrome); ram.position.set(0, 0.7, 2.95); g.add(ram);
+  for (let i = 0; i < 5; i++) { const sp = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.7, 6), chrome); sp.rotation.x = Math.PI / 2; sp.position.set(-1.2 + i * 0.6, 0.7, 3.35); g.add(sp); }
+  // exhaust pipes and roll bar
+  for (const s of [-1, 1]) { const ex = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.8, 8), chrome); ex.rotation.x = Math.PI / 2; ex.position.set(s * 1.05, 0.55, -2.9); g.add(ex); }
+  const wheels = [];
+  for (const [x, z] of [[-1.45, 1.75], [1.45, 1.75], [-1.45, -1.75], [1.45, -1.75]]) {
+    const w = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.5, 14), dark); w.rotation.z = Math.PI / 2; w.position.set(x, 0.62, z); g.add(w); wheels.push(w);
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.52, 8), chrome); hub.rotation.z = Math.PI / 2; hub.position.copy(w.position); g.add(hub);
+  }
+  for (const s of [-1, 1]) { const hl = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), basic(0xfff3c0)); hl.position.set(s * 0.9, 1.0, 2.82); g.add(hl); }
+  // four roof guns, one per crew seat
+  const guns = CAR_SEATS.map(([x, , z]) => {
+    const t = new THREE.Group(); t.rotation.order = 'YXZ'; t.position.set(x, 1.65, z + 0.75); g.add(t);
+    t.add(new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 0.3, 10), dark));
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1.1, 8), chrome); b.rotation.x = Math.PI / 2; b.position.set(0, 0.1, 0.5); t.add(b);
+    return t;
+  });
+  // smoke shown while the car is broken
+  g.userData = { wheels, guns, body };
+  return g;
+}
+const CAR_SEATS = [[-0.7, 1.4, -1.6], [0.7, 1.4, -1.6], [-0.7, 1.4, 0.0], [0.7, 1.4, 0.0]];
+function makeAlienCar(ram) {
+  const g = new THREE.Group(), skin = phong(ram ? 0xff6a3a : 0x3fd06a, { emissive: ram ? 0x5a1a00 : 0x0c4a20 }), dark = phong(0x1a3a28);
+  const body = new THREE.Mesh(new THREE.SphereGeometry(1.1, 12, 8), skin); body.scale.set(1, 0.45, 1.6); body.position.y = 0.75; g.add(body);
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.5, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2), phong(0x9fffd0, { transparent: true, opacity: 0.6, emissive: 0x1a7a48 })); dome.position.set(0, 1.0, -0.2); g.add(dome);
+  const eye = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), basic(0x03101c)); eye.position.set(0, 1.15, -0.1); g.add(eye);
+  for (let i = 0; i < 6; i++) { const sp = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.55, 5), dark); const a = i / 6 * Math.PI * 2; sp.position.set(Math.cos(a) * 1.0, 0.85, Math.sin(a) * 1.4); sp.rotation.set(Math.sin(a) * 1.3, 0, -Math.cos(a) * 1.3); g.add(sp); }
+  const wheels = [];
+  for (const [x, z] of [[-0.9, 0.9], [0.9, 0.9], [-0.9, -0.9], [0.9, -0.9]]) { const w = new THREE.Mesh(new THREE.SphereGeometry(0.42, 8, 6), dark); w.position.set(x, 0.42, z); g.add(w); wheels.push(w); }
+  if (!ram) { const gun = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.14, 1.0, 8), dark); gun.rotation.x = Math.PI / 2; gun.position.set(0, 1.1, 0.9); g.add(gun); }
+  else { const horn = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1.2, 8), phong(0xffd166)); horn.rotation.x = Math.PI / 2; horn.position.set(0, 0.8, 1.9); g.add(horn); }
+  g.userData = { wheels, mat: skin, emi: ram ? 0x5a1a00 : 0x0c4a20 };
+  return g;
+}
+function carPos() { const r = roadAt(LS.cd); return new V3(r.x, 1, r.z); }
+function setupRoad() {
+  const g = makeRoadCar(); lvlG.add(g);
+  LS.car = { g, hp: 300, max: 300 }; LS.cd = 0; LS.ph = 0; LS.boardT = 10; LS.splat = 0; LS.acars = []; LS.acSeq = 1; LS.acT = 4; LS.walkT = 3; LS.spT = 9; LS.kits = [false, false, false];
+  LS.seated = true; LS.zaps = [];
+  // repair kits on the road: drive over them to fix the car
+  LS.kitG = [0.32, 0.56, 0.8].map((u) => { const r = roadAt(roadLen() * u), m = orbMesh(0x5dffa8); m.scale.setScalar(2); m.position.set(r.x, 1.8, r.z); lvlG.add(m); return m; });
+  const goal = new THREE.Mesh(new THREE.TorusGeometry(2.6, 0.18, 8, 30), basic(0x5dffa8, { transparent: true, opacity: 0.7 })); goal.rotation.x = Math.PI / 2; const e = roadAt(roadLen()); goal.position.set(e.x, 1.2, e.z); lvlG.add(goal); LS.goal = goal;
+  placeCar();
+}
+function placeCar() {
+  const r = roadAt(LS.cd), g = LS.car.g;
+  g.position.set(r.x, 1, r.z); g.rotation.y = r.yaw;
+}
+function seatPos(i) { const g = LS.car.g, s = CAR_SEATS[i % 4]; return new V3(s[0], s[1], s[2]).applyAxisAngle(new V3(0, 1, 0), g.rotation.y).add(g.position); }
+function mySeat() {
+  if (!NET) return 0;
+  const ids = NET.r.peers().map((p) => p.peer).sort(), me = myPeer();
+  return Math.max(0, ids.indexOf(me)) % 4;
+}
+function carSeat() { // keeps a seated player on the car; returns the feet position
+  if (!LS.car || !LS.seated) return null;
+  if (LS.ph === 0 && (input.jump || keys.has('Space'))) { // hop out to look for parts
+    LS.seated = false; const g = LS.car.g, side = new V3(mySeat() % 2 ? 2.4 : -2.4, 0, 0).applyAxisAngle(new V3(0, 1, 0), g.rotation.y);
+    player.pos.copy(g.position).add(side); player.pos.y = 1.05; player.vel.set(0, 4, 0); input.jump = false; return null;
+  }
+  return seatPos(mySeat());
+}
+function boardCar(mine) {
+  if (LS.ph >= 2) return;
+  if (isGuest()) { if (mine) netOp(['L', 'board']); LS.seated = true; return; }
+  LS.ph = 2; LS.seated = true; netOp(['L', 'board']);
+  for (const a of aliens) if (a.pos.distanceTo(carPos()) < 12) a.hp = 0;
+  toast('Everyone is in the car! Hold on and shoot the alien cars!', 3); sfx.pickup();
+}
+const partsGot = () => (LS.items || []).filter((q) => q.kind === 'part' && q.got).length;
+function carHurt(n) {
+  const c = LS.car; if (!c || isGuest() || LS.ph < 2) return;
+  c.hp -= n; shake = Math.max(shake, 0.15);
+  if (c.hp <= 0) { c.hp = 0; failMission('The aliens wrecked your car. Try again!'); }
+}
+function spawnACar() {
+  const cp = carPos(), r = roadAt(LS.cd + 18 + Math.random() * 10), side = Math.random() < 0.5 ? -1 : 1;
+  const ram = Math.random() < 0.35;
+  let x = clamp(r.x + Math.cos(r.yaw) * side * 14, -29, 29), z = clamp(r.z - Math.sin(r.yaw) * side * 14, -29, 29);
+  if (Math.hypot(x - cp.x, z - cp.z) < 10) { x = clamp(cp.x - Math.sin(r.yaw) * 16, -29, 29); z = clamp(cp.z - Math.cos(r.yaw) * 16, -29, 29); }
+  addACar(LS.acSeq++, x, z, ram);
+}
+function addACar(id, x, z, ram) {
+  const g = makeAlienCar(ram); lvlG.add(g);
+  const c = { id, g, pos: new V3(x, groundY(x, z), z), yaw: 0, hp: ram ? 5 : 9, ram, cd: 1.5 + Math.random(), side: Math.random() < 0.5 ? -1 : 1, flash: 0, tgt: new V3(x, 1, z) };
+  g.position.copy(c.pos); LS.acars.push(c); return c;
+}
+function groundY(x, z) { const t = topAt(Math.floor(x), Math.floor(z)); return (t === null ? 0 : t) + 1; }
+function aCarHit(id, dmg) {
+  const c = LS.acars.find((q) => q.id === id); if (!c) return;
+  c.flash = 0.1; sfx.hit();
+  if (isGuest()) { c.myHit = clock; netOp(['L', 'acar', id, dmg]); return; }
+  c.hp -= dmg; if (c.hp <= 0) aCarDie(c, true);
+}
+function aCarDie(c, shot) {
+  burst(c.pos.clone().setY(c.pos.y + 0.8), c.ram ? 0xff7a3a : 0x5dffa8, 90, 8, 1); burst(c.pos, 0xffd166, 40, 5, 1); sfx.boom();
+  lvlG.remove(c.g); LS.acars = LS.acars.filter((q) => q !== c);
+  if (shot) { kills++; if (!isGuest()) netOp(['L', 'acarDie', c.id]); }
+}
+function zap(a, b) { showBeam(a, b, 0x9dff5a); burst(b, 0x9dff5a, 10, 3, 1); sfx.spit(); }
+function updRoad(dt) {
+  const c = LS.car; if (!c) return;
+  const host = !isGuest();
+  // car and wheels
+  if (host && LS.ph >= 2 && state === 'play') {
+    LS.cd = Math.min(roadLen(), LS.cd + dt * 3.4);
+    if (LS.cd >= roadLen() && !LS.won) { LS.won = true; winAll(); }
+  }
+  placeCar();
+  const moving = LS.ph >= 2;
+  c.g.userData.wheels.forEach((w) => { if (moving) w.rotation.x += dt * 5.5; });
+  if (LS.ph < 2 && Math.random() < dt * 4) burst(c.g.position.clone().add(new V3(0, 2.2, 0)), 0x6a6a6a, 3, 1.2, -1); // broken: smoke
+  if (moving && Math.random() < dt * 10) { const back = new V3(0, 0.6, -3.4).applyAxisAngle(new V3(0, 1, 0), c.g.rotation.y).add(c.g.position); burst(back, 0x8a93a8, 2, 1.5, -1); }
+  // my roof gun follows where I look
+  if (LS.seated) { const gn = c.g.userData.guns[mySeat()]; gn.rotation.y = player.yaw - c.g.rotation.y + Math.PI; gn.rotation.x = -player.pitch; }
+  // repair kits
+  LS.kitG.forEach((m, i) => { m.visible = !LS.kits[i]; m.rotation.y += dt * 2; });
+  if (LS.goal) LS.goal.rotation.z += dt;
+  // alien cars
+  const cp = c.g.position;
+  for (const a of LS.acars) {
+    if (a.flash > 0) { a.flash -= dt; a.g.userData.mat.emissive.setHex(a.flash > 0 ? 0xffffff : a.g.userData.emi); }
+    a.g.userData.wheels.forEach((w) => { w.rotation.x += dt * 8; });
+    if (!host) { a.pos.lerp(a.tgt, Math.min(1, dt * 8)); a.g.position.copy(a.pos); let dy = a.yaw - a.g.rotation.y; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); a.g.rotation.y += dy * Math.min(1, dt * 8); continue; }
+    const r = roadAt(LS.cd + (a.ram ? 0 : 2)), perp = new V3(Math.cos(r.yaw), 0, -Math.sin(r.yaw));
+    const tgt = a.ram || LS.ph < 2 ? cp.clone() : cp.clone().addScaledVector(perp, a.side * 4.2);
+    const to = tgt.sub(a.pos); to.y = 0; const d = to.length(); to.divideScalar(d || 1);
+    const sp = d > 6 ? 7.5 : LS.ph >= 2 ? 3.8 : 2;
+    a.pos.addScaledVector(to, Math.min(d, sp * dt)); a.pos.x = clamp(a.pos.x, -31, 31); a.pos.z = clamp(a.pos.z, -31, 31);
+    a.pos.y += (groundY(a.pos.x, a.pos.z) - a.pos.y) * Math.min(1, dt * 6);
+    let want = Math.atan2(to.x, to.z), dy = want - a.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); a.yaw += dy * Math.min(1, dt * 5);
+    a.g.position.copy(a.pos); a.g.rotation.y = a.yaw;
+    const dc = Math.hypot(a.pos.x - cp.x, a.pos.z - cp.z);
+    if (a.ram && dc < 3.2) { carHurt(30); aCarDie(a, false); netOp(['L', 'acarDie', a.id]); toast('An alien car rammed you!', 1.5); continue; }
+    a.cd -= dt;
+    if (!a.ram && a.cd <= 0 && dc < 13) {
+      a.cd = 1.9 / Math.max(0.6, DM());
+      const from = a.pos.clone().add(new V3(0, 1.1, 0)), to2 = cp.clone().add(new V3((Math.random() - 0.5) * 2, 1.4, (Math.random() - 0.5) * 3));
+      zap(from, to2); carHurt(6); netOp(['L', 'zap', r2(from.x), r2(from.y), r2(from.z), r2(to2.x), r2(to2.y), r2(to2.z)]);
+    }
+  }
+  if (!host) return;
+  // drive over repair kits
+  if (LS.ph >= 2) LS.kitG.forEach((m, i) => { if (!LS.kits[i] && Math.hypot(m.position.x - cp.x, m.position.z - cp.z) < 3) { LS.kits[i] = true; c.hp = Math.min(c.max, c.hp + 70); toast('Repair kit! The car is fixed a bit.', 2); sfx.repair(); } });
+  // squash aliens on the road
+  if (LS.ph >= 2) for (const a of aliens.slice()) if (a.hp > 0 && Math.hypot(a.pos.x - cp.x, a.pos.z - cp.z) < 2.7 && Math.abs(a.pos.y - cp.y - 0.8) < 2.2) { LS.splat++; a.hp = 0; killAlien(a); burst(a.pos, 0x5dffa8, 60, 6, 2); if (LS.splat % 5 === 0) toast(`Squashed ${LS.splat} aliens!`, 1.4); }
+  // phases
+  if (LS.ph === 0 && partsGot() >= 3) { LS.ph = 1; LS.boardT = 10; toast('The car is fixed! Get in the car!', 3); sfx.repair(); }
+  if (LS.ph === 1) { LS.boardT -= dt; if (LS.boardT <= 0) boardCar(true); }
+  // spawns
+  if (LS.ph < 2) {
+    LS.spT -= dt;
+    if (LS.spT <= 0 && aliens.length < capA(5)) { LS.spT = 9 / DM(); const p = crewPick(), a = Math.random() * 6.28; spawnAlien(new V3(clamp(p.x + Math.cos(a) * 11, -29, 29), 8, clamp(p.z + Math.sin(a) * 11, -29, 29)), 'biter'); }
+  } else {
+    LS.acT -= dt;
+    if (LS.acT <= 0 && LS.acars.length < capA(5) && LS.cd < roadLen() - 25) { LS.acT = 5 / DM(); spawnACar(); }
+    LS.walkT -= dt;
+    if (LS.walkT <= 0 && aliens.length < capA(8) && LS.cd < roadLen() - 20) { LS.walkT = 2.6; const r = roadAt(LS.cd + 16 + Math.random() * 8); spawnAlien(new V3(r.x + (Math.random() - 0.5) * 3, 3, r.z + (Math.random() - 0.5) * 3), Math.random() < 0.5 ? 'swarm' : 'biter'); }
+  }
+}
+function updRoadAll(dt) {
+  // walking up to the car gets you in (after it is fixed); one player in means everybody in
+  if (LS.ph >= 2 && !LS.seated) LS.seated = true;
+  if (LS.seated && LS.ph >= 2 && curTool !== 1) selectTool(1); // riding: you hold the roof gun trigger
+  if (LS.ph === 1 && LS.car && (LS.seated || player.pos.distanceTo(LS.car.g.position) < 3.6)) boardCar(true);
+  updRoad(dt);
+}
+function hudRoad() {
+  if (LS.ph === 0) return ['Fix the car', `${partsGot()}/3 car parts · ${LS.seated ? 'press JUMP to get out of the car' : 'look for the yellow light beams'}`];
+  if (LS.ph === 1) return ['Get in the car!', `It leaves in ${Math.max(0, Math.ceil(LS.boardT))} s · walk up to the car`];
+  return ['Ride to the base', `${Math.floor(LS.cd / roadLen() * 100)}% · car ${Math.ceil(LS.car.hp / LS.car.max * 100)}% · shoot the alien cars · run over aliens`];
+}
+function tgtRoad() {
+  if (LS.ph === 0) { const left = (LS.items || []).filter((q) => q.kind === 'part' && !q.got).map((q) => q.p); return left.length ? nearest(left) : LS.car.g.position; }
+  if (LS.ph === 1) return LS.car.g.position;
+  const e = roadAt(roadLen()); return new V3(e.x, 2, e.z);
+}
 
 // --- 16: king of the asteroid (co-op only)
 function genKing() {
@@ -2019,62 +2317,62 @@ function updKing(dt) {
   }
 }
 function kingMsg(i, own) { toast(own ? `Point ${'ABC'[i]} captured!` : `Point ${'ABC'[i]} was lost!`, 2.2); if (own) sfx.pickup(); else tone(400, 200, 0.4, 'square', 0.06); }
-function hudKing() { const n = LS.pts.filter((p) => p.own).length; return ['Hold all 3 points', `${n}/3 held · hold time ${Math.floor(LS.score * 100)}% · wave ${LS.wave}`]; }
+function hudKing() { const n = LS.pts.filter((p) => p.own).length; return ['Hold all 3 points', `${n}/3 points · ${Math.floor(LS.score * 100)}% done · wave ${LS.wave}`]; }
 function tgtKing() { const free = LS.pts.filter((p) => !p.own).map((p) => new V3(p.x, p.y + 1, p.z)); return free.length ? nearest(free) : new V3(LS.pts[0].x, LS.pts[0].y, LS.pts[0].z); }
 
 const LEVELS = [
-  { name: 'Asteroid K-7', brief: 'Bridge to the caged artifact and fly it home.', gen: genWorld, update: updK7, par: 240,
-    tip: 'A minigun floats on a platform to your left. Destroy the purple alien nest below to stop the saucer drops.',
+  { name: 'Asteroid K-7', brief: 'Build a bridge to the artifact. Take it back to your ship.', gen: genWorld, update: updK7, par: 240,
+    tip: 'A minigun floats on your left. Break the purple alien nest below, then the saucers stop dropping aliens.',
     nest: () => !LS.nestCells || !LS.nestCells.length || cellsLeft(LS.nestCells, NEST) > 0,
     bonus: relicBonus('Recover the data core on the high rock'), relicMsg: 'Data core recovered!',
     saucers: [[24, 11, 0.13], [31, 15, -0.17]], sc: [10, 0, 0] },
-  { name: 'The Mothership', brief: 'Break three shield generators, drop into the core, steal its artifact. Then run: it self-destructs.', gen: genMothership,
+  { name: 'The Mothership', brief: 'Break 3 shield towers. Jump into the core and take the artifact. Then run: the ship will blow up.', gen: genMothership,
     update: updMothership, hud: hudMothership, target: tgtMothership, saucers: [[32, 12, 0.11], [38, 17, -0.14]], sc: [0, 0, 0], sky: { spin: 0.035 }, par: 300,
-    tip: 'Red turrets shoot at you. Hold the pickaxe on one for 3 seconds to hack it.',
+    tip: 'Green alien turrets shoot at you. Hold the pickaxe on one to take it over.',
     mix: { biter: 40, spitter: 30, shield: 18, swarm: 6, boom: 6 },
     items: () => [{ kind: 'rocket', p: ground(-20.5, 4.5) }],
-    bonus: () => ['Hack both red defence turrets', turrets.some((t) => t.enemy) ? 0 : 1],
+    bonus: () => ['Take over both alien turrets', turrets.some((t) => t.enemy) ? 0 : 1],
     netOut: () => [LS.sd === undefined ? -1 : r2(LS.sd)],
     netIn: (X) => { if (Array.isArray(X) && fin(X[0]) && X[0] >= 0) { if (LS.sd === undefined) LS.sd = X[0]; else if (Math.abs(LS.sd - X[0]) > 1) LS.sd = X[0]; } },
-    onOp: (k) => { if (k === 'sd' && LS.sd === undefined) { LS.sd = 60; toast('SELF-DESTRUCT! 60 seconds to get off the mothership!', 3.5); } } },
-  { name: 'Moon, far side', brief: 'Low gravity. Things burrow out of the dust, and something much bigger lives under it.', gen: genMoon, setup: setupMoon, update: updMoonAll,
-    grav: 0.42, cold: true, sub: 'Big jumps · crater pads launch you', saucers: [[30, 14, 0.12]], sc: [0, 0, 0], par: 300,
+    onOp: (k) => { if (k === 'sd' && LS.sd === undefined) { LS.sd = 60; toast('The ship will blow up in 60 seconds! Get out!', 3.5); } } },
+  { name: 'Moon, far side', brief: 'Low gravity. Aliens dig out of the sand. Something very big lives under it.', gen: genMoon, setup: setupMoon, update: updMoonAll,
+    grav: 0.42, cold: true, sub: 'Big jumps · pads in the holes throw you up', saucers: [[30, 14, 0.12]], sc: [0, 0, 0], par: 300,
     sky: { earth: [700, 820, -500], es: 0.32, hemi: [0x9fb4d6, 0x1b2230, 0.5], sun: 0.8 },
-    tip: 'When the ground rumbles, move! Shoot the sand worm while it is out.',
+    tip: 'When the ground shakes, move! Shoot the sand worm when it comes out.',
     items: () => [{ kind: 'freeze', p: ground(10.5, -10.5) }],
     bonus: relicBonus('Dig up the crashed probe (wreck in the far crater field)'), relicMsg: 'Probe recovered!',
     targets: () => (LS.w && !LS.w.dead && LS.w.st === 2 && LS.w.segs[0].visible ? [{ p: LS.w.segs[0].position, r: 1.5, hit: (d) => wormHit(d) }] : []),
     netOut: () => { const w = LS.w; return w ? [w.st, r2(w.t), r2(w.x), r2(w.z), r2(w.y0), r2(w.dir), Math.round(w.hp), w.dead ? 1 : 0] : 0; },
     netIn: (X) => { const w = LS.w; if (!w || !Array.isArray(X) || !X.every(fin)) return; if (X[0] !== w.st) w.t = X[1]; w.st = X[0]; w.x = X[2]; w.z = X[3]; w.y0 = X[4]; w.dir = X[5]; w.hp = X[6]; if (X[7] && !w.dead) { w.dead = true; burst(w.segs[0].position, 0xb8a27a, 100, 9, 2); } },
     onOp: (k, a) => { if (k === 'worm' && !isGuest() && fin(a[0])) wormHit(clamp(a[0], 0, 5)); else if (k === 'wormdead') toast('The sand worm is dead!', 3); } },
-  { name: 'Asteroid field run', brief: 'Ride the shuttles across the field. Dodge the drifting rocks. Grab the upgrade cores.', gen: genField, setup: setupField,
+  { name: 'Asteroid field run', brief: 'Ride the moving platforms to the other side. Watch out for flying rocks. Grab the power cores.', gen: genField, setup: setupField,
     update: updField, hud: hudField, target: () => ship.position, noArtifactWin: true, saucers: [[28, 12, 0.12], [34, 16, -0.15]], sc: [0, 0, 0], par: 150,
-    tip: 'Drifting rocks can knock you off a shuttle. Time your crossing.',
-    bonus: () => ['Grab both upgrade cores', LS.orbs && LS.orbs.every((o) => o.got) ? 1 : 0] },
-  { name: 'Defend the lander', brief: 'The jump drive needs 2:30 to charge. Keep the aliens off your ship.', gen: genDefend, setup: setupDefend,
+    tip: 'Flying rocks can push you off a platform. Wait for a good moment.',
+    bonus: () => ['Grab both power cores', LS.orbs && LS.orbs.every((o) => o.got) ? 1 : 0] },
+  { name: 'Defend the lander', brief: 'Your ship needs 2:30 to load its engine. Keep the aliens away from it.', gen: genDefend, setup: setupDefend,
     update: updDefend, hud: hudDefend, target: () => ship.position, canWin: () => false, defend: true, dropMul: 0.55, maxAliens: 9, par: 190,
-    saucers: [[22, 12, 0.14], [27, 16, -0.12], [32, 14, 0.1]], sc: [0, 0, 0], tip: 'Repair the third turret. Pick an upgrade when the drive hits 33% and 66%.', sGate: 8,
+    saucers: [[22, 12, 0.14], [27, 16, -0.12], [32, 14, 0.1]], sc: [0, 0, 0], tip: 'Fix the third turret. At 33% and 66% you can pick an upgrade.', sGate: 8,
     mix: { biter: 45, spitter: 30, shield: 10, swarm: 5, boom: 10 },
-    bonus: () => ['Keep the hull above 50%', LS.hull > 200 ? 2 : -1],
+    bonus: () => ['Keep the ship above 50% health', LS.hull > 200 ? 2 : -1],
     netOut: () => [r2(LS.charge), Math.round(LS.hull), LS.upDone || 0, LS.hullMul || 1, LS.turretCd || 0.4],
     netIn: (X) => {
       if (!Array.isArray(X) || !X.every(fin)) return;
-      if (LS.charge < 1 && X[0] >= 1) { toast('Jump drive charged! Get in the ship and hold on for 2 seconds.', 3.5); sfx.pickup(); }
+      if (LS.charge < 1 && X[0] >= 1) { toast('Engine ready! Stand in the ship for 2 seconds.', 3.5); sfx.pickup(); }
       LS.charge = clamp(X[0], 0, 1); LS.hull = X[1];
       if (X[2] > (LS.upDone || 0)) { LS.upDone = X[2]; $('upg').hidden = true; }
       LS.hullMul = X[3]; LS.turretCd = X[4];
     },
-    onOp: (k, a) => { if (k === 'up' && Number.isInteger(a[0]) && Number.isInteger(a[1])) defUp(a[0], a[1], false); else if (k === 'final') toast('FINAL WAVE! Hold them off!', 3); } },
-  { name: 'Derelict station', brief: 'No air, no power. Restart the generators, find three keycards, open the vault. Stay out of the drone’s sight.', gen: genStation,
+    onOp: (k, a) => { if (k === 'up' && Number.isInteger(a[0]) && Number.isInteger(a[1])) defUp(a[0], a[1], false); else if (k === 'final') toast('LAST WAVE! Hold on!', 3); } },
+  { name: 'Derelict station', brief: 'No air, no power. Turn on the power, find 3 keycards, open the vault. Do not let the robot drone see you.', gen: genStation,
     setup: () => { setupStation(); stationSetupExtra(); }, update: updStationAll, hud: hudStation, target: tgtStation, o2: true, saucers: [], sc: [0, 0, 0], dark: true, aura: true, par: 330,
-    tip: 'Green-cross stations refill oxygen. Yellow-bolt generators restart with the pickaxe.',
+    tip: 'Green cross boxes give you air. Hold the pickaxe on the yellow power boxes to turn them on.',
     mix: { biter: 55, spitter: 25, shield: 10, swarm: 10, boom: 0 },
     items: () => [{ kind: 'charge', p: new V3(-8.5, 1.6, 0.5) }],
     secrets: () => { secretCrate(-4, 1, -17); secretCrate(-3, 1, 20); secretCrate(20, 1, 5); },
     pwrHold: (hit) => { const i = LS.pwrCells.findIndex(([x, y, z]) => x === hit.x && y === hit.y && z === hit.z); return i >= 0 && !LS.pow[i] ? { time: 2, done: () => powerOn(i, true) } : null; },
     pwrPrompt: (hit) => { const i = LS.pwrCells.findIndex(([x, y, z]) => x === hit.x && y === hit.y && z === hit.z); return i >= 0 && LS.pow[i] ? 'Generator running' : 'Dead generator · hold the pickaxe on it to restart it'; },
     targets: () => (LS.drone && LS.drone.alive ? [{ p: LS.drone.g.position, r: 0.7, hit: (d) => droneHit(d) }] : []),
-    bonus: () => ['Stay hidden: never trigger the drone alarm', LS.drone && LS.drone.alarms ? -1 : 2],
+    bonus: () => ['Do not let the drone see you', LS.drone && LS.drone.alarms ? -1 : 2],
     netOut: () => { const d = LS.drone; return [LS.keys.reduce((m, k, i) => m | (k.got ? 1 << i : 0), 0), (LS.pow[0] ? 1 : 0) | (LS.pow[1] ? 2 : 0), r2(d.g.position.x), r2(d.g.position.y), r2(d.g.position.z), r2(d.g.rotation.y), d.alive ? 1 : 0, d.alarms, r2(d.spot)]; },
     netIn: (X) => {
       if (!Array.isArray(X) || !X.every(fin)) return;
@@ -2083,10 +2381,10 @@ const LEVELS = [
       const d = LS.drone; d.tgt = new V3(X[2], X[3], X[4]); d.netYaw = X[5]; if (!X[6] && d.alive) { d.alive = false; burst(d.g.position, 0xff3a4a, 60, 6, 2); } d.alarms = X[7]; d.spot = X[8];
     },
     onOp: (k, a) => { if (k === 'pwr' && Number.isInteger(a[0])) powerOn(a[0], false); else if (k === 'alarm') droneAlarm(false); else if (k === 'drone' && !isGuest() && fin(a[0])) droneHit(clamp(a[0], 0, 6)); } },
-  { name: 'The Hive Queen', brief: 'Shoot her weak spot while it glows. EMP stuns her. Burn her egg sacs before they hatch.', gen: genQueen, setup: setupQueen,
-    update: updQueenAll, hud: hudQueen, target: tgtQueen, saucers: [], sc: [0, 0, 0], sub: 'Bridge to the crystal rock', par: 300,
-    tip: 'The lime egg sacs on her rock hatch over time. Mine or shoot them.',
-    bonus: () => ['Destroy all 6 egg sacs before any hatch', LS.hatched > 0 ? -1 : cellsLeft(LS.eggCells, EGG) === 0 ? 1 : 0],
+  { name: 'The Hive Queen', brief: 'Shoot her glowing weak spot. The shock wave stuns her. Break her eggs before they hatch.', gen: genQueen, setup: setupQueen,
+    update: updQueenAll, hud: hudQueen, target: tgtQueen, saucers: [], sc: [0, 0, 0], sub: 'Build a bridge to the crystal rock', par: 300,
+    tip: 'The green eggs on her rock hatch after a while. Dig or shoot them.',
+    bonus: () => ['Break all 6 eggs before one hatches', LS.hatched > 0 ? -1 : cellsLeft(LS.eggCells, EGG) === 0 ? 1 : 0],
     netOut: () => { const q = LS.q; if (!q) return 0; const s = q.slam || { x: 0, y: 0, z: 0, t: 0 }; return [Math.round(q.hp * 10) / 10, q.lit, Math.round(q.stun * 10) / 10, q.dead ? 1 : 0, r2(q.g.rotation.y), r2(q.t), q.p2 ? 1 : 0, LS.hatched, q.slamId, r2(s.x), r2(s.y), r2(s.z), r2(s.t)]; },
     netIn: (X) => {
       const q = LS.q; if (!q || !Array.isArray(X) || !X.every(fin)) return;
@@ -2094,69 +2392,98 @@ const LEVELS = [
       if (X[8] !== q.slamId) { q.slamId = X[8]; q.slam = { x: X[9], y: X[10], z: X[11], t: X[12] }; }
       if (X[3] && !q.dead) queenDie();
     },
-    onOp: (k) => { if (k === 'hatch') toast('An egg sac hatched!', 2); else if (k === 'p2') toast('The Queen lands! The ground cracks and her tentacles slam down.', 3.5); } },
-  { name: 'Solar storm', brief: 'Collect five supply drops. Every 40 seconds a solar storm sweeps the rock: get behind cover or dig in.', gen: genStorm, setup: setupStorm, update: updStorm, par: 260,
+    onOp: (k) => { if (k === 'hatch') toast('An egg hatched!', 2); else if (k === 'p2') toast('The Queen lands! The ground breaks and her tentacles hit hard.', 3.5); } },
+  { name: 'Solar storm', brief: 'Pick up 5 supply boxes. Every 40 seconds a sun storm hits: hide behind rock or dig a hole.', gen: genStorm, setup: setupStorm, update: updStorm, par: 260,
     hud: () => LS.got < 5 ? ['Collect supply drops', `${LS.got}/5 · storm ${LS.storm > 0 ? 'NOW: take cover!' : 'in ' + Math.ceil(LS.sT) + ' s'}`] : ['Back to the ship', LS.storm > 0 ? 'Storm now: take cover!' : 'All drops collected'],
     target: () => LS.got < 5 && LS.drop ? new V3(LS.drop.x, LS.drop.y, LS.drop.z) : ship.position, saucers: [[26, 13, 0.12]], sc: [0, 0, 0],
-    sky: { hemi: [0xffc890, 0x5a2a10, 0.6], sun: 1.1 }, tip: 'The storm comes from the bright side. Any rock between you and it keeps you safe.',
-    bonus: () => ['Never get caught in the storm', LS.burned ? -1 : 2],
+    sky: { hemi: [0xffc890, 0x5a2a10, 0.6], sun: 1.1 }, tip: 'The storm comes from the bright side. Put rock between you and the storm.',
+    bonus: () => ['Never get hit by the storm', LS.burned ? -1 : 2],
     netOut: () => { const d = LS.drop; return [r2(LS.sT), r2(LS.storm), LS.got, d ? d.id : 0, d ? d.x : 0, d ? d.y : 0, d ? d.z : 0]; },
     netIn: (X) => { if (!Array.isArray(X) || !X.every(fin)) return; LS.sT = X[0]; LS.storm = X[1]; LS.got = X[2]; if (!X[3]) LS.drop = null; else if (!LS.drop || LS.drop.id !== X[3]) LS.drop = { id: X[3], x: X[4], y: X[5], z: X[6], h: 16 }; },
     onOp: (k, a) => { if (k === 'take' && !isGuest() && Number.isInteger(a[0])) takeDrop(a[0]); } },
-  { name: 'Ice comet', brief: 'Dig down to the frozen artifact before the comet breaks up. Its sunward end melts away, and the ice is slippery.', gen: genComet, setup: setupComet, update: updComet, par: 220,
+  { name: 'Ice comet', brief: 'Dig down to the frozen artifact before the comet breaks apart. One end melts. The ice is slippery.', gen: genComet, setup: setupComet, update: updComet, par: 220,
     hud: () => [carrying || netCarried ? 'Back to the ship' : 'Dig to the frozen artifact', `Comet breaks up in ${fmtTime(LS.time)} · the bright end is melting`],
-    saucers: [[30, 14, 0.12]], sc: [0, 0, 0], slip: true, sub: 'Deep in the frost core',
+    saucers: [[30, 14, 0.12]], sc: [0, 0, 0], slip: true, sub: 'Deep in the ice',
     sky: { earth: [900, 500, -800], es: 0.45, hemi: [0xbfe8ff, 0x1d3a5e, 0.7] }, mix: { biter: 40, spitter: 30, swarm: 20, shield: 10 },
     items: () => [{ kind: 'freeze', p: ground(-6.5, 4.5) }],
-    bonus: () => ['Mine all 5 glowing comet shards', cellsLeft(LS.shards, SHARD) === 0 ? 1 : 0],
+    bonus: () => ['Dig all 5 glowing ice crystals', cellsLeft(LS.shards, SHARD) === 0 ? 1 : 0],
     netOut: () => [Math.round(LS.time)], netIn: (X) => { if (Array.isArray(X) && fin(X[0]) && Math.abs(LS.time - X[0]) > 1.5) LS.time = X[0]; } },
-  { name: 'Hive tunnels', brief: 'Go down into an infested asteroid. Burn the egg sacs before they hatch, then get out.', gen: genHive, setup: setupHive, update: updHive, hud: hudHive, target: tgtHive, par: 300,
-    saucers: [], sc: [0, 0, 0], dark: true, aura: true, mix: { biter: 45, swarm: 30, shield: 10, boom: 15 }, tip: 'Your helmet light is on. A rocket launcher waits in the central chamber.',
+  { name: 'Hive tunnels', brief: 'Go into a rock full of aliens. Break the eggs before they hatch, then get out.', gen: genHive, setup: setupHive, update: updHive, hud: hudHive, target: tgtHive, par: 300,
+    saucers: [], sc: [0, 0, 0], dark: true, aura: true, mix: { biter: 45, swarm: 30, shield: 10, boom: 15 }, tip: 'You have a light around you. A rocket launcher is in the middle room.',
     items: () => { let y = -1; while (!get(0, y - 1, 0) && y > -9) y--; return [{ kind: 'rocket', p: new V3(0.5, y + 0.9, 0.5) }]; },
-    bonus: () => ['Burn every egg sac (none hatch)', LS.hatched > 0 ? -1 : cellsLeft(LS.eggCells, EGG) === 0 ? 1 : 0],
+    bonus: () => ['Break every egg (none may hatch)', LS.hatched > 0 ? -1 : cellsLeft(LS.eggCells, EGG) === 0 ? 1 : 0],
     netOut: () => [LS.hatched], netIn: (X) => { if (Array.isArray(X) && Number.isInteger(X[0])) LS.hatched = X[0]; },
-    onOp: (k) => { if (k === 'hatch') toast('An egg sac hatched!', 2); } },
-  { name: 'Satellite repair', brief: 'Fix four broken satellites across the debris field, then keep them alive while the uplink charges.', gen: genSats, setup: () => { blocks += 20; }, update: updSats, hud: hudSats, target: tgtSats, par: 240,
-    saucers: [[24, 12, 0.13], [30, 16, -0.15]], sc: [0, 0, 0], mix: { spitter: 40, biter: 35, swarm: 15, boom: 10 }, tip: 'Bridge to each satellite rock and hold the pickaxe on it. Aliens will try to break them again.',
+    onOp: (k) => { if (k === 'hatch') toast('An egg hatched!', 2); } },
+  { name: 'Satellite repair', brief: 'Fix 4 broken satellites. Then keep them safe while the signal loads.', gen: genSats, setup: () => { blocks += 20; }, update: updSats, hud: hudSats, target: tgtSats, par: 240,
+    saucers: [[24, 12, 0.13], [30, 16, -0.15]], sc: [0, 0, 0], mix: { spitter: 40, biter: 35, swarm: 15, boom: 10 }, tip: 'Build a bridge to each satellite and hold the pickaxe on it. Aliens will try to break them again.',
     aiTarget: (a, dBest) => { if (dBest < 5 || a.id % 5 > 2) return null; const s = satList().filter((t) => t.hp > 0); if (!s.length) return null; const t = s.reduce((b, q) => (q.head.distanceTo(a.pos) < b.head.distanceTo(a.pos) ? q : b)); return { p: t.head, reach: 1.4, hurt: (d) => damageTurret(t, d) }; },
-    bonus: () => ['No satellite goes down again after repair', (LS.satBroke || 0) ? -1 : 2],
+    bonus: () => ['No fixed satellite breaks again', (LS.satBroke || 0) ? -1 : 2],
     netOut: () => [r2(LS.up || 0), LS.satBroke || 0], netIn: (X) => { if (Array.isArray(X) && X.every(fin)) { LS.up = X[0]; LS.satBroke = X[1]; } } },
-  { name: 'Space elevator', brief: 'Climb the tower to the station at the top. Ride the lifts, build where there are none, and keep the swarms off you.', gen: genElevator, setup: setupElevator, update: updElevator, hud: hudElevator, par: 240,
-    target: () => new V3(0.5, 27.5, 0.5), saucers: [[22, 10, 0.1]], sc: [0, 0, 0], mix: { spitter: 45, swarm: 35, biter: 20 }, tip: 'Falling only drops you a floor or two. Checkpoints save the highest floor you reach.',
+  { name: 'Space elevator', brief: 'Climb the tower to the top. Ride the lifts. Where a lift is broken, build stairs.', gen: genElevator, setup: setupElevator, update: updElevator, hud: hudElevator, par: 240,
+    target: () => new V3(0.5, 27.5, 0.5), saucers: [[22, 10, 0.1]], sc: [0, 0, 0], mix: { spitter: 45, swarm: 35, biter: 20 }, tip: 'If you fall, you start again on the highest floor you reached.',
     items: () => [{ kind: 'charge', p: new V3(3.5, 2.6, 3.5) }, { kind: 'cell', p: new V3(10, -7.4, 7) }, { kind: 'cell', p: new V3(-9.5, 2.6, -6.5) }, { kind: 'cell', p: new V3(7, 12.6, -9.5) }],
     secrets: () => { secretCrate(-4, -8, -4); secretCrate(4, 12, 4); secretCrate(-4, 22, 3); },
-    bonus: () => ['Grab 3 energy cells on the outer ledges', cellsGot() >= 3 ? 1 : 0] },
-  { name: 'Escort the rover', brief: 'A cargo rover crawls across the rock. Bridge the gaps in front of it and keep the aliens off it.', gen: genRover, setup: setupRover, update: updRover, hud: hudRover, par: 200,
+    bonus: () => ['Grab 3 energy balls on the outside', cellsGot() >= 3 ? 1 : 0] },
+  { name: 'Escort the rover', brief: 'A slow truck drives across the rock. Fill the holes in front of it and keep the aliens away.', gen: genRover, setup: setupRover, update: updRover, hud: hudRover, par: 200,
     target: () => LS.rover.c, saucers: [[24, 12, 0.12], [30, 15, -0.14]], sc: [0, 0, 0], mix: { biter: 40, spitter: 25, boom: 20, shield: 15 },
-    sky: { earth: [700, 820, -500], es: 0.4, hemi: [0x9fb4d6, 0x2a2230, 0.55] }, tip: 'Exploding red aliens hurt the rover badly. Stop them early.',
+    sky: { earth: [700, 820, -500], es: 0.4, hemi: [0x9fb4d6, 0x2a2230, 0.55] }, tip: 'Red aliens blow up and hurt the truck a lot. Shoot them early.',
     aiTarget: (a, dBest) => (dBest > 4 || a.kind === 'boom' || a.kind === 'brute') && LS.rover ? { p: LS.rover.c, reach: 2.2, hurt: (d) => roverDmg(d) } : null,
     boltHit: (p) => { const r = LS.rover; if (r && Math.abs(p.x - r.c.x) < r.hx + 0.2 && Math.abs(p.y - r.c.y) < r.hy + 0.2 && Math.abs(p.z - r.c.z) < r.hz + 0.2) { roverDmg(12); return true; } return false; },
     boomHit: (p) => { if (LS.rover && p.distanceTo(LS.rover.c) < 4) roverDmg(50); },
-    bonus: () => ['Rover hull above 75% at the end', LS.rhp > 225 ? 2 : -1],
+    bonus: () => ['Truck health above 75% at the end', LS.rhp > 225 ? 2 : -1],
     netOut: () => [Math.round(LS.rhp), LS.wait ? 1 : 0], netIn: (X) => { if (Array.isArray(X) && X.every(fin)) { LS.rhp = X[0]; LS.wait = !!X[1]; } } },
-  { name: 'Gravity flip station', brief: 'Gravity flips between floor and ceiling every 20 seconds. Build over the holes on both sides to cross the hall.', gen: genGravity, setup: setupGravity, update: updGravity, par: 180,
+  { name: 'Gravity flip station', brief: 'Every 20 seconds you fall up to the ceiling, then down again. Cover the holes in the floor and the ceiling.', gen: genGravity, setup: setupGravity, update: updGravity, par: 180,
     hud: () => ['Cross the gravity hall', `Gravity flips in ${Math.ceil(LS.fT)} s · holes in the floor and in the ceiling`], target: () => new V3(26.5, LS.g ? 10.5 : 1.5, 0.5),
-    saucers: [], sc: [0, 0, 0], mix: { swarm: 50, biter: 30, shield: 20 }, tip: 'When the gravity flips you fall up. Make sure there is a ceiling above you.',
+    saucers: [], sc: [0, 0, 0], mix: { swarm: 50, biter: 30, shield: 20 }, tip: 'When gravity turns, you fall up. Make sure there is a roof over you.',
     items: () => [-22, -11, 1, 19].map((x) => ({ kind: 'cell', p: new V3(x + 0.5, 10.2, 0.5) })),
     secrets: () => { secretCrate(-22, 1, -2); secretCrate(10, 1, 2); box(19, 10, -3, 21, 11, -1, ALLOY); secretAt(20, 11, -2); set(20, 10, -2, RUNE); set(21, 10, -2, RUNE); },
-    bonus: () => ['Collect the 4 energy cells near the ceiling', cellsGot() >= 4 ? 1 : 0],
+    bonus: () => ['Grab the 4 energy balls near the ceiling', cellsGot() >= 4 ? 1 : 0],
     netOut: () => [LS.g, r2(LS.fT)], netIn: (X) => { if (Array.isArray(X) && X.every(fin)) { LS.g = X[0] ? 1 : 0; LS.fT = X[1]; } } },
-  { name: 'Mothership chase', brief: 'A giant saucer is crossing the sky. Destroy its four engine pods before it gets away.', gen: genChase, setup: setupChase, update: updChase, hud: hudChase, target: tgtChase, par: 200,
-    saucers: [[22, 13, 0.14], [28, 16, -0.12]], sc: [0, 0, 0], mix: { biter: 40, spitter: 35, shield: 10, swarm: 15 }, tip: 'Long shots work: the gun reaches the pods. The minigun and rockets shred them faster.',
+  { name: 'Mothership chase', brief: 'A giant saucer flies over you. Break its 4 orange engines before it gets away.', gen: genChase, setup: setupChase, update: updChase, hud: hudChase, target: tgtChase, par: 200,
+    saucers: [[22, 13, 0.14], [28, 16, -0.12]], sc: [0, 0, 0], mix: { biter: 40, spitter: 35, shield: 10, swarm: 15 }, tip: 'Your gun can reach the engines. The minigun and rockets are faster.',
     items: () => [{ kind: 'rocket', p: ground(6.5, -5.5) }],
     targets: chaseTargets,
     onSaucerDown: () => { LS.escorts = (LS.escorts || 0) + 1; },
-    bonus: () => ['Shoot down 3 escort saucers', (LS.escorts || 0) >= 3 ? 1 : 0],
+    bonus: () => ['Shoot down 3 small saucers', (LS.escorts || 0) >= 3 ? 1 : 0],
     netOut: () => { const b = LS.boss; return [r2(b.t), ...b.pods.map((p) => Math.max(0, Math.round(p.hp))), b.dead ? 1 : 0, LS.escorts || 0]; },
     netIn: (X) => { const b = LS.boss; if (!b || !Array.isArray(X) || !X.every(fin)) return; b.t = X[0]; b.pods.forEach((p, i) => { if (X[1 + i] <= 0 && p.hp > 0) podDown(i); else if (X[1 + i] > 0) p.hp = X[1 + i]; }); LS.escorts = X[6]; },
     onOp: (k, a) => { if (k === 'pod' && !isGuest() && Number.isInteger(a[0]) && fin(a[1])) podHit(a[0], clamp(a[1], 0, 6)); } },
-  { name: 'King of the asteroid', coop: true, brief: 'Co-op only. Capture all three points and hold them together while the waves get bigger.', gen: genKing, setup: setupKing, update: updKing, hud: hudKing, target: tgtKing, par: 300,
-    saucers: [[26, 12, 0.12]], sc: [0, 0, 0], tip: 'Stand on a point to capture it. Aliens on an empty point take it back. Split up!',
+  { name: 'King of the asteroid', coop: true, brief: 'Co-op only. Take all 3 points and hold them together. More and more aliens come.', gen: genKing, setup: setupKing, update: updKing, hud: hudKing, target: tgtKing, par: 300,
+    saucers: [[26, 12, 0.12]], sc: [0, 0, 0], tip: 'Stand on a point to take it. Aliens can take it back when nobody is there. Split up!',
     aiTarget: (a, dBest) => { if (dBest < 6) return null; const own = LS.pts.filter((p) => p.own); if (!own.length) return null; const p = own[a.id % own.length]; return { p: new V3(p.x, p.y + 0.8, p.z), reach: 0.8, hurt: () => {} }; },
-    bonus: () => ['Never lose a point once captured', LS.lost ? -1 : 2],
+    bonus: () => ['Never lose a point you took', LS.lost ? -1 : 2],
     netOut: () => [r2(LS.score), LS.wave, ...LS.pts.map((p) => p.own), ...LS.pts.map((p) => r2(p.prog)), LS.lost ? 1 : 0],
     netIn: (X) => { if (!Array.isArray(X) || !X.every(fin)) return; LS.score = X[0]; LS.wave = X[1]; LS.pts.forEach((p, i) => { p.own = X[2 + i]; p.prog = X[5 + i]; }); LS.lost = !!X[8]; },
     onOp: (k, a) => { if (k === 'cap') kingMsg(a[0], 1); else if (k === 'lost') kingMsg(a[0], 0); else if (k === 'wave') toast(`Wave ${a[0]}!`, 2); } },
+  { name: 'Road war', brief: 'Your car is broken. Find 3 car parts, then ride the car to the base. Alien cars will attack you on the way!', gen: genRoad, setup: setupRoad, update: updRoadAll, hud: hudRoad, target: tgtRoad, par: 220,
+    saucers: [], sc: [0, 0, 0], sky: { earth: [700, 820, -500], es: 0.32, hemi: [0x9fb4d6, 0x1b2230, 0.5], sun: 0.8 }, mix: { biter: 60, swarm: 25, spitter: 15 }, seat: carSeat,
+    tip: 'Press JUMP to get out of the car. In the car you shoot with the roof gun. The car squashes aliens on the road.',
+    items: () => [{ kind: 'part', p: ground(-20.5, -28.5) }, { kind: 'part', p: ground(-28.5, -17.5, 1.2) }, { kind: 'part', p: new V3(-15.5, 2.2, -17.5) }, { kind: 'rocket', p: ground(-26.5, -28.5) }],
+    targets: () => (LS.acars || []).map((a) => ({ p: a.pos.clone().setY(a.pos.y + 0.8), r: 1.7, hit: (d) => aCarHit(a.id, d) })),
+    bonus: () => ['Squash 10 aliens with the car', (LS.splat || 0) >= 10 ? 1 : 0],
+    netOut: () => { const a = [LS.ph, r2(LS.cd), Math.round(LS.car.hp), (LS.items || []).reduce((m, q, i) => m | (q.got && q.kind === 'part' ? 1 << i : 0), 0), LS.splat, Math.round(LS.boardT), LS.kits.reduce((m, k, i) => m | (k ? 1 << i : 0), 0)];
+      for (const c of LS.acars.slice(0, 8)) a.push(c.id, r2(c.pos.x), r2(c.pos.y), r2(c.pos.z), r2(c.yaw), c.ram ? 1 : 0); return a; },
+    netIn: (X) => {
+      if (!Array.isArray(X) || X.length < 7 || !X.every(fin) || !LS.car) return;
+      if (X[0] >= 2 && LS.ph < 2) { LS.seated = true; toast('Everyone is in the car! Hold on and shoot the alien cars!', 3); }
+      if (X[0] === 1 && LS.ph === 0) toast('The car is fixed! Get in the car!', 3);
+      LS.ph = X[0]; LS.cd += (X[1] - LS.cd) * (Math.abs(X[1] - LS.cd) > 4 ? 1 : 0.3); LS.car.hp = X[2]; LS.splat = X[4]; LS.boardT = X[5];
+      (LS.items || []).forEach((q, i) => { if (q.kind === 'part' && (X[3] >> i) & 1 && !q.got) { q.got = true; q.g.visible = false; q.bc.visible = false; } });
+      LS.kits = LS.kits.map((k, i) => !!((X[6] >> i) & 1));
+      const seen = new Set();
+      for (let k = 7; k + 5 < X.length; k += 6) {
+        const id = X[k]; seen.add(id);
+        let c = LS.acars.find((q) => q.id === id); if (!c) c = addACar(id, X[k + 1], X[k + 3], !!X[k + 5]);
+        c.tgt.set(X[k + 1], X[k + 2], X[k + 3]); c.yaw = X[k + 4];
+      }
+      for (const c of LS.acars.slice()) if (!seen.has(c.id)) { lvlG.remove(c.g); LS.acars = LS.acars.filter((q) => q !== c); }
+    },
+    onOp: (k, a) => {
+      if (k === 'board') { if (isGuest()) LS.seated = true; else boardCar(false); }
+      else if (k === 'acar' && !isGuest() && fin(a[0]) && fin(a[1])) aCarHit(a[0], clamp(a[1], 0, 15));
+      else if (k === 'acarDie' && isGuest()) { const c = LS.acars.find((q) => q.id === a[0]); if (c) { if (c.myHit && clock - c.myHit < 1.5) kills++; aCarDie(c, false); } }
+      else if (k === 'zap' && a.length >= 6 && a.every(fin)) zap(new V3(a[0], a[1], a[2]), new V3(a[3], a[4], a[5]));
+    } }
 ];
 const SKY0 = { earth: [1150, 230, -260], es: 1, hemi: [0x7cc4ff, 0x1d5a34, 0.62], sun: 0.95, spin: 0 };
 let L = LEVELS[0], LS = {}, meshDirty = false, o2 = 100, frost = 0, jam = 0;
@@ -2165,6 +2492,10 @@ const run = { order: [0, 1, 2, 3, 4, 5, 6], i: 0 };
 // difficulty scales how many aliens come and how fast; pickLv -1 = all solo missions in random order; pickCoop: co-op panel choice
 const DIFF = [{ n: 'Easy', m: 0.6 }, { n: 'Normal', m: 1 }, { n: 'Hard', m: 1.6 }, { n: 'Insane', m: 2.4 }];
 let diff = 1, pickLv = -1, pickCoop = -1;
+const VERSION = 'v2.0';
+document.querySelectorAll('.ver').forEach((e) => { e.textContent = VERSION; });
+const cleanName = (n) => String(n || '').replace(/[^\p{L}\p{N} _.!?-]/gu, '').trim().slice(0, 12);
+let myName = ''; try { myName = cleanName(localStorage.getItem('starblock.name')); } catch (e) {}
 try { const sv = JSON.parse(localStorage.getItem('starblock.pick') || '{}'); if (DIFF[sv.df]) diff = sv.df; if (sv.lv >= -1 && sv.lv < 30) pickLv = sv.lv; if (sv.co >= -1 && sv.co < 30) pickCoop = sv.co; } catch (e) {}
 const DM = () => DIFF[diff].m * (NET ? 1 : 0.5), capA = (n) => Math.max(1, Math.round(n * DM()));
 function crewPick() { const all = [player.pos, ...crewTargets]; return all[Math.floor(Math.random() * all.length)]; }
@@ -2203,21 +2534,21 @@ const secretsTotal = () => (LS.secretCells || []).length;
 const secretsFound = () => (LS.secretCells || []).filter(([x, y, z]) => get(x, y, z) !== CACHE).length;
 function secretReward(mine) {
   const n = secretsFound(), tot = secretsTotal();
-  if (mine) { blocks += 8; player.hp = Math.min(100, player.hp + 40); abCd.fill(0); toast(`Secret cache ${n}/${tot}! +8 blocks, suit patched, abilities recharged`, 3.5); }
-  else toast(`A crewmate dug up secret cache ${n}/${tot}`, 2.5);
+  if (mine) { blocks += 8; player.hp = Math.min(100, player.hp + 40); abCd.fill(0); toast(`Hidden box ${n}/${tot}! +8 blocks, health and powers back`, 3.5); }
+  else toast(`A friend found hidden box ${n}/${tot}`, 2.5);
   sfx.pickup();
 }
 // best results per mission, kept on this phone
 let best = {};
 try { best = JSON.parse(localStorage.getItem('starblock.best') || '{}') || {}; } catch (e) {}
 const starStr = (n) => '★'.repeat(n) + '☆'.repeat(3 - n);
+function shuffle(o) { for (let i = o.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [o[i], o[j]] = [o[j], o[i]]; } return o; }
 function newRun() {
   const solo = LEVELS.map((_, i) => i).filter((i) => !LEVELS[i].coop);
   const pick = NET && NET.host && pickCoop >= 0 && LEVELS[pickCoop] ? pickCoop : LEVELS[pickLv] && !LEVELS[pickLv].coop ? pickLv : -1;
   let o = solo.slice();
-  if (pick >= 0 && LEVELS[pick].coop) o = [pick, ...solo];
-  else if (pick >= 0) { const k0 = solo.indexOf(pick); o = solo.map((_, k) => solo[(k0 + k) % solo.length]); }
-  else for (let i = o.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [o[i], o[j]] = [o[j], o[i]]; }
+  shuffle(o);
+  if (pick >= 0) o = [pick, ...o.filter((i) => i !== pick)]; // the chosen mission first, the rest in a random order
   run.order = o; run.i = 0;
   mined = 0; placed = 0; kills = 0; shipsDown = 0; built = 0; playTime = 0; blocks = 0; hasMinigun = false; upg.dash = upg.shield = false;
   hasRocket = hasFreeze = hasCharge = false;
@@ -2281,14 +2612,14 @@ function makeSatModel() {
   return g;
 }
 function makeTurret(x, y, z, broken, kind) {
-  const mesh = kind === 'sat' ? makeSatModel() : makeTurretModel(); mesh.position.set(x + 0.5, y, z + 0.5); scene.add(mesh);
-  const t = { x, y, z, mesh, hp: broken ? 0 : 100, cd: 0, head: new V3(x + 0.5, y + 0.82, z + 0.5), sat: kind === 'sat', enemy: kind === 'enemy' };
+  const mesh = kind === 'sat' ? makeSatModel() : kind === 'enemy' ? makeAlienTurretModel() : makeTurretModel(); mesh.position.set(x + 0.5, y, z + 0.5); scene.add(mesh);
+  const t = { x, y, z, mesh, hp: broken ? 0 : 100, cd: 0, head: new V3(x + 0.5, y + (kind === 'enemy' ? 1.75 : 0.82), z + 0.5), sat: kind === 'sat', enemy: kind === 'enemy' };
   setTurretLook(t); return t;
 }
 function setTurretLook(t) {
   const u = t.mesh.userData, ok = t.hp > 0;
-  u.headMat.color.setHex(t.enemy ? 0xff6a7a : !ok ? 0x4a5868 : t.sat ? 0xdbe8f5 : 0x9fd8ff);
-  u.lamp.material.color.setHex(t.enemy ? 0xff2a4a : ok ? 0x5dffa8 : 0x5a2633);
+  if (u.alien) { u.headMat.color.setHex(t.enemy ? 0x46e07a : 0x7fd8ff); u.lamp.material.color.setHex(t.enemy ? 0xb8ff3a : 0x4fb3ff); u.headMat.emissive.setHex(t.enemy ? 0x0f5a2a : 0x0a3a66); }
+  else { u.headMat.color.setHex(t.enemy ? 0xff6a7a : !ok ? 0x4a5868 : t.sat ? 0xdbe8f5 : 0x9fd8ff); u.lamp.material.color.setHex(t.enemy ? 0xff2a4a : ok ? 0x5dffa8 : 0x5a2633); }
   u.head.rotation.x = ok ? 0 : 0.5;
 }
 function damageTurret(t, n) {
@@ -2296,8 +2627,8 @@ function damageTurret(t, n) {
   t.hp -= n;
   if (t.hp <= 0) {
     t.hp = 0; setTurretLook(t); burst(t.head, 0x9fd8ff, 30, 4); sfx.boom();
-    if (t.sat) { LS.satBroke = (LS.satBroke || 0) + 1; toast('A satellite went offline! Hold the pickaxe on it to fix it.', 2.5); }
-    else toast('A turret went down. Hammer it with the pickaxe to repair (3 blocks).');
+    if (t.sat) { LS.satBroke = (LS.satBroke || 0) + 1; toast('A satellite broke! Hold the pickaxe on it to fix it.', 2.5); }
+    else toast('A turret broke. Hit it with the pickaxe to fix it (3 blocks).');
   }
 }
 function turretAction(hit) {
@@ -2306,11 +2637,11 @@ function turretAction(hit) {
     if (t.enemy) { hackTurret(t, true); return; }
     if (t.hp >= 100) { toast('This turret is fully working.'); return; }
     const cost = t.sat ? 0 : t.hp <= 0 ? 3 : 1;
-    if (blocks < cost) { toast(`Repair needs ${cost} block${cost > 1 ? 's' : ''}. Mine some rock.`); return; }
+    if (blocks < cost) { toast(`Fixing needs ${cost} block${cost > 1 ? 's' : ''}. Mine some rock.`); return; }
     blocks -= cost; t.hp = 100; setTurretLook(t); t.pending = clock + 2; netOp(['r', t.x, t.y, t.z]); sfx.repair(); burst(t.head, 0x5dffa8, 24, 3, 1); toast(t.sat ? 'Satellite back online.' : 'Turret repaired.');
     return;
   }
-  if (hit.ny !== 1) { toast('Place turrets on top of a block.'); return; }
+  if (hit.ny !== 1) { toast('Put turrets on top of a block.'); return; }
   const x = hit.x, y = hit.y + 1, z = hit.z;
   if (!inB(x, y + 1, z) || get(x, y, z) || get(x, y + 1, z) || playerOverlaps(x, y, z) || playerOverlaps(x, y + 1, z)) { toast('No room for a turret here.'); return; }
   if (blocks < TURRET_COST) { toast(`A turret needs ${TURRET_COST} blocks. Mine some rock.`); return; }
@@ -2323,7 +2654,7 @@ function hackTurret(t, mine) {
   if (!t.enemy) return;
   t.enemy = false; t.hp = 100; setTurretLook(t); burst(t.head, 0x5dffa8, 30, 3, 1); sfx.repair();
   if (mine) netOp(['H', t.x, t.y, t.z]);
-  toast(mine ? 'Turret hacked! It fights for you now.' : 'A crewmate hacked a defence turret.', 2.5);
+  toast(mine ? 'Turret taken over! It fights for you now.' : 'A friend took over an alien turret.', 2.5);
 }
 function enemyTurret(t, dt) { // a mothership defence turret shoots at the crew until hacked
   let best = null, bd = 22;
@@ -2360,7 +2691,7 @@ function hurt(n) {
   player.hp -= n; player.lastHurt = clock; hurtFlash = Math.min(1, hurtFlash + n / 25); dmgTaken += n;
   if (hurtSoundT <= 0) { sfx.hurt(); hurtSoundT = 0.35; }
   if (player.hp <= 0) {
-    if (NET && NET.live && avatars.size > 0) { player.hp = 0; player.down = 20; input.act = false; toast('You are down! A crewmate can revive you.', 4); }
+    if (NET && NET.live && avatars.size > 0) { player.hp = 0; player.down = 20; input.act = false; toast('You are down! A friend can save you.', 4); }
     else respawn('Suit breach. You wake up at your ship.');
   }
 }
@@ -2378,7 +2709,7 @@ let novaT = 0;
 const abBtns = [...document.querySelectorAll('.ab')];
 function useAbility(i) {
   if (state !== 'play') return;
-  if (abCd[i] > 0) { toast(`${ABIL[i].name} recharging · ${Math.ceil(abCd[i])}s`, 1.2); return; }
+  if (abCd[i] > 0) { toast(`${ABIL[i].name} not ready · ${Math.ceil(abCd[i])}s`, 1.2); return; }
   const chest = new V3(player.pos.x, player.pos.y + 1, player.pos.z);
   if (i === 0) {
     const sy = Math.sin(player.yaw), cy = Math.cos(player.yaw);
@@ -2395,10 +2726,10 @@ function useAbility(i) {
     if (!isGuest()) for (const a of aliens) if (a.hp > 0 && a.pos.distanceTo(chest) < 11) { a.hp = 0; killAlien(a); n++; }
     for (const b of bolts) if (b.mesh.position.distanceTo(chest) < 11) { b.life = 0; burst(b.mesh.position, 0x4fb3ff, 6, 2); }
     novaMesh.position.copy(chest); novaMesh.visible = true; novaT = 0;
-    if (LS.q && !LS.q.dead && LS.q.g.position.distanceTo(chest) < 30) { LS.q.stun = 4; toast('The Queen is stunned! All weak spots are open.', 2.5); return finishAbility(i); }
-    sfx.boom(); toast(n ? `EMP nova · ${n} alien${n > 1 ? 's' : ''} fried` : 'EMP nova', 1.6);
+    if (LS.q && !LS.q.dead && LS.q.g.position.distanceTo(chest) < 30) { LS.q.stun = 4; toast('The Queen is stunned! Shoot her now.', 2.5); return finishAbility(i); }
+    sfx.boom(); toast(n ? `EMP nova · ${n} alien${n > 1 ? 's' : ''} fried` : 'Shock wave', 1.6);
   } else if (i === 3) {
-    abOn[3] = ABIL[3].dur; netOp(['z']); sfx.drop(); toast('Stasis field · aliens slowed', 1.6);
+    abOn[3] = ABIL[3].dur; netOp(['z']); sfx.drop(); toast('Slow time · aliens are slow', 1.6);
   } else if (i === 4) {
     player.hp = Math.min(100, player.hp + 60);
     let n = 0;
@@ -2468,7 +2799,7 @@ function updateMovers(dt) {
         m.hitT = clock;
         const away = new V3(p.x - m.c.x, 0, p.z - m.c.z); if (away.lengthSq() < 1e-4) away.set(0, 0, 1); away.normalize();
         player.vel.x = away.x * 6 + m.delta.x / dt * 1.2; player.vel.z = away.z * 6 + m.delta.z / dt * 1.2; player.vel.y = 4.5;
-        player.jumped = true; player.onGround = false; hurt(8); toast('A drifting rock knocked you!', 1.6); burst(new V3(p.x, p.y + 1, p.z), 0x8fb4d6, 20, 3);
+        player.jumped = true; player.onGround = false; hurt(8); toast('A flying rock hit you!', 1.6); burst(new V3(p.x, p.y + 1, p.z), 0x8fb4d6, 20, 3);
       }
     }
     else if (moverAt(p.x, p.y, p.z) === m) { p.add(m.delta); if (boxHits(p.x, p.y, p.z)) p.sub(m.delta); }
@@ -2518,6 +2849,8 @@ function updatePlayer(dt) {
   player.yaw -= input.lookDX * sensT * fs; player.pitch -= input.lookDY * sensT * fs;
   input.lookDX = input.lookDY = 0;
   player.pitch = clamp(player.pitch, -1.53, 1.53);
+  const seatP = L.seat && L.seat();
+  if (seatP) { player.pos.copy(seatP); player.vel.set(0, 0, 0); player.onGround = true; player.jumped = false; if (clock - player.lastHurt > 4) player.hp = Math.min(100, player.hp + 7 * dt); return; }
 
   let mx = input.mx + ((keys.has('KeyD') || keys.has('ArrowRight')) ? 1 : 0) - ((keys.has('KeyA') || keys.has('ArrowLeft')) ? 1 : 0);
   let my = input.my + ((keys.has('KeyW') || keys.has('ArrowUp')) ? 1 : 0) - ((keys.has('KeyS') || keys.has('ArrowDown')) ? 1 : 0);
@@ -2581,27 +2914,28 @@ function breakBlock(hit) {
   if (hit.type === RELIC) { sfx.pickup(); burst(c, 0xff7ab8, 50, 5, 0); toast(L.relicMsg || 'Bonus item recovered!', 3); }
   if (hit.type === ARTIFACT) {
     carrying = true; artifact.visible = false; $('carry').hidden = false;
-    sfx.pickup(); toast('Artifact secured. Get back to your ship!', 3.5);
+    sfx.pickup(); toast('You have the artifact. Go back to your ship!', 3.5);
     burst(c, 0x5dffa8, 60, 6, 0);
     saucers.forEach(s => { if (!s.dead) s.drop = Math.min(s.drop, 1.5); });
   } else { blocks++; mined++; sfx.break(); }
 }
 // bridge assist: looking down at an edge places the next block in front of your feet
 function bridgeCell() {
-  if (player.pitch > -0.3 || player.jumped) return null;
-  const fy = Math.floor(player.pos.y + 0.01) - 1, cx = Math.floor(player.pos.x), cz = Math.floor(player.pos.z);
+  const fl = player.flip, dn = fl ? 1 : -1; // with gravity flipped, "down" is up in the world
+  if ((fl ? player.pitch < 0.3 : player.pitch > -0.3) || player.jumped) return null;
+  const fy = fl ? Math.floor(player.pos.y + PH - 0.01) + 1 : Math.floor(player.pos.y + 0.01) - 1, cx = Math.floor(player.pos.x), cz = Math.floor(player.pos.z);
   const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw);
   const sx = Math.abs(fx) > Math.abs(fz) ? Math.sign(fx) : 0, sz = sx ? 0 : Math.sign(fz);
   for (const [x, z] of [[cx, cz], [cx + sx, cz + sz]]) {
     if (!inB(x, fy, z)) return null;
     if (get(x, fy, z)) continue;
-    const touches = [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], [0, -1, 0]].some(([a, b, c]) => { const t = get(x + a, fy + b, z + c); return t && !INVIS(t); });
+    const touches = [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], [0, dn, 0]].some(([a, b, c]) => { const t = get(x + a, fy + b, z + c); return t && !INVIS(t); });
     return touches ? { x, y: fy, z, nx: 0, ny: 0, nz: 0, type: 0, assist: true } : null;
   }
   return null;
 }
 function placeBlock(hit) {
-  if (blocks <= 0) { toast('No blocks. Mine some rock with the pickaxe.'); placeCd = 0.8; return; }
+  if (blocks <= 0) { toast('No blocks. Dig some rock with the pickaxe.'); placeCd = 0.8; return; }
   const x = hit.x + hit.nx, y = hit.y + hit.ny, z = hit.z + hit.nz;
   if (!inB(x, y, z) || get(x, y, z) || playerOverlaps(x, y, z)) return;
   set(x, y, z, PANEL); buildMeshes(); myEdit(x, y, z, PANEL);
@@ -2609,11 +2943,30 @@ function placeBlock(hit) {
   burst(new V3(x + 0.5, y + 0.5, z + 0.5), CHIP[PANEL], 8, 1.5);
 }
 const GUN = { dmg: 1, spread: 0, color: 0x7dffbf, flash: true }, MINI = { dmg: 0.5, spread: 0.035, color: 0x9fd8ff, flash: false };
+const CARGUN = { dmg: 1.1, spread: 0.012, color: 0xff9f5a, flash: true };
+const SMG = { dmg: 0.6, spread: 0.025, color: 0xffd166, flash: false, smg: true };
 const FREEZE = { dmg: 0.25, spread: 0, color: 0x9ff3ff, flash: false, freeze: true };
 function shieldBlocks(a, dir) { // shielded aliens block shots from the front
   if (a.kind !== 'shield') return false;
   const f = a.face || (fin(a.netYaw) ? new V3(Math.sin(a.netYaw), 0, Math.cos(a.netYaw)) : null);
   return !!f && dir.x * f.x + dir.z * f.z < -0.35;
+}
+function freezeSaucer(s) { s.netFrozen = 3; if (isGuest()) { netOp(['fs', saucers.indexOf(s)]); return; } s.frozen = 3; }
+// small ice crystals stuck on frozen aliens and saucers
+const iceGeo = new THREE.OctahedronGeometry(0.13, 0), iceMat = new THREE.MeshPhongMaterial({ color: 0xcff8ff, emissive: 0x2a7a9a, transparent: true, opacity: 0.85, flatShading: true });
+function iceFx(m, on, big) {
+  let ice = m.userData.ice;
+  if (!on && !ice) return;
+  if (!ice) {
+    ice = new THREE.Group(); const n = big ? 14 : 7, r = big ? 2.3 : 0.5;
+    for (let k = 0; k < n; k++) {
+      const c = new THREE.Mesh(iceGeo, iceMat), a = k / n * Math.PI * 2 + Math.random() * 0.4, e = (Math.random() - 0.3) * (big ? 0.5 : 1.4);
+      c.position.set(Math.cos(a) * r * Math.cos(e), Math.sin(e) * r * (big ? 0.4 : 1), Math.sin(a) * r * Math.cos(e));
+      c.scale.set(1, 1.6 + Math.random(), 1).multiplyScalar(big ? 2.2 : 1); c.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3); ice.add(c);
+    }
+    m.add(ice); m.userData.ice = ice;
+  }
+  ice.visible = on;
 }
 function freezeAlien(a) { a.netFrozen = 3; if (isGuest()) { netOp(['f', a.id]); return; } a.frozen = 3; }
 const rocketGeo = new THREE.CylinderGeometry(0.07, 0.07, 0.45, 8); rocketGeo.rotateX(Math.PI / 2);
@@ -2630,10 +2983,10 @@ function fireRocket(eye) {
 function explode(p, mine) {
   burst(p, 0xffd166, 60, 8, 1); burst(p, 0xff7a3a, 40, 5, 1); sfx.boom();
   if (!mine) return;
-  for (const a of aliens.slice()) { const d = a.pos.distanceTo(p); if (d < 3.6 && a.hp > 0) hitAlien(a, 4 * (1 - d / 5), a.pos.clone().sub(p).normalize(), 6); }
-  for (const s of saucers) if (!s.dead && s.mesh.position.distanceTo(p) < 4) hitSaucer(s, 5, p.clone());
-  if (L.targets) for (const tg of L.targets()) if (tg.p.distanceTo(p) < tg.r + 3) tg.hit(4, p.clone());
-  if (LS.q && !LS.q.dead && LS.q.g.position.distanceTo(p) < 5) queenHit(LS.q.lit, 2, p.clone());
+  for (const a of aliens.slice()) { const d = a.pos.distanceTo(p); if (d < 3.6 && a.hp > 0) hitAlien(a, 12 * (1 - d / 5), a.pos.clone().sub(p).normalize(), 6); }
+  for (const s of saucers) if (!s.dead && s.mesh.position.distanceTo(p) < 4) hitSaucer(s, 15, p.clone());
+  if (L.targets) for (const tg of L.targets()) if (tg.p.distanceTo(p) < tg.r + 3) tg.hit(12, p.clone());
+  if (LS.q && !LS.q.dead && LS.q.g.position.distanceTo(p) < 5) queenHit(LS.q.lit, 6, p.clone());
 }
 function updateRockets(dt) {
   for (const r of rockets) {
@@ -2647,11 +3000,18 @@ function updateRockets(dt) {
   rockets = rockets.filter((r) => { if (r.life < 0) { scene.remove(r.m); return false; } return true; });
 }
 // weapon and bonus pickups that float in a level
+function makePart() { // a car wheel with a gear: the parts for the road war car
+  const g = new THREE.Group();
+  const tire = new THREE.Mesh(new THREE.TorusGeometry(0.38, 0.16, 8, 16), phong(0x2a2f3a)); g.add(tire);
+  const gear = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.12, 10), phong(0xffd166, { emissive: 0x5a4a00 })); gear.rotation.x = Math.PI / 2; g.add(gear);
+  for (let i = 0; i < 8; i++) { const t = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.14), phong(0xffd166)); const a = i / 8 * Math.PI * 2; t.position.set(Math.cos(a) * 0.3, Math.sin(a) * 0.3, 0); g.add(t); }
+  return g;
+}
 function addItem(it) {
   if ((it.kind === 'rocket' && hasRocket) || (it.kind === 'freeze' && hasFreeze) || (it.kind === 'charge' && hasCharge)) return;
-  const col = { rocket: 0xff9f5a, freeze: 0x9ff3ff, charge: 0xffd166, cell: 0x5dffa8 }[it.kind] || 0x5dffa8;
-  const g = it.kind === 'rocket' ? tools[5].clone() : it.kind === 'freeze' ? tools[6].clone() : it.kind === 'charge' ? tools[1].clone() : orbMesh(col);
-  g.visible = true; if (it.kind !== 'cell') g.scale.setScalar(2.2);
+  const col = { rocket: 0xff9f5a, freeze: 0x9ff3ff, charge: 0xffd166, cell: 0x5dffa8, part: 0xffd166 }[it.kind] || 0x5dffa8;
+  const g = it.kind === 'rocket' ? tools[5].clone() : it.kind === 'freeze' ? tools[6].clone() : it.kind === 'charge' ? tools[1].clone() : it.kind === 'part' ? makePart() : orbMesh(col);
+  g.visible = true; if (it.kind !== 'cell' && it.kind !== 'part') g.scale.setScalar(2.2);
   g.position.copy(it.p); lvlG.add(g);
   const bc = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 50, 8, 1, true), basic(col, { transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false }));
   bc.position.set(it.p.x, it.p.y + 25, it.p.z); lvlG.add(bc);
@@ -2660,9 +3020,10 @@ function addItem(it) {
 function takeItem(it, mine) {
   if (it.got) return; it.got = true; it.g.visible = false; it.bc.visible = false;
   burst(it.p, 0x5dffa8, 40, 5, 0); sfx.pickup();
-  if (it.kind === 'rocket') { hasRocket = true; $('slotRocket').hidden = false; selectTool(5); toast('Rocket launcher! Key 6. Blasts whole groups.', 3); }
-  else if (it.kind === 'freeze') { hasFreeze = true; $('slotFreeze').hidden = false; selectTool(6); toast('Freeze ray! Key 7. Frozen aliens cannot move or bite.', 3); }
-  else if (it.kind === 'charge') { hasCharge = true; selectTool(1); toast('Gun upgrade: hold fire to charge a big shot, release to fire.', 3.5); }
+  if (it.kind === 'rocket') { hasRocket = true; $('slotRocket').hidden = false; selectTool(5); toast('Rocket launcher! Key 6. Kills whole groups.', 3); }
+  else if (it.kind === 'freeze') { hasFreeze = true; $('slotFreeze').hidden = false; selectTool(6); toast('Freeze gun! Key 7. Frozen aliens and saucers stop moving.', 3); }
+  else if (it.kind === 'charge') { hasCharge = true; selectTool(1); toast('Gun upgrade: SMG! Your space gun now shoots much faster.', 3.5); }
+  else if (it.kind === 'part') { if (mine) netOp(['L', 'cell', LS.items.indexOf(it)]); const n = partsGot(); toast(n >= 3 ? 'All 3 car parts!' : `Car part ${n}/3`, 2); }
   else if (it.kind === 'cell') { if (mine) netOp(['L', 'cell', LS.items.indexOf(it)]); toast(mine ? `Energy cell ${LS.items.filter((q) => q.kind === 'cell' && q.got).length}/${LS.items.filter((q) => q.kind === 'cell').length}` : 'A crewmate grabbed an energy cell', 2); }
 }
 function updateItems(dt) {
@@ -2695,12 +3056,12 @@ function fireGun(eye, o) {
   const end = eye.clone().addScaledVector(camDir, bt);
   const start = eye.clone().addScaledVector(camRight, 0.2).addScaledVector(camUp, -0.17).addScaledVector(camDir, 0.55);
   showBeam(start, end, o.color); if (o.big) { showBeam(start.clone().add(camUp.clone().multiplyScalar(0.03)), end, 0xffffff); burst(end, 0xffd166, 20, 4, 1); }
-  if (o.flash) { sfx.laser(); recoil = Math.max(recoil, 1); muzzleFlash.visible = true; } else if (o.freeze) tone(2400, 1700, 0.08, 'sine', 0.025); else { sfx.mini(); recoil = Math.max(recoil, 0.35); }
+  if (o.flash) { sfx.laser(); recoil = Math.max(recoil, 1); muzzleFlash.visible = true; } else if (o.smg) { sfx.mini(); recoil = Math.max(recoil, 0.5); muzzleFlash.visible = true; } else if (o.freeze) tone(2400, 1700, 0.08, 'sine', 0.025); else { sfx.mini(); recoil = Math.max(recoil, 0.35); }
   if (best && best.a) {
     const a = best.a;
     if (shieldBlocks(a, camDir) && !o.big) { burst(end, 0x9fd8ff, 8, 3, 1); sfx.hit(); hitAlien(a, o.dmg * 0.2, camDir, 0); if (clock - (LS.shTip || -99) > 6) { LS.shTip = clock; toast('The shield soaks most of the damage. Hit it from behind or the side!', 2.5); } }
     else { burst(end, o.freeze ? 0x9ff3ff : a.spitter ? 0x4fb3ff : 0x5dffa8, 10, 3, 2); sfx.hit(); if (o.freeze) freezeAlien(a); hitAlien(a, o.dmg, camDir, o.freeze ? 0 : 3 * o.dmg); }
-  } else if (best && best.s) hitSaucer(best.s, o.dmg, end); else if (best && best.q !== undefined) queenHit(best.q, o.dmg, end);
+  } else if (best && best.s) { if (o.freeze) freezeSaucer(best.s); hitSaucer(best.s, o.dmg, end); } else if (best && best.q !== undefined) queenHit(best.q, o.dmg, end);
   else if (best && best.tg) best.tg.hit(o.dmg, end);
   else if (vh && vh.type === EGG) breakBlock(vh);
   else if (vh) burst(end, 0xc8ffe6, 6, 2);
@@ -2781,10 +3142,13 @@ function updateWorldEntities(dt, eye) {
       s.dead -= dt;
       if (s.dead <= 0) {
         if (saucerGate > 0 || L.noRespawn || isGuest()) s.dead = isGuest() ? 1 : 0.5;
-        else { saucerGate = L.sGate || 10; s.hp = 10; m.visible = true; s.drop = 8; toast('A saucer warped back in.', 1.6); }
+        else { saucerGate = L.sGate || 10; s.hp = 10; s.frozen = 0; m.visible = true; s.drop = 8; toast('A new saucer is here.', 1.6); }
       }
       continue;
     }
+    const sFrozen = isGuest() ? s.netFrozenP : s.frozen > 0;
+    iceFx(m, !!sFrozen, true);
+    if (s.frozen > 0 || (isGuest() && s.netFrozenP)) { s.frozen -= dt; m.userData.beam.visible = false; continue; }
     s.ang += s.spd * dt;
     m.position.set(L.sc[0] + Math.cos(s.ang) * s.R, s.H + Math.sin(clock * 0.7 + s.R) * 2, L.sc[2] + Math.sin(s.ang) * s.R);
     m.rotation.y += dt * 1.4;
@@ -2808,6 +3172,7 @@ function updateWorldEntities(dt, eye) {
   const fdt = dt; dt = abOn[3] > 0 || stasisNet > 0 ? dt * 0.2 : dt; // stasis field slows aliens and their bolts
   for (const a of aliens) {
     a.t += dt;
+    iceFx(a.mesh, isGuest() ? !!a.netFrozen : a.frozen > 0);
     if (isGuest()) { guestAlien(a, dt, eye, chest); continue; }
     if (a.emerge > 0) { a.emerge -= dt; a.pos.y += dt * 1.2; a.mesh.position.copy(a.pos); a.mesh.lookAt(eye); continue; }
     const au = a.mesh.userData;
@@ -2907,7 +3272,7 @@ function updateWorldEntities(dt, eye) {
     if (player.pos.distanceTo(minigunSpot) < 2.3) {
       hasMinigun = true; worldMini.visible = false; miniBeacon.visible = false; $('slotMini').hidden = false;
       selectTool(3); sfx.pickup(); burst(minigunSpot, 0x4fb3ff, 50, 5, 0);
-      toast('Minigun acquired! Hold fire to spin it up.', 3);
+      toast('You got the minigun! Hold fire, it needs a moment to spin.', 3);
     }
   }
 
@@ -2926,7 +3291,7 @@ function updateWorldEntities(dt, eye) {
 }
 
 function win() {
-  state = 'won'; sfx.win(); input.act = false;
+  state = 'won'; sfx.win(); input.act = false; paused = false; $('pause').hidden = true;
   const last = run.i >= run.order.length - 1;
   $('wEye').textContent = last ? `All ${run.order.length} missions complete` : `Mission ${run.i + 1} of ${run.order.length} complete`;
   $('wTitle').textContent = last ? 'Campaign complete' : L.name;
@@ -2991,7 +3356,7 @@ function updateMarker() {
     x = w / 2 + dx * s; y = h / 2 - dy * s; rot = Math.atan2(dx, dy); mode = 'arrow';
   }
   if (mode !== markerMode) { marker.firstElementChild.className = mode; markerMode = mode; }
-  marker.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
+  marker.style.transform = `translate(${x / uiz}px, ${y / uiz}px) translate(-50%, -50%)`;
   marker.firstElementChild.style.transform = mode === 'arrow' ? `rotate(${rot}rad)` : 'rotate(45deg)';
 }
 
@@ -3012,7 +3377,7 @@ touchLayer.addEventListener('pointerdown', (e) => {
   touchLayer.setPointerCapture(e.pointerId);
   if (e.clientX < innerWidth * 0.42 && joyId === null) {
     joyId = e.pointerId; joyX = e.clientX; joyY = e.clientY;
-    joy.style.left = joyX + 'px'; joy.style.top = joyY + 'px'; joy.hidden = false; knob.style.transform = '';
+    joy.style.left = joyX / uiz + 'px'; joy.style.top = joyY / uiz + 'px'; joy.hidden = false; knob.style.transform = '';
     $('joyHint').hidden = true;
   } else if (lookId === null) { lookId = e.pointerId; lookX = e.clientX; lookY = e.clientY; }
 });
@@ -3021,7 +3386,7 @@ touchLayer.addEventListener('pointermove', (e) => {
     let dx = e.clientX - joyX, dy = e.clientY - joyY; const R = 52, l = Math.hypot(dx, dy);
     if (l > R) { dx *= R / l; dy *= R / l; }
     input.mx = dx / R; input.my = -dy / R;
-    knob.style.transform = `translate(${dx}px, ${dy}px)`;
+    knob.style.transform = `translate(${dx / uiz}px, ${dy / uiz}px)`;
   } else if (e.pointerId === lookId && !locked()) {
     input.lookDX += e.clientX - lookX; input.lookDY += e.clientY - lookY; lookX = e.clientX; lookY = e.clientY;
   }
@@ -3060,7 +3425,8 @@ abBtns.forEach((b, i) => b.addEventListener('pointerdown', (e) => { e.stopPropag
 document.querySelectorAll('.slot, .btn, .ab').forEach((b) => b.addEventListener('contextmenu', (e) => e.preventDefault()));
 
 window.addEventListener('keydown', (e) => {
-  if (state !== 'play') return;
+  if (e.code === 'KeyP' && !e.repeat) { if (paused) resumeGame(); else pauseGame(); return; }
+  if (state !== 'play' || paused) return;
   keys.add(e.code);
   const km = { Digit1: 0, Digit2: 1, Digit3: 3, Digit4: 2, Digit5: 4, Digit6: 5, Digit7: 6 };
   const ak = { KeyQ: 0, KeyE: 1, KeyR: 2, KeyT: 3, KeyG: 4 };
@@ -3077,7 +3443,7 @@ document.addEventListener('touchmove', (e) => { if (state === 'play') e.preventD
 
 function begin() {
   initAudio(); if (actx && actx.state === 'suspended') actx.resume();
-  $('menu').hidden = true; $('win').hidden = true; $('hud').hidden = false;
+  $('menu').hidden = true; $('win').hidden = true; $('hud').hidden = false; $('pause').hidden = true; paused = false;
   state = 'play';
   if (matchMedia('(pointer: coarse)').matches) {
     try { const r = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); if (r && r.catch) r.catch(() => {}); } catch (e) {}
@@ -3085,7 +3451,32 @@ function begin() {
   $('bnEye').textContent = (NET ? `Co-op · game ${NET.code}` : `Mission ${run.i + 1} of ${run.order.length}`) + ` · ${DIFF[diff].n}`; $('bnName').textContent = L.name; $('bnBrief').textContent = L.brief;
   $('banner').classList.add('show'); bannerT = 4.5;
 }
-let bannerT = 0;
+let bannerT = 0, paused = false;
+function pauseGame() {
+  if (paused || (state !== 'play' && state !== 'paused')) return;
+  paused = true; input.act = false; input.jump = false; keys.clear(); joyId = lookId = null; joy.hidden = true;
+  if (!NET) state = 'paused';
+  if (document.pointerLockElement) document.exitPointerLock();
+  const sel = $('pauseLvl'); sel.innerHTML = '';
+  LEVELS.forEach((lv, i) => { if (lv.coop && !(NET && NET.host)) return; const o = document.createElement('option'); o.value = i; o.textContent = lv.name + (lv.coop ? ' (co-op)' : ''); sel.appendChild(o); });
+  sel.value = String(LEVELS.indexOf(L));
+  const guest = !!(NET && !NET.host);
+  sel.disabled = $('pauseGo').disabled = guest;
+  $('pauseNote').textContent = !NET ? 'The game is stopped.' : guest ? 'Co-op: the game keeps going for your crew. Only the host can change the mission.' : 'Co-op: the game keeps going for your crew. A new mission starts for everyone.';
+  $('pause').hidden = false;
+}
+function resumeGame() { if (!paused) return; paused = false; $('pause').hidden = true; if (state === 'paused') state = 'play'; }
+$('pauseBtn').addEventListener('click', pauseGame);
+$('resumeBtn').addEventListener('click', resumeGame);
+$('pauseGo').addEventListener('click', () => {
+  if (NET && !NET.host) return;
+  const k = +$('pauseLvl').value; if (!LEVELS[k]) return;
+  paused = false; $('pause').hidden = true; state = 'play';
+  run.order = [k, ...shuffle(LEVELS.map((_, i) => i).filter((i) => i !== k && !LEVELS[i].coop))]; run.i = 0;
+  if (NET) coopReset(); else { loadLevel(); begin(); }
+});
+document.addEventListener('pointerlockchange', () => { if (!document.pointerLockElement && state === 'play' && !paused && hadLock) pauseGame(); hadLock = !!document.pointerLockElement; });
+let hadLock = false;
 $('start').addEventListener('click', () => { if (NET && NET.guest && !NET.synced) return; begin(); });
 $('again').addEventListener('click', () => { if (NET) { if (NET.host) { if (run.i >= run.order.length - 1) newRun(); else run.i++; coopReset(); } return; } if (run.i >= run.order.length - 1) newRun(); else run.i++; loadLevel(); begin(); });
 
@@ -3254,11 +3645,11 @@ function netSet(x, y, z, t, quiet) {
   if (NET && NET.host) NET.edits.set(idx(x, y, z), [x, y, z, t]);
   if (prev === ARTIFACT && t === AIR && !carrying) {
     artifact.visible = false; netCarried = true;
-    if (!quiet) { toast('A crewmate grabbed the artifact! Cover them on the way to the ship.', 3); saucers.forEach((s) => { if (!s.dead) s.drop = Math.min(s.drop, 1.5); }); }
+    if (!quiet) { toast('A friend has the artifact! Protect them on the way to the ship.', 3); saucers.forEach((s) => { if (!s.dead) s.drop = Math.min(s.drop, 1.5); }); }
   }
   if (t === TURRET && !turrets.find((q) => q.x === x && q.y === y && q.z === z)) turrets.push(makeTurret(x, y, z, false));
   if (prev === CACHE && !quiet) secretReward(false);
-  if (prev === RELIC && !quiet) toast('A crewmate recovered the bonus item!', 2.5);
+  if (prev === RELIC && !quiet) toast('A friend found the bonus item!', 2.5);
   if (t === ARTIFACT) { artifactCell = { x, y, z }; artifact.position.set(x + 0.5, y + 0.5, z + 0.5); artifact.visible = true; netCarried = false; }
   if (!quiet) burst(cellV(x, y, z), CHIP[t || prev] || 0x8fb4d6, t ? 8 : 18, t ? 1.5 : 3.5);
 }
@@ -3305,7 +3696,7 @@ function onOps(msg) {
     else if (k === 'x' && [a, b, c].every(fin)) blastFx(new V3(a, b, c));
     else if (k === 'B' && Number.isInteger(a) && Math.abs(a) < 200 && !(isGuest() && !NET.synced)) { blocks = Math.max(0, blocks + a); NET.blk = blocks; }
     else if (k === 'm' && Number.isInteger(a) && CHAT[a]) chatIn(msg.peer, a);
-    else if (k === 'rv') { if (a === myPeer() && player.down > 0) { player.down = 0; player.hp = 50; toast('A crewmate revived you!', 2.5); sfx.repair(); } }
+    else if (k === 'rv') { if (a === myPeer() && player.down > 0) { player.down = 0; player.hp = 50; toast('A friend saved you!', 2.5); sfx.repair(); } }
     else if (k === 'H' && [a, b, c].every(Number.isInteger)) { const t = turrets.find((q) => q.x === a && q.y === b && q.z === c); if (t) hackTurret(t, false); }
     else if (k === 'L' && typeof a === 'string' && !(isGuest() && !NET.synced)) { if (a === 'cell') { if (LS.items && LS.items[b]) takeItem(LS.items[b], false); } else if (L.onOp) L.onOp(a, op.slice(2), msg.peer); }
     else if (k === 'e' && [a, b, c].every(fin)) {
@@ -3318,11 +3709,12 @@ function onOps(msg) {
     else if (!NET.host) continue;
     // host only from here
     else if (k === 'k') sendSync();
-    else if (k === 'h') { const al = aliens.find((q) => q.id === a); if (al && fin(b) && [c, d, e].every(fin)) { al.hp -= clamp(b, 0, 2); al.flash = 0.12; al.vel.add(new V3(clamp(c, -8, 8), clamp(d, -8, 8), clamp(e, -8, 8))); if (al.hp <= 0) killAlien(al); } }
-    else if (k === 's') { const s = saucers[a]; if (s && !s.dead && fin(b)) hitSaucer(s, clamp(b, 0, 2), s.mesh.position); }
+    else if (k === 'h') { const al = aliens.find((q) => q.id === a); if (al && fin(b) && [c, d, e].every(fin)) { al.hp -= clamp(b, 0, 12); al.flash = 0.12; al.vel.add(new V3(clamp(c, -8, 8), clamp(d, -8, 8), clamp(e, -8, 8))); if (al.hp <= 0) killAlien(al); } }
+    else if (k === 's') { const s = saucers[a]; if (s && !s.dead && fin(b)) hitSaucer(s, clamp(b, 0, 15), s.mesh.position); }
     else if (k === 'r') repairTurretAt(a, b, c);
+    else if (k === 'fs') { const s = saucers[a]; if (s && !s.dead) s.frozen = 3; }
     else if (k === 'f') { const al = aliens.find((q) => q.id === a); if (al) al.frozen = 3; }
-    else if (k === 'q' && LS.q && !LS.q.dead && Number.isInteger(a) && fin(b)) queenHit(a, clamp(b, 0, 2), LS.q.g.position.clone());
+    else if (k === 'q' && LS.q && !LS.q.dead && Number.isInteger(a) && fin(b)) queenHit(a, clamp(b, 0, 6), LS.q.g.position.clone());
   }
 }
 const CHAT = ['Help!', 'Here!', 'Follow me!'];
@@ -3372,7 +3764,7 @@ function stopNet(msg) {
   for (const av of avatars.values()) scene.remove(av.g); avatars.clear();
   $('crew').hidden = true; $('chat').hidden = true; $('pick').classList.remove('locked'); revivePrompt = '';
   newRun(); loadLevel(); menuInfo();
-  state = 'menu'; $('hud').hidden = true; $('win').hidden = true; $('menu').hidden = false; $('coop').hidden = false;
+  state = 'menu'; paused = false; $('pause').hidden = true; $('hud').hidden = true; $('win').hidden = true; $('menu').hidden = false; $('coop').hidden = false;
   if (document.pointerLockElement) document.exitPointerLock();
   coopMsg(msg || '');
 }
@@ -3430,11 +3822,11 @@ async function joinGame() {
 
 function sendPresence() {
   const P = player, pr = { r: NET.host ? 'h' : 'g', j: NET.j, ep: NET.ep,
-    p: [r2(P.pos.x), r2(P.pos.y), r2(P.pos.z)], yw: r2(P.yaw), pt: r2(P.pitch), tl: curTool, car: carrying ? 1 : 0, st: state === 'play' ? 1 : 0,
+    p: [r2(P.pos.x), r2(P.pos.y), r2(P.pos.z)], yw: r2(P.yaw), pt: r2(P.pitch), tl: curTool, nm: myName, car: carrying ? 1 : 0, st: state === 'play' ? 1 : 0,
     fx: (state === 'play' && input.act && !(curTool === 3 && (jam > 0 || spin < 0.55)) ? 1 : 0) | (abOn[1] > 0 ? 2 : 0) | (clock - dashAt < 0.35 ? 4 : 0), dn: player.down > 0 ? 1 : 0, fl: player.flip ? 1 : 0 };
   if (NET.host) {
     pr.A = aliens.slice(0, 24).map((a) => [a.id, KIND.indexOf(a.kind), r2(a.pos.x), r2(a.pos.y), r2(a.pos.z), Math.max(0, Math.round(a.hp * 10) / 10), a.frozen > 0 ? 1 : 0, a.face ? r2(Math.atan2(a.face.x, a.face.z)) : 0]);
-    pr.S = saucers.map((s) => [r2(s.ang), s.dead > 0 ? 1 : 0, s.mesh.userData.beam.visible ? 1 : 0]);
+    pr.S = saucers.map((s) => [r2(s.ang), s.dead > 0 ? 1 : 0, s.mesh.userData.beam.visible ? 1 : 0, s.frozen > 0 ? 1 : 0]);
     pr.T = turrets.map((t) => [t.x, t.y, t.z, Math.round(t.hp), t.enemy ? 1 : 0]);
     pr.nc = netCarried || carrying ? 1 : 0;
     pr.lv = run.order[run.i]; pr.df = diff;
@@ -3466,7 +3858,7 @@ function mirrorHost(hp, dt) {
     let da = e[0] - s.ang; if (Math.abs(da) > 0.6) s.ang = e[0]; else s.ang += da * Math.min(1, dt * 4);
     if (e[1] && !s.dead) { s.dead = 40; s.mesh.visible = false; burst(s.mesh.position, 0x5dffa8, 120, 10, 0); sfx.boom(); }
     if (!e[1] && s.dead) { s.dead = 0; s.mesh.visible = true; }
-    s.netBeam = !!e[2];
+    s.netBeam = !!e[2]; s.netFrozenP = !!e[3];
   });
   if (Array.isArray(pr.T)) for (const e of pr.T) {
     if (!Array.isArray(e) || !e.slice(0, 4).every(Number.isInteger) || !inB(e[0], e[1], e[2])) continue;
@@ -3552,12 +3944,12 @@ function updateNet(dt) {
     av.g.rotation.set(pr.dn ? -Math.PI / 2 : 0, av.yaw, pr.fl ? Math.PI : 0); av.g.userData.head.rotation.x = clamp(av.pitch, -1, 1) * 0.7;
     if (pr.dn && !player.down && state === 'play' && av.g.position.distanceTo(player.pos) < 2.6) {
       av.rev = (av.rev || 0) + dt; reviving = Math.min(99, Math.round(av.rev / 2.5 * 100));
-      if (av.rev >= 2.5) { netOp(['rv', p.peer]); av.rev = -2; toast('Crewmate revived!', 2); sfx.repair(); }
+      if (av.rev >= 2.5) { netOp(['rv', p.peer]); av.rev = -2; toast('You saved your friend!', 2); sfx.repair(); }
     } else if (!pr.dn) av.rev = 0;
     av.chatT = Math.max(0, (av.chatT || 0) - dt);
     av.g.userData.gem.visible = !!pr.car; av.g.userData.gem.rotation.y += dt * 2;
     if (pr.st) avatarFx(av, pr, dt);
-    const nm = pr.r === 'h' ? 'HOST' : 'P' + (rank + 1); av.g.userData.label = nm;
+    const nm = cleanName(pr.nm) || (pr.r === 'h' ? 'HOST' : 'P' + (rank + 1)); av.g.userData.label = nm;
     setTag(av, pr.dn ? nm + ' DOWN' : av.chatT > 0 ? av.chat : nm, pr.dn ? 0xff5a6a : col);
     if (pr.st) crewTargets.push(new V3(av.g.position.x, av.g.position.y + 1, av.g.position.z));
   });
@@ -3593,8 +3985,11 @@ $('coopCode').addEventListener('keydown', (e) => { if (e.key === 'Enter') joinGa
 $('coopCode').addEventListener('input', () => { $('coopCode').value = $('coopCode').value.replace(/\D/g, '').slice(0, 2); });
 
 // ---------------------------------------------------------------- loop
+// phones with a big system font open the page zoomed in, so the CSS screen is smaller: shrink the HUD to fit
+let uiz = 1;
 function resize() {
   const w = innerWidth, h = innerHeight;
+  uiz = clamp(Math.min(Math.min(w, h) / 360, Math.max(w, h) / 720), 0.55, 1); document.documentElement.style.setProperty('--uiz', uiz.toFixed(3));
   renderer.setSize(w, h, false);
   camera.aspect = w / h; camera.fov = w < h ? 88 : 75; camera.updateProjectionMatrix();
   vmCam.aspect = w / h; vmCam.fov = w < h ? 75 : 60; vmCam.updateProjectionMatrix();
@@ -3629,7 +4024,9 @@ function frame(now) {
   let hit = null;
   if (state === 'play') hit = raycast(eye, camDir, REACH);
   if (state === 'play') {
-    if (curTool === 0) {
+    if (LS.seated) {
+      if (input.act && gunCd <= 0) { fireGun(eye, CARGUN); gunCd = 0.1; }
+    } else if (curTool === 0) {
       // melee: an alien right in front of the pickaxe takes priority over mining
       let foe = null, ft = 2.8;
       for (const a of aliens) { if (a.emerge > 0) continue; const t = raySphere(eye, camDir, a.pos, a.kind === 'brute' ? 1.1 : 0.8); if (t >= 0 && t < ft && (!hit || t < hit.t + 0.5)) { ft = t; foe = a; } }
@@ -3657,27 +4054,20 @@ function frame(now) {
         if (mineProg >= 1) { breakBlock(hit); mineProg = 0; mineKey = ''; }
       } else { mineProg = 0; mineKey = ''; }
     } else if (curTool === 1) {
-      if (hasCharge) {
-        if (input.act) charge = Math.min(1, charge + dt / 0.9);
-        else if (prevAct && charge > 0) {
-          if (charge >= 0.35) { fireGun(eye, { dmg: 1 + charge * 4, spread: 0, color: 0xffd166, flash: true, big: true }); recoil = 1.6; }
-          else fireGun(eye, GUN);
-          gunCd = 0.19; charge = 0;
-        }
-      } else if (input.act && gunCd <= 0) { fireGun(eye, GUN); gunCd = 0.19; }
+      if (input.act && gunCd <= 0) { if (hasCharge) { fireGun(eye, SMG); gunCd = 0.075; } else { fireGun(eye, GUN); gunCd = 0.19; } }
     } else if (curTool === 5) {
-      if (input.act && gunCd <= 0) { fireRocket(eye); gunCd = 1.1; }
+      if (input.act && gunCd <= 0) { fireRocket(eye); gunCd = 1.22; }
     } else if (curTool === 6) {
       if (input.act && gunCd <= 0) { fireGun(eye, FREEZE); gunCd = 0.11; }
     } else if (curTool === 3) {
       if (input.act && spin > 0.55 && gunCd <= 0 && jam <= 0) {
         fireGun(eye, MINI); gunCd = 0.065;
-        if (L.cold) { frost += 0.03; if (frost >= 1) { frost = 1; jam = 2.5; toast('Minigun froze up! Thawing…', 2); } }
+        if (L.cold) { frost += 0.03; if (frost >= 1) { frost = 1; jam = 2.5; toast('The minigun is frozen! Wait a moment…', 2); } }
       }
     } else if (curTool === 2) {
       const nx = hit && hit.x + hit.nx, ny = hit && hit.y + hit.ny, nz = hit && hit.z + hit.nz;
       const normalOk = hit && !get(nx, ny, nz) && !playerOverlaps(nx, ny, nz);
-      if (!normalOk || hit.y < Math.floor(player.pos.y) - 1) { const bc = bridgeCell(); if (bc) hit = bc; }
+      if (!normalOk || (player.flip ? hit.y > Math.floor(player.pos.y + PH) + 1 : hit.y < Math.floor(player.pos.y) - 1)) { const bc = bridgeCell(); if (bc) hit = bc; }
       if (input.act && placeCd <= 0 && hit) { placeBlock(hit); placeCd = 0.24; }
     } else if (curTool === 4) {
       if (input.act && placeCd <= 0 && hit) { turretAction(hit); placeCd = 0.5; }
@@ -3695,10 +4085,10 @@ function frame(now) {
   spin = (state === 'play' && curTool === 3 && input.act && jam <= 0) ? Math.min(1, spin + dt * 2.5) : Math.max(0, spin - dt * 1.5);
   tools[3].userData.barrels.rotation.z += dt * spin * 40;
   let pr = '';
-  if (hit && hit.type === TURRET) { const t = turrets.find((q) => q.x === hit.x && q.y === hit.y && q.z === hit.z); if (t) pr = t.enemy ? 'Enemy turret · hold the pickaxe on it for 3 s to hack it' : t.sat ? (t.hp <= 0 ? 'Broken satellite · hold the pickaxe on it to repair' : `Satellite ${Math.ceil(t.hp)}%` + (t.hp < 100 ? ' · pickaxe to fix' : '')) : t.hp <= 0 ? 'Broken turret · hold pickaxe on it to repair (3 blocks)' : `Turret ${Math.ceil(t.hp)}%` + (t.hp < 100 ? ' · pickaxe repair: 1 block' : ''); }
+  if (hit && hit.type === TURRET) { const t = turrets.find((q) => q.x === hit.x && q.y === hit.y && q.z === hit.z); if (t) pr = t.enemy ? 'Alien turret · hold the pickaxe on it to take it over' : t.sat ? (t.hp <= 0 ? 'Broken satellite · hold the pickaxe on it to fix it' : `Satellite ${Math.ceil(t.hp)}%` + (t.hp < 100 ? ' · pickaxe to fix' : '')) : t.hp <= 0 ? 'Broken turret · hold the pickaxe on it to fix it (3 blocks)' : `Turret ${Math.ceil(t.hp)}%` + (t.hp < 100 ? ' · pickaxe repair: 1 block' : ''); }
   else if (hit && hit.type === PWR && L.pwrPrompt) pr = L.pwrPrompt(hit);
-  else if (hit && hit.type === CACHE) pr = 'Secret cache! Mine it';
-  else if (hit && curTool === 0 && HARD[hit.type] >= 50) pr = hit.type === FIELD ? 'Force field · cannot be mined' : 'Too tough to mine';
+  else if (hit && hit.type === CACHE) pr = 'Hidden box! Dig it';
+  else if (hit && curTool === 0 && HARD[hit.type] >= 50) pr = hit.type === FIELD ? 'Force field · you cannot dig it' : 'Too hard to dig';
   else if (hit && curTool === 4) pr = hit.ny === 1 ? `Build turret here · ${TURRET_COST} blocks` : '';
   if (revivePrompt) pr = revivePrompt;
   if (promptEl.textContent !== pr) promptEl.textContent = pr;
@@ -3708,7 +4098,7 @@ function frame(now) {
     crack.visible = mineProg > 0; crack.position.copy(hiBox.position); crack.material.opacity = mineProg * 0.55;
   } else { hiBox.visible = false; crack.visible = false; }
   const frostRing = curTool === 3 && L.cold;
-  ring.style.strokeDashoffset = 106.8 * (1 - clamp(curTool === 1 && hasCharge ? charge : frostRing ? frost : mineProg, 0, 1));
+  ring.style.strokeDashoffset = 106.8 * (1 - clamp(frostRing ? frost : mineProg, 0, 1));
   ring.style.stroke = frostRing ? (jam > 0 ? '#e4f3ff' : '#4fb3ff') : '';
 
   // viewmodel animation
@@ -3756,6 +4146,9 @@ function fillPickers() {
   $('coopLvl').value = String(pickCoop);
 }
 fillPickers();
+$('nameIn').value = myName;
+$('nameIn').addEventListener('input', () => { myName = cleanName($('nameIn').value); try { localStorage.setItem('starblock.name', myName); } catch (e) {} });
+$('nameIn').addEventListener('keydown', (e) => e.stopPropagation());
 function savePick() { try { localStorage.setItem('starblock.pick', JSON.stringify({ lv: pickLv, df: diff, co: pickCoop })); } catch (e) {} }
 $('coopLvl').addEventListener('change', () => {
   if (NET && NET.guest) return;
@@ -3766,7 +4159,7 @@ function setDiff(d, save) {
   diff = d; document.querySelectorAll('#diffSel button').forEach((b) => { const on = +b.dataset.d === d; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
   if (save) savePick();
 }
-function menuInfo() { $('firstMission').textContent = pickLv >= 0 ? `Mission: ${L.name}.` : `First mission: ${L.name}.`; }
+function menuInfo() { $('firstMission').textContent = `First mission: ${L.name}.`; }
 $('lvlSel').addEventListener('change', () => {
   if (NET && NET.guest) return;
   pickLv = +$('lvlSel').value; savePick();
