@@ -2565,7 +2565,7 @@ const run = { order: [0, 1, 2, 3, 4, 5, 6], i: 0 };
 // difficulty scales how many aliens come and how fast; pickLv -1 = all solo missions in random order; pickCoop: co-op panel choice
 const DIFF = [{ n: 'Easy', m: 0.6 }, { n: 'Normal', m: 1 }, { n: 'Hard', m: 1.6 }, { n: 'Insane', m: 2.4 }];
 let diff = 1, pickLv = -1, pickCoop = -1;
-const VERSION = 'v3.2';
+const VERSION = 'v3.3';
 document.querySelectorAll('.ver').forEach((e) => { e.textContent = VERSION; });
 const cleanName = (n) => String(n || '').replace(/[^\p{L}\p{N} _.!?-]/gu, '').trim().slice(0, 12);
 let myName = ''; try { myName = cleanName(localStorage.getItem('starblock.name')); } catch (e) {}
@@ -2646,7 +2646,7 @@ const hubIdx = (x, y, z) => (x + HUBD[3]) + (y + HUBD[4]) * HUBD[0] + (z + HUBD[
 const oldHubKey = (k) => hubIdx(k % 64 - 32, Math.floor(k / 64) % 64 - 32, Math.floor(k / 4096) - 32); // saves from the old small ship
 try {
   const a2 = localStorage.getItem('starblock.hub2'), old = !a2, a = JSON.parse(a2 || localStorage.getItem('starblock.hub') || '[]');
-  for (let i = 0; i + 1 < a.length; i += 2) if (HUB_TYPES.includes(a[i + 1])) { const k = old ? oldHubKey(a[i]) : a[i]; if (k >= 0 && k < HUB_LEN) hubEdits.set(k, a[i + 1]); }
+  for (let i = 0; i + 1 < a.length; i += 2) if (a[i + 1] === 0 || HUB_TYPES.includes(a[i + 1])) { const k = old ? oldHubKey(a[i]) : a[i]; if (k >= 0 && k < HUB_LEN) hubEdits.set(k, a[i + 1]); }
 } catch (e) {}
 let invSaveT = 0;
 function saveInvSoon() { clearTimeout(invSaveT); invSaveT = setTimeout(saveStore, 800); }
@@ -2663,17 +2663,37 @@ const TROPHY_SPOTS = [];
 for (const z of [-12, 12]) for (let x = 58; x <= 82; x += 4) TROPHY_SPOTS.push([x, z]);
 for (const z of [-6, 0, 6]) TROPHY_SPOTS.push([86, z]);
 const DOME = { x: -70, z: 0, R: 25 };
-const HANGAR_SHIPS = [[-28, -14], [-16, -14], [-4, -14], [-28, -30], [-16, -30], [-4, -30]];
+const HANGAR_PADS = [[-28, -14, 'ship'], [-16, -14, 'ship'], [-4, -14, 'rover'], [-28, -30, 'ship'], [-16, -30, 'ship'], [-4, -30, 'car']];
+// soil and the sample hut in the dome: you may dig these (dug cells are saved as 0 in hubEdits)
+const hubSoft = new Uint8Array(HUB_LEN);
+const hubDig = (x, y, z) => { const k = idx(x, y, z); return world[k] !== AIR && (hubSoft[k] === 1 || hubEdits.has(k)); };
 function genHub() {
   world.fill(0);
   // dome room: round floor and a big glass dome
   const { x: cx, z: cz, R } = DOME;
   for (let x = cx - R - 1; x <= cx + R + 1; x++) for (let z = cz - R - 1; z <= cz + R + 1; z++) for (let y = -1; y <= R + 1; y++) {
     const h = Math.hypot(x + 0.5 - cx, z + 0.5 - cz), d = Math.hypot(h, y + 0.5);
-    if (y === -1) { if (h <= R) set(x, y, z, h < 4 ? CRYSTAL : (Math.floor(h) % 6 === 0 ? PANEL : HULL)); continue; }
+    if (y === -1) continue;
     if (d <= R && d > R - 1.2) set(x, y, z, GLASS);
   }
-  for (let a = 0; a < 12; a++) { const x = Math.floor(cx + Math.cos(a / 12 * 6.283) * 10), z = Math.floor(cz + Math.sin(a / 12 * 6.283) * 10); set(x, -1, z, SHARD); }
+  // under the dome floor: a piece of asteroid (soil you can dig)
+  hubSoft.fill(0);
+  for (let x = cx - R; x <= cx + R; x++) for (let z = cz - R; z <= cz + R; z++) for (let y = -8; y <= -1; y++) {
+    const h = Math.hypot(x + 0.5 - cx, z + 0.5 - cz), e = Math.hypot(h, (y + 0.5) * R / 9);
+    if (h > R || e > R) continue;
+    if (y === -8) { set(x, y, z, HULL); continue; } // ship floor under the soil, so you cannot dig out into space
+    const n = hash3(x, y, z, 31);
+    let t = y === -1 ? MOSS : y >= -3 ? REGO : ROCK;
+    if (y < -1 && n > 0.93) t = ICE; else if (y < -3 && n < 0.03) t = CRYSTAL;
+    set(x, y, z, t); hubSoft[idx(x, y, z)] = 1;
+  }
+  // a simple sample hut: rock walls, ice windows, a build-block roof and a crystal lamp
+  const hut = (x, y, z, t) => { set(x, y, z, t); hubSoft[idx(x, y, z)] = t ? 1 : 0; };
+  for (let x = -82; x <= -76; x++) for (let z = 4; z <= 9; z++) for (let y = 0; y <= 2; y++) if (x === -82 || x === -76 || z === 4 || z === 9) hut(x, y, z, ROCK);
+  hut(-76, 0, 6, AIR); hut(-76, 1, 6, AIR);                          // door
+  hut(-79, 1, 4, ICE); hut(-79, 1, 9, ICE); hut(-82, 1, 6, ICE); hut(-82, 1, 7, ICE); // windows
+  for (let x = -83; x <= -75; x++) for (let z = 3; z <= 10; z++) hut(x, 3, z, PANEL);
+  hut(-81, 0, 8, CRYSTAL); hut(-81, 0, 5, ALLOY);
   box(-47, -1, -5, 49, 7, 5, HULL);           // main hall
   box(48, -1, -29, 92, 16, 29, HULL);         // bridge
   box(-36, -1, 5, 6, 15, 42, HULL);           // build bay
@@ -2700,12 +2720,16 @@ function genHub() {
   for (const [x, z] of [[56, -20], [56, 20], [84, -20], [84, 20], [70, 0]]) set(x, 16, z, SHARD);
   for (const [x, z] of [[-30, 20], [-10, 20], [-30, 34], [-10, 34]]) set(x, 15, z, SHARD);
   // hangar: landing pads with yellow marks
-  for (const [x, z] of HANGAR_SHIPS) { box(x - 3, -1, z - 3, x + 3, -1, z + 3, ALLOY); for (let k = -3; k <= 3; k++) { set(x + k, -1, z - 3, PWR); set(x + k, -1, z + 3, PWR); } }
+  for (const [x, z] of HANGAR_PADS) { box(x - 3, -1, z - 3, x + 3, -1, z + 3, ALLOY); for (let k = -3; k <= 3; k++) { set(x + k, -1, z - 3, PWR); set(x + k, -1, z + 3, PWR); } }
   // trophy stands
   TROPHY_SPOTS.forEach(([x, z], i) => { if (i < LEVELS.length) set(x, 0, z, ALLOY); });
   // your own building (blocks that no longer fit, after the ship got bigger, go back to your storage)
   let back = 0;
-  for (const [k, t] of [...hubEdits]) { if (k >= 0 && k < world.length && world[k] === AIR) world[k] = t; else { hubEdits.delete(k); inv[t] = (inv[t] || 0) + 1; back++; } }
+  for (const [k, t] of [...hubEdits]) {
+    if (!(k >= 0 && k < world.length)) { hubEdits.delete(k); continue; }
+    if (t === AIR) { if (hubSoft[k]) world[k] = AIR; else hubEdits.delete(k); continue; } // soil you dug away
+    if (world[k] === AIR || hubSoft[k]) world[k] = t; else { hubEdits.delete(k); inv[t] = (inv[t] || 0) + 1; back++; }
+  }
   if (back) { saveStore(); setTimeout(() => toast(`${back} of your blocks did not fit in the bigger ship. They are back in your storage.`, 3.5), 600); }
   spawn.copy(HUB_SPAWN); shipPos.set(0, -400, 0);
 }
@@ -2738,7 +2762,14 @@ function setupHub() {
     const lab = textSprite(b ? `${nm} ${starStr(b.s)}` : `${nm} · ?`, b ? '#ffd166' : '#6f86a8', 1.75); lab.position.y = 1.4; g.add(lab);
   });
   // hangar: parked ships
-  HANGAR_SHIPS.forEach(([x, z], i) => { const m = ship.clone(); m.position.set(x + 0.5, 2.25, z + 0.5); m.rotation.y = Math.PI / 2 + (i % 2 ? 0.25 : -0.25); lvlG.add(m); });
+  HANGAR_PADS.forEach(([x, z, kind], i) => {
+    let m;
+    if (kind === 'rover') { m = makeRover(); m.scale.setScalar(1.6); m.position.set(x + 0.5, 0.95, z + 0.5); m.rotation.y = 0.6; }
+    else if (kind === 'car') { m = makeRoadCar(); m.position.set(x + 0.5, 0, z + 0.5); m.rotation.y = 0.35; }
+    else { m = ship.clone(); m.position.set(x + 0.5, 2.25, z + 0.5); m.rotation.y = Math.PI / 2 + (i % 2 ? 0.25 : -0.25); }
+    lvlG.add(m);
+  });
+  { const l = textSprite('SAMPLE HUT · dig the soil, build your own', '#ffd166', 4.2); l.position.set(-78.5, 4.6, 6.5); lvlG.add(l); }
   for (const [z, t] of [[-3.6, 'HANGAR'], [3.6, 'BUILD BAY']]) { const l = textSprite(t, '#9fd8ff', 3); l.position.set(-14.5, 5.3, z); lvlG.add(l); }
   // painted on the floor of the fast lane
   if (!fastSign) {
@@ -2818,7 +2849,7 @@ function unpackSave(u) {
   let p = 0, n = 0, sh = 0; for (;;) { const c = u[p++]; n |= (c & 127) << sh; sh += 7; if (!(c & 128)) break; }
   const d = JSON.parse(new TextDecoder().decode(u.subarray(p, p + n))); p += n;
   const ed = new Map(); let k = 0;
-  while (p < u.length) { let dd = 0, s = 0; for (;;) { const c = u[p++]; dd |= (c & 127) << s; s += 7; if (!(c & 128)) break; } k += dd; const t = u[p++]; const kk = d.v === 1 ? oldHubKey(k) : k; if (HUB_TYPES.includes(t) && kk >= 0 && kk < HUB_LEN) ed.set(kk, t); }
+  while (p < u.length) { let dd = 0, s = 0; for (;;) { const c = u[p++]; dd |= (c & 127) << s; s += 7; if (!(c & 128)) break; } k += dd; const t = u[p++]; const kk = d.v === 1 ? oldHubKey(k) : k; if ((t === 0 || HUB_TYPES.includes(t)) && kk >= 0 && kk < HUB_LEN) ed.set(kk, t); }
   d.ed = ed; return d;
 }
 async function makeSaveBytes() {
@@ -2923,7 +2954,7 @@ async function showSaveCode() {
     const bytes = await makeSaveBytes(), G = drawCode(bytes);
     if (!G) { codeOverlay(true, 'Your base is too big for one save picture. Remove some blocks and try again.'); return; }
     $('codeCv').hidden = false; $('codeDl').hidden = false;
-    const nm = Object.keys(best).length, nb = hubEdits.size;
+    const nm = Object.keys(best).length, nb = [...hubEdits.values()].filter(Boolean).length;
     $('codeTxt').textContent = `Take a screenshot of this picture (or download it). Later: LOAD SAVE and pick the picture. Inside: ${nm} missions, ${nb} built blocks, your block storage.`;
   } catch (e) { codeOverlay(true, 'Could not make the save picture: ' + e.message); }
 }
@@ -3280,8 +3311,8 @@ function playerOverlaps(cx, cy, cz) {
 }
 function breakBlock(hit) {
   if (L.hub) { // your own blocks go back into storage
-    const k = idx(hit.x, hit.y, hit.z); if (!hubEdits.has(k)) return;
-    set(hit.x, hit.y, hit.z, AIR); buildMeshes(); hubEdits.delete(k); addInv(hit.type, 1); saveInvSoon();
+    const k = idx(hit.x, hit.y, hit.z); if (!hubDig(hit.x, hit.y, hit.z)) return;
+    set(hit.x, hit.y, hit.z, AIR); buildMeshes(); if (hubSoft[k]) hubEdits.set(k, AIR); else hubEdits.delete(k); addInv(hit.type, 1); saveInvSoon();
     burst(new V3(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5), CHIP[hit.type] || 0x8fb4d6, 22, 3.5); sfx.break(); return;
   }
   const c = new V3(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
@@ -3902,7 +3933,7 @@ document.querySelectorAll('.loadBtn').forEach((b) => b.addEventListener('click',
 $('codeFile').addEventListener('change', async () => {
   const f = $('codeFile').files[0]; if (!f) return;
   codeOverlay(true, 'Reading the save picture…');
-  try { const d = await loadSaveImage(f); codeOverlay(true, `Save loaded! ${Object.keys(best).length} missions, ${d.ed.size} built blocks, ${Object.values(inv).reduce((a, b) => a + b, 0)} blocks in storage.`); }
+  try { const d = await loadSaveImage(f); codeOverlay(true, `Save loaded! ${Object.keys(best).length} missions, ${[...d.ed.values()].filter(Boolean).length} built blocks, ${Object.values(inv).reduce((a, b) => a + b, 0)} blocks in storage.`); }
   catch (e) { codeOverlay(true, 'Could not load: ' + e.message); }
 });
 $('codeClose').addEventListener('click', () => { $('codeOv').hidden = true; });
@@ -4493,7 +4524,7 @@ function frame(now) {
         mineProg += dt / (pwr ? pwr.time : tur.enemy ? 3 : tur.sat ? 2.5 : 0.8);
         if (mineSoundT <= 0) { sfx.chip(); mineSoundT = 0.22; burst(pwr ? cellV(hit.x, hit.y, hit.z) : tur.head, 0x9fd8ff, 4, 2); }
         if (mineProg >= 1) { if (pwr) pwr.done(); else turretAction(hit); mineProg = 0; mineKey = ''; placeCd = 0.4; }
-      } else if (input.act && hit && hit.type !== TURRET && HARD[hit.type] < 50 && (!L.hub || hubEdits.has(idx(hit.x, hit.y, hit.z)))) {
+      } else if (input.act && hit && hit.type !== TURRET && HARD[hit.type] < 50 && (!L.hub || hubDig(hit.x, hit.y, hit.z))) {
         const key = hit.x + ',' + hit.y + ',' + hit.z;
         if (key !== mineKey) { mineKey = key; mineProg = 0; }
         mineProg += dt / HARD[hit.type];
@@ -4535,7 +4566,7 @@ function frame(now) {
   if (hit && hit.type === TURRET) { const t = turrets.find((q) => q.x === hit.x && q.y === hit.y && q.z === hit.z); if (t) pr = t.enemy ? 'Alien turret · hold the pickaxe on it to take it over' : t.sat ? (t.hp <= 0 ? 'Broken satellite · hold the pickaxe on it to fix it' : `Satellite ${Math.ceil(t.hp)}%` + (t.hp < 100 ? ' · pickaxe to fix' : '')) : t.hp <= 0 ? 'Broken turret · hold the pickaxe on it to fix it (3 blocks)' : `Turret ${Math.ceil(t.hp)}%` + (t.hp < 100 ? ' · pickaxe repair: 1 block' : ''); }
   else if (hit && hit.type === PWR && L.pwrPrompt) pr = L.pwrPrompt(hit);
   else if (hit && hit.type === CACHE) pr = 'Hidden box! Dig it';
-  else if (hit && curTool === 0 && L.hub && !hubEdits.has(idx(hit.x, hit.y, hit.z))) pr = 'Ship wall · you can only dig blocks you built';
+  else if (hit && curTool === 0 && L.hub && !hubDig(hit.x, hit.y, hit.z)) pr = 'Ship wall · you can only dig soil and blocks you built';
   else if (hit && curTool === 0 && HARD[hit.type] >= 50) pr = hit.type === FIELD ? 'Force field · you cannot dig it' : hit.type === WEB ? 'Alien web · shoot it or use a rocket' : 'Too hard to dig';
   else if (hit && curTool === 4) pr = hit.ny === 1 ? `Build turret here · ${TURRET_COST} blocks` : '';
   if (revivePrompt) pr = revivePrompt;
