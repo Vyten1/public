@@ -42,6 +42,22 @@ body {
 /* top bar */
 #pauseBtn { position: absolute; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 2px); transform: translateX(-50%); pointer-events: auto; z-index: 5;
   font: 700 12px var(--font-hud); letter-spacing: .12em; padding: 3px 14px; border-radius: 0 0 8px 8px; border: 1px solid var(--panel-line); border-top: 0; background: var(--panel); color: var(--text); cursor: pointer; }
+#hubBtn { position: absolute; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 2px); transform: translateX(62px); pointer-events: auto; z-index: 5;
+  font: 700 12px var(--font-hud); letter-spacing: .12em; padding: 3px 12px; border-radius: 0 0 8px 8px; border: 1px solid var(--panel-line); border-top: 0; background: var(--panel); color: var(--yellow, #ffd166); cursor: pointer; }
+#hubBtn[hidden], #hubInv[hidden] { display: none; }
+#hubInv { position: absolute; left: 0; right: 0; margin: 0 auto; width: max-content; bottom: calc(env(safe-area-inset-bottom, 0px) + 74px); display: flex; gap: 4px; pointer-events: auto; flex-wrap: wrap; justify-content: center; max-width: 92vw; }
+#hubInv .hb { display: flex; align-items: center; gap: 3px; padding: 2px 6px 2px 3px; border-radius: 6px; border: 2px solid var(--panel-line); background: var(--panel); color: var(--text); font: 700 12px var(--font-hud); cursor: pointer; }
+#hubInv .hb i { width: 14px; height: 14px; border-radius: 3px; display: block; }
+#hubInv .hb.on { border-color: var(--green); }
+#codeOv { position: fixed; inset: 0; z-index: 60; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 10px; }
+#codeOv[hidden] { display: none; }
+#codeCv { width: min(94vw, 80vh); height: auto; image-rendering: pixelated; }
+#codeCv[hidden] { display: none; }
+#codeTxt { color: #9aa3b5; font: 13px/1.4 sans-serif; max-width: 640px; text-align: center; }
+#codeOv .crow { display: flex; gap: 10px; }
+#codeOv button { font: 700 13px sans-serif; letter-spacing: .08em; padding: 8px 16px; border-radius: 8px; background: #222; color: #ddd; border: 1px solid #555; cursor: pointer; }
+#codeOv button[hidden] { display: none; }
+.cta.small { font-size: 12px; padding: 7px 14px; }
 #top {
   position: absolute; left: 0; right: 0; top: 0;
   padding: calc(env(safe-area-inset-top, 0px) + 26px) max(14px, env(safe-area-inset-right, 0px)) 0 max(14px, env(safe-area-inset-left, 0px));
@@ -215,6 +231,8 @@ body.down #downFx { display: grid; }
 <div id="touch"></div>
 <div id="hud" hidden>
   <button id="pauseBtn" aria-label="Pause">II PAUSE</button>
+  <button id="hubBtn" aria-label="Teleport to the bridge" hidden>⌂ BRIDGE</button>
+  <div id="hubInv" hidden></div>
   <div id="top">
     <div id="suit" class="chip"><div class="lbl">Health</div><div id="hpbar"><div id="hpfill"></div></div><div id="o2wrap" hidden><div class="lbl" style="margin-top:5px">Air</div><div class="bar o2"><div id="o2fill"></div></div></div></div>
     <div id="objective" class="chip"><b id="objMain">Reach the artifact</b><span id="objSub">Mine rock · build a bridge</span><span id="objBonus"></span></div>
@@ -277,7 +295,8 @@ body.down #downFx { display: grid; }
       <label class="sel"><span>First mission</span><select id="lvlSel"><option value="-1">Random</option></select></label>
       <div class="seg" id="diffSel" role="radiogroup" aria-label="Difficulty"><button data-d="0" role="radio">EASY</button><button data-d="1" role="radio">NORMAL</button><button data-d="2" role="radio">HARD</button><button data-d="3" role="radio">INSANE</button></div>
     </div>
-    <div class="row"><button id="start" class="cta">START</button><button id="coopBtn" class="cta ghost">CO-OP</button></div>
+    <div class="row"><button id="start" class="cta">START</button><button id="coopBtn" class="cta ghost">CO-OP</button><button id="hubStart" class="cta ghost">MOTHERSHIP</button></div>
+    <div class="row"><button class="cta ghost small saveBtn">SAVE PICTURE</button><button class="cta ghost small loadBtn">LOAD SAVE</button></div>
     <div id="coop" hidden>
       <div class="hint">Play together. One phone is the host. The others type the host's 2-digit code and join.</div>
       <div class="row"><button id="hostBtn" class="cta">HOST</button><span class="hint">or</span>
@@ -303,9 +322,18 @@ body.down #downFx { display: grid; }
     <div class="row"><button id="resumeBtn" class="cta">GO ON</button></div>
     <label class="sel"><span>Change mission</span><select id="pauseLvl"></select></label>
     <div class="row"><button id="pauseGo" class="cta ghost">PLAY THIS MISSION</button></div>
+    <div class="row"><button id="hubGo" class="cta ghost">GO TO MOTHERSHIP</button></div>
+    <div class="row"><button class="cta ghost small saveBtn">SAVE PICTURE</button><button class="cta ghost small loadBtn">LOAD SAVE</button></div>
     <div class="row"><button id="nameBtn" class="cta ghost">CHANGE NAME</button><input id="pauseName" maxlength="12" placeholder="Pilot" autocomplete="off" spellcheck="false" aria-label="Your name" hidden></div>
   </div>
 </div>
+
+<div id="codeOv" hidden>
+  <canvas id="codeCv" hidden></canvas>
+  <div id="codeTxt"></div>
+  <div class="crow"><button id="codeDl" hidden>DOWNLOAD PICTURE</button><button id="codeClose">CLOSE</button></div>
+</div>
+<input type="file" id="codeFile" accept="image/*" hidden>
 
 <div id="win" class="overlay" hidden>
   <div class="card">
@@ -363,15 +391,15 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 // ---------------------------------------------------------------- blocks
 const AIR = 0, ROCK = 1, ICE = 2, MOSS = 3, CRYSTAL = 4, ALLOY = 5, PANEL = 6, ARTIFACT = 7, TURRET = 8,
   REGO = 9, GEN = 10, FIELD = 11, PAD = 12, VAULT = 13, O2 = 14, HULL = 15,
-  RUNE = 16, CACHE = 17, RELIC = 18, NEST = 19, EGG = 20, SHARD = 21, FROST = 22, SWITCH = 23, PWR = 24, WEB = 25;
-const NTYPES = 26;
+  RUNE = 16, CACHE = 17, RELIC = 18, NEST = 19, EGG = 20, SHARD = 21, FROST = 22, SWITCH = 23, PWR = 24, WEB = 25, GLASS = 26;
+const NTYPES = 27;
 const INVIS = (t) => t === ARTIFACT || t === TURRET;
 const GLOWS = new Set([CRYSTAL, GEN, FIELD, PAD, O2, RUNE, CACHE, RELIC, EGG, SHARD, SWITCH, PWR, WEB]);
 const TURRET_COST = 6;
-const HARD = [0, 0.45, 0.32, 0.38, 0.75, 1.3, 0.28, 0.9, 99, 0.36, 0.9, 99, 99, 99, 99, 0.8, 0.6, 0.55, 0.6, 0.5, 0.25, 0.6, 1.4, 99, 99, 99];
+const HARD = [0, 0.45, 0.32, 0.38, 0.75, 1.3, 0.28, 0.9, 99, 0.36, 0.9, 99, 99, 99, 99, 0.8, 0.6, 0.55, 0.6, 0.5, 0.25, 0.6, 1.4, 99, 99, 99, 99];
 const TILES = { 1: [0, 0, 0], 2: [1, 1, 1], 3: [2, 3, 0], 4: [4, 4, 4], 5: [5, 5, 5], 6: [6, 6, 6], 9: [8, 7, 7], 10: [9, 9, 9], 11: [10, 10, 10], 12: [11, 14, 14], 13: [12, 12, 12], 14: [13, 13, 13], 15: [14, 14, 14],
-  16: [15, 15, 15], 17: [16, 16, 16], 18: [17, 17, 17], 19: [18, 18, 18], 20: [19, 19, 19], 21: [20, 20, 20], 22: [21, 21, 21], 23: [22, 22, 22], 24: [23, 23, 23], 25: [24, 24, 24] };
-const CHIP = { 1: 0x3a4d6b, 2: 0x8fd8ff, 3: 0x46c46a, 4: 0x6dffa8, 5: 0x2d6fb8, 6: 0x1f9c8a, 7: 0x5dffa8, 9: 0x5a6070, 10: 0x5dffa8, 15: 0x96aac4, 16: 0xffc857, 17: 0xffd166, 18: 0xff7ab8, 19: 0x9a3a86, 20: 0xb6ff5a, 21: 0x7af6ff, 22: 0xcfeeff, 23: 0xffc857, 24: 0xffd166, 25: 0x8dff5a };
+  16: [15, 15, 15], 17: [16, 16, 16], 18: [17, 17, 17], 19: [18, 18, 18], 20: [19, 19, 19], 21: [20, 20, 20], 22: [21, 21, 21], 23: [22, 22, 22], 24: [23, 23, 23], 25: [24, 24, 24], 26: [25, 25, 25] };
+const CHIP = { 1: 0x3a4d6b, 2: 0x8fd8ff, 3: 0x46c46a, 4: 0x6dffa8, 5: 0x2d6fb8, 6: 0x1f9c8a, 7: 0x5dffa8, 9: 0x5a6070, 10: 0x5dffa8, 15: 0x96aac4, 16: 0xffc857, 17: 0xffd166, 18: 0xff7ab8, 19: 0x9a3a86, 20: 0xb6ff5a, 21: 0x7af6ff, 22: 0xcfeeff, 23: 0xffc857, 24: 0xffd166, 25: 0x8dff5a, 26: 0xbfe4ff };
 
 const N = 64, OFF = 32;
 let world = new Uint8Array(N * N * N);
@@ -569,6 +597,9 @@ function makeAtlas() {
       c = strand || ring ? [150, 255, 90] : [14, 46, 20];
       if (edge) c = [60, 140, 50];
       px(24, x, y, c, strand || ring ? 30 : 8); }
+    // 25 glass window: pale blue with a light frame
+    c = edge || x === 1 || y === 1 ? [200, 230, 255] : (x + y === 10 || x + y === 11) ? [235, 248, 255] : [120, 170, 220];
+    px(25, x, y, c, 4);
   }
   ctx.putImageData(img, 0, 0);
   const tex = new THREE.CanvasTexture(cv);
@@ -682,6 +713,8 @@ skyG.add(earth);
 const atlas = makeAtlas();
 const worldMat = new THREE.MeshLambertMaterial({ map: atlas, vertexColors: true });
 const glowMat = new THREE.MeshBasicMaterial({ map: atlas, vertexColors: true });
+const glassMat = new THREE.MeshBasicMaterial({ map: atlas, vertexColors: true, transparent: true, opacity: 0.22, depthWrite: false });
+let glassMesh = null;
 const FACES = [
   { d: [-1, 0, 0], c: [[0, 1, 0, 0, 1], [0, 0, 0, 0, 0], [0, 1, 1, 1, 1], [0, 0, 1, 1, 0]] },
   { d: [1, 0, 0], c: [[1, 1, 1, 0, 1], [1, 0, 1, 0, 0], [1, 1, 0, 1, 1], [1, 0, 0, 1, 0]] },
@@ -692,15 +725,15 @@ const FACES = [
 ];
 let worldMesh = null, glowMesh = null;
 function buildMeshes() {
-  const B = [0, 1].map(() => ({ p: [], n: [], u: [], c: [], i: [] }));
+  const B = [0, 1, 2].map(() => ({ p: [], n: [], u: [], c: [], i: [] }));
   for (let z = -OFF; z < N - OFF; z++) for (let y = -OFF; y < N - OFF; y++) for (let x = -OFF; x < N - OFF; x++) {
     const t = world[idx(x, y, z)];
     if (!t || INVIS(t)) continue;
-    const b = B[GLOWS.has(t) ? 1 : 0];
+    const b = B[t === GLASS ? 2 : GLOWS.has(t) ? 1 : 0];
     const tint = 0.92 + hash3(x, y, z, 9) * 0.12;
     for (const f of FACES) {
       const nb = get(x + f.d[0], y + f.d[1], z + f.d[2]);
-      if (nb && !INVIS(nb)) continue;
+      if (nb && !INVIS(nb) && (nb !== GLASS || t === GLASS)) continue; // glass does not hide what is behind it
       const tile = TILES[t][f.d[1] > 0 ? 0 : f.d[1] < 0 ? 2 : 1];
       const shade = (f.d[1] > 0 ? 1 : f.d[1] < 0 ? 0.55 : f.d[0] !== 0 ? 0.82 : 0.7) * tint;
       const base = b.p.length / 3;
@@ -724,6 +757,7 @@ function buildMeshes() {
   };
   worldMesh = mk(B[0], worldMat, worldMesh);
   glowMesh = mk(B[1], glowMat, glowMesh);
+  glassMesh = mk(B[2], glassMat, glassMesh); glassMesh.renderOrder = 2;
 }
 
 // voxel ray (Amanatides & Woo)
@@ -2515,7 +2549,7 @@ const run = { order: [0, 1, 2, 3, 4, 5, 6], i: 0 };
 // difficulty scales how many aliens come and how fast; pickLv -1 = all solo missions in random order; pickCoop: co-op panel choice
 const DIFF = [{ n: 'Easy', m: 0.6 }, { n: 'Normal', m: 1 }, { n: 'Hard', m: 1.6 }, { n: 'Insane', m: 2.4 }];
 let diff = 1, pickLv = -1, pickCoop = -1;
-const VERSION = 'v2.4';
+const VERSION = 'v3.0';
 document.querySelectorAll('.ver').forEach((e) => { e.textContent = VERSION; });
 const cleanName = (n) => String(n || '').replace(/[^\p{L}\p{N} _.!?-]/gu, '').trim().slice(0, 12);
 let myName = ''; try { myName = cleanName(localStorage.getItem('starblock.name')); } catch (e) {}
@@ -2584,8 +2618,267 @@ function applySky() {
 }
 function objTarget() { return (L.target && L.target()) || (carrying || netCarried ? ship.position : artifact.position); }
 
+// ---------------------------------------------------------------- the mothership (home base)
+// You build here with the blocks you mined in missions. Saved on this device, and in a save picture.
+const HUB_TYPES = [ROCK, REGO, ICE, FROST, MOSS, CRYSTAL, SHARD, ALLOY, HULL, PANEL];
+const BLOCK_NAME = { [ROCK]: 'Rock', [REGO]: 'Moon dust', [ICE]: 'Ice', [FROST]: 'Deep frost', [MOSS]: 'Moss', [CRYSTAL]: 'Crystal', [SHARD]: 'Comet shard', [ALLOY]: 'Alien metal', [HULL]: 'Hull plate', [PANEL]: 'Build block' };
+let hubMode = false, hubType = ROCK, inv = {}, hubEdits = new Map();
+try { const o = JSON.parse(localStorage.getItem('starblock.inv') || '{}'); for (const t of HUB_TYPES) if (o[t] > 0) inv[t] = Math.floor(o[t]); } catch (e) {}
+try { const a = JSON.parse(localStorage.getItem('starblock.hub') || '[]'); for (let i = 0; i + 1 < a.length; i += 2) if (HUB_TYPES.includes(a[i + 1])) hubEdits.set(a[i], a[i + 1]); } catch (e) {}
+let invSaveT = 0;
+function saveInvSoon() { clearTimeout(invSaveT); invSaveT = setTimeout(saveStore, 800); }
+function saveStore() {
+  try {
+    localStorage.setItem('starblock.inv', JSON.stringify(inv));
+    const a = []; for (const [k, t] of hubEdits) a.push(k, t);
+    localStorage.setItem('starblock.hub', JSON.stringify(a));
+  } catch (e) {}
+}
+function addInv(t, n) { if (!HUB_TYPES.includes(t)) return; inv[t] = Math.max(0, (inv[t] || 0) + n); saveInvSoon(); if (L.hub) fillHubInv(); }
+const HUB_SPAWN = new V3(18.5, 0, 0.5);
+const TROPHY_SPOTS = [];
+for (const z of [-8, 8]) for (let x = 16; x <= 28; x += 2) TROPHY_SPOTS.push([x, z]);
+for (const z of [-4, 0, 4]) TROPHY_SPOTS.push([26, z]);
+function genHub() {
+  world.fill(0);
+  box(-20, -1, -3, 16, 5, 3, HULL);       // main hall
+  box(14, -1, -10, 29, 8, 10, HULL);      // bridge
+  box(-12, -1, 3, 2, 7, 15, HULL); box(-12, -1, -15, 2, 7, -3, HULL); // two empty build bays
+  // dome room: round floor and a glass dome
+  const cx = -22.5, cz = 0.5, R = 8.5;
+  for (let x = -31; x <= -14; x++) for (let z = -9; z <= 9; z++) for (let y = -1; y <= 9; y++) {
+    const h = Math.hypot(x + 0.5 - cx, z + 0.5 - cz), d = Math.hypot(h, y + 0.5);
+    if (y === -1) { if (h <= R) set(x, y, z, h < 2.5 ? CRYSTAL : HULL); continue; }
+    if (d <= R && d > R - 1.2) set(x, y, z, GLASS); else if (d <= R - 1.2) set(x, y, z, AIR);
+  }
+  box(-19, 0, -2, 15, 4, 2, AIR);          // hall inside (also opens into the dome and the bridge)
+  box(15, 0, -9, 28, 7, 9, AIR);           // bridge inside
+  box(-11, 0, 4, 1, 6, 14, AIR); box(-11, 0, -14, 1, 6, -4, AIR);
+  for (const s of [1, -1]) box(-6, 0, 3 * s, -4, 2, 3 * s, AIR); // doors to the bays
+  // windows
+  for (let x = -18; x <= 12; x += 4) if (x + 1 < -12 || x > 2) for (const z of [-3, 3]) box(x, 1, z, x + 1, 3, z, GLASS);
+  for (let x = -16; x <= 12; x += 6) box(x, 5, -1, x + 1, 5, 1, GLASS);
+  box(29, 1, -7, 29, 6, 7, GLASS); box(18, 8, -3, 26, 8, 3, GLASS);
+  for (let x = 16; x <= 27; x += 3) for (const z of [-10, 10]) box(x, 2, z, x + 1, 5, z, GLASS);
+  for (let x = -10; x <= -1; x += 4) for (const z of [-15, 15]) box(x, 1, z, x + 2, 5, z, GLASS);
+  for (const x of [-12, 2]) { box(x, 2, 6, x, 4, 12, GLASS); box(x, 2, -12, x, 4, -6, GLASS); }
+  for (const z of [-15, 3]) box(-9, 7, z + 3, -1, 7, z + 9, GLASS); // skylights in the bays
+  // floors and lights
+  box(15, -1, -9, 28, -1, 9, ALLOY); box(-19, -1, 0, 13, -1, 0, PANEL);
+  for (let x = -13; x <= 12; x += 6) set(x, 5, 0, SHARD);
+  for (const [x, z] of [[17, -6], [17, 6], [27, -6], [27, 6]]) set(x, 8, z, SHARD);
+  // trophy stands
+  TROPHY_SPOTS.forEach(([x, z], i) => { if (i < LEVELS.length) set(x, 0, z, ALLOY); });
+  // your own building
+  for (const [k, t] of hubEdits) if (k >= 0 && k < world.length && world[k] === AIR) world[k] = t;
+  spawn.copy(HUB_SPAWN); shipPos.set(0, -400, 0);
+}
+function cupModel(col) {
+  const g = new THREE.Group(), gold = phong(0xffc857, { emissive: 0x5a3a00, shininess: 90 });
+  const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.28, 0.1, 12), gold); foot.position.y = 0.05; g.add(foot);
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.3, 8), gold); stem.position.y = 0.25; g.add(stem);
+  const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.14, 0.4, 14, 1, true), phong(0xffc857, { emissive: 0x5a3a00, side: THREE.DoubleSide })); cup.position.y = 0.6; g.add(cup);
+  const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.14), basic(col)); gem.position.y = 0.95; g.add(gem);
+  return g;
+}
+function trophyModel(lv, i) {
+  const n = lv.name;
+  if (n === 'The Hive Queen') { const m = makeAlien(false); m.scale.setScalar(0.7); m.position.y = 0.4; m.userData.mat.color.setHex(0xb48cff); return m; }
+  if (n === 'Escort the rover') { const m = makeRover(); m.scale.setScalar(0.4); m.position.y = 0.3; return m; }
+  if (n === 'Road war') { const m = makeRoadCar(); m.scale.setScalar(0.2); return m; }
+  if (n === 'Mothership chase') { const m = makeSaucer(); m.scale.setScalar(0.17); m.position.y = 0.35; m.userData.beam.visible = false; return m; }
+  if (n === 'Defend the lander') { const m = ship.clone(); m.scale.setScalar(0.09); m.position.y = 0.05; return m; }
+  return cupModel([0x5dffa8, 0x4fb3ff, 0xff7ab8, 0xffd166, 0x9ff3ff, 0xb48cff][i % 6]);
+}
+function setupHub() {
+  LS.trophies = []; LS.rocks = [];
+  LEVELS.forEach((lv, i) => {
+    const sp = TROPHY_SPOTS[i]; if (!sp) return;
+    const b = best[i], g = new THREE.Group(); g.position.set(sp[0] + 0.5, 1, sp[1] + 0.5); lvlG.add(g);
+    if (b) { const m = trophyModel(lv, i); g.add(m); LS.trophies.push(m); }
+    else { const m = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), new THREE.MeshBasicMaterial({ color: 0x4fb3ff, wireframe: true, transparent: true, opacity: 0.35 })); m.position.y = 0.4; g.add(m); LS.trophies.push(m); }
+    const nm = lv.name.length > 17 ? lv.name.slice(0, 16) + '…' : lv.name;
+    const lab = textSprite(b ? `${nm} ${starStr(b.s)}` : `${nm} · ?`, b ? '#ffd166' : '#6f86a8', 1.75); lab.position.y = 1.4; g.add(lab);
+  });
+  // asteroids far away outside the windows
+  const rnd = mulberry32(4242);
+  for (let k = 0; k < 14; k++) {
+    const geo = new THREE.IcosahedronGeometry(1, 1), p = geo.attributes.position;
+    for (let v = 0; v < p.count; v++) { const s = 0.75 + rnd() * 0.5; p.setXYZ(v, p.getX(v) * s, p.getY(v) * s, p.getZ(v) * s); }
+    geo.computeVertexNormals();
+    const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: [0x6b7890, 0x8a7a68, 0x5a6478][k % 3], flatShading: true }));
+    const a = rnd() * Math.PI * 2, el = (rnd() - 0.35) * 0.9, d = 70 + rnd() * 160;
+    m.position.set(Math.cos(a) * Math.cos(el) * d, Math.sin(el) * d, Math.sin(a) * Math.cos(el) * d);
+    m.scale.setScalar(3 + rnd() * 10); m.userData.spin = (rnd() - 0.5) * 0.3; lvlG.add(m); LS.rocks.push(m);
+  }
+  if (!HUB_TYPES.includes(hubType) || !(inv[hubType] > 0)) hubType = HUB_TYPES.find((t) => inv[t] > 0) || ROCK;
+  blocks = 0; fillHubInv();
+}
+function updHub(dt) {
+  player.hp = 100;
+  for (const t of LS.trophies) t.rotation.y += dt * 0.8;
+  for (const r of LS.rocks) { r.rotation.y += dt * r.userData.spin; r.rotation.x += dt * r.userData.spin * 0.5; }
+  if (player.pos.y < -12) { player.pos.copy(HUB_SPAWN); player.vel.set(0, 0, 0); }
+}
+function hudHub() {
+  const n = inv[hubType] || 0;
+  return ['Your mothership', `Building with: ${BLOCK_NAME[hubType]} ×${n} · B or tap below to change · blocks come from mining in missions`];
+}
+const HUB = { name: 'Your mothership', hub: true, brief: 'Your home. Build here with the blocks you mined in missions. Your trophies stand on the bridge.',
+  gen: genHub, setup: setupHub, update: updHub, hud: hudHub, secrets: () => {}, saucers: [], sc: [0, 0, 0], par: 9999, target: () => HUB_SPAWN,
+  sky: { earth: [900, 160, 120], es: 0.7, hemi: [0x9fc4ff, 0x2a3550, 0.75], sun: 0.85 } };
+function fillHubInv() {
+  const el = $('hubInv'); el.innerHTML = '';
+  for (const t of HUB_TYPES) {
+    const b = document.createElement('button'); b.className = 'hb' + (t === hubType ? ' on' : '');
+    b.innerHTML = `<i style="background:#${CHIP[t].toString(16).padStart(6, '0')}"></i>${inv[t] || 0}`;
+    b.title = BLOCK_NAME[t]; b.setAttribute('aria-label', BLOCK_NAME[t]);
+    b.addEventListener('click', (e) => { e.stopPropagation(); hubType = t; fillHubInv(); selectTool(2); });
+    el.appendChild(b);
+  }
+}
+function cycleHubType() { const i = HUB_TYPES.indexOf(hubType); hubType = HUB_TYPES[(i + 1) % HUB_TYPES.length]; fillHubInv(); selectTool(2); toast(`${BLOCK_NAME[hubType]} ×${inv[hubType] || 0}`, 1.2); }
+function enterHub() {
+  if (NET) return;
+  hubMode = true; paused = false; $('pause').hidden = true; state = 'play';
+  loadLevel(); begin();
+}
+function leaveHub() { if (!hubMode) return; hubMode = false; saveStore(); }
+
+// ---------------------------------------------------------------- save picture
+// Everything (name, best results, block storage, your building) goes into a picture of big coloured squares.
+// 8 colours = 3 bits per square. A green frame finds the picture inside a screenshot; a black/white row counts the squares.
+const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(b) { let c = 0xffffffff; for (let i = 0; i < b.length; i++) c = CRC_T[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; }
+async function zip(bytes, inflate) {
+  if (typeof CompressionStream === 'undefined') return null;
+  const s = new Blob([bytes]).stream().pipeThrough(inflate ? new DecompressionStream('deflate-raw') : new CompressionStream('deflate-raw'));
+  return new Uint8Array(await new Response(s).arrayBuffer());
+}
+function packSave() {
+  const keys = [...hubEdits.keys()].sort((a, b) => a - b), eb = [];
+  let prev = 0;
+  for (const k of keys) { let d = k - prev; prev = k; while (d >= 128) { eb.push((d & 127) | 128); d >>>= 7; } eb.push(d); eb.push(hubEdits.get(k)); }
+  const js = new TextEncoder().encode(JSON.stringify({ v: 1, n: myName, b: best, i: inv }));
+  const out = []; let n = js.length; while (n >= 128) { out.push((n & 127) | 128); n >>>= 7; } out.push(n);
+  return new Uint8Array([...out, ...js, ...eb]);
+}
+function unpackSave(u) {
+  let p = 0, n = 0, sh = 0; for (;;) { const c = u[p++]; n |= (c & 127) << sh; sh += 7; if (!(c & 128)) break; }
+  const d = JSON.parse(new TextDecoder().decode(u.subarray(p, p + n))); p += n;
+  const ed = new Map(); let k = 0;
+  while (p < u.length) { let dd = 0, s = 0; for (;;) { const c = u[p++]; dd |= (c & 127) << s; s += 7; if (!(c & 128)) break; } k += dd; const t = u[p++]; if (HUB_TYPES.includes(t) && k < world.length) ed.set(k, t); }
+  d.ed = ed; return d;
+}
+async function makeSaveBytes() {
+  const raw = packSave(), z = await zip(raw).catch(() => null), body = z && z.length < raw.length ? z : raw;
+  const out = new Uint8Array(12 + body.length), dv = new DataView(out.buffer);
+  out[0] = 83; out[1] = 66; out[2] = 1; out[3] = body === z ? 1 : 0; dv.setUint32(4, body.length, true); out.set(body, 8); dv.setUint32(8 + body.length, crc32(out.subarray(0, 8 + body.length)), true);
+  return out;
+}
+function codeMask(i) { return mulberry32(9001 + i * 31)() * 8 | 0; } // scramble so big areas are not one colour
+function drawCode(bytes) {
+  const bits = bytes.length * 8, cells = Math.ceil(bits / 3), G = Math.max(16, Math.ceil(Math.sqrt(cells) / 8) * 8);
+  if (G > 256) return null;
+  const T = G + 6, M = 2, px = Math.max(4, Math.floor(1100 / (T + 2 * M)));
+  const cv = $('codeCv'); cv.width = cv.height = (T + 2 * M) * px; const c = cv.getContext('2d');
+  c.fillStyle = '#000'; c.fillRect(0, 0, cv.width, cv.height);
+  const R = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect((M + x) * px, (M + y) * px, w * px, h * px); };
+  R(0, 0, T, T, '#00ff00'); R(2, 2, T - 4, T - 4, '#000');
+  for (let k = 0; k < T - 4; k++) { const col = k % 2 ? '#000' : '#fff'; R(2 + k, 2, 1, 1, col); R(2 + k, T - 3, 1, 1, col); R(2, 2 + k, 1, 1, col); R(T - 3, 2 + k, 1, 1, col); }
+  for (let i = 0; i < G * G; i++) {
+    let v = 0; for (let b = 0; b < 3; b++) { const bi = i * 3 + b; v = (v << 1) | (bi < bits ? (bytes[bi >> 3] >> (7 - (bi & 7))) & 1 : 0); }
+    v ^= codeMask(i);
+    R(3 + (i % G), 3 + ((i / G) | 0), 1, 1, `rgb(${v & 4 ? 255 : 0},${v & 2 ? 255 : 0},${v & 1 ? 255 : 0})`);
+  }
+  return G;
+}
+async function readCodeImage(file) {
+  const img = await new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => no(new Error('not a picture')); im.src = URL.createObjectURL(file); });
+  const sc = Math.min(1, 2000 / Math.max(img.width, img.height)), w = Math.round(img.width * sc), h = Math.round(img.height * sc);
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const c = cv.getContext('2d'); c.drawImage(img, 0, 0, w, h);
+  return decodeCode(c.getImageData(0, 0, w, h).data, w, h);
+}
+function decodeCode(d, w, h) {
+  const green = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) { const r = d[i * 4], g = d[i * 4 + 1], b = d[i * 4 + 2]; green[i] = g > 120 && g - r > 70 && g - b > 70 ? 1 : 0; }
+  // biggest green shape = the frame
+  const lab = new Int32Array(w * h), st = new Int32Array(w * h); let bestA = 0, B = null, id = 0;
+  for (let s = 0; s < w * h; s++) {
+    if (!green[s] || lab[s]) continue;
+    id++; let sp = 0, x0 = w, y0 = h, x1 = 0, y1 = 0, cnt = 0; st[sp++] = s; lab[s] = id;
+    while (sp) {
+      const q = st[--sp], x = q % w, y = (q / w) | 0; cnt++;
+      if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+      if (x > 0 && green[q - 1] && !lab[q - 1]) { lab[q - 1] = id; st[sp++] = q - 1; }
+      if (x < w - 1 && green[q + 1] && !lab[q + 1]) { lab[q + 1] = id; st[sp++] = q + 1; }
+      if (y > 0 && green[q - w] && !lab[q - w]) { lab[q - w] = id; st[sp++] = q - w; }
+      if (y < h - 1 && green[q + w] && !lab[q + w]) { lab[q + w] = id; st[sp++] = q + w; }
+    }
+    const a = (x1 - x0) * (y1 - y0); if (a > bestA && cnt > 200) { bestA = a; B = { x0, y0, x1, y1 }; }
+  }
+  if (!B) throw new Error('No save picture found (green frame missing).');
+  const W = B.x1 - B.x0 + 1, H = B.y1 - B.y0 + 1;
+  const run = (x, y, dx, dy) => { let n = 0; while (x >= 0 && y >= 0 && x < w && y < h && green[y * w + x]) { n++; x += dx; y += dy; } return n; };
+  const mx = (B.x0 + B.x1) >> 1, my = (B.y0 + B.y1) >> 1;
+  const cell = (run(mx, B.y0, 0, 1) + run(mx, B.y1, 0, -1) + run(B.x0, my, 1, 0) + run(B.x1, my, -1, 0)) / 8;
+  const lum = (x, y) => { const i = (Math.round(y) * w + Math.round(x)) * 4; return d[i] + d[i + 1] + d[i + 2]; };
+  const count = (horiz) => { // black/white squares along the timing row
+    let n = 0, prev = -1;
+    const a0 = horiz ? B.x0 : B.y0, a1 = horiz ? B.x1 : B.y1, fixed = (horiz ? B.y0 : B.x0) + cell * 2.5;
+    for (let a = a0 + cell * 2.2; a <= a1 - cell * 2.2; a += 0.5) { const v = (horiz ? lum(a, fixed) : lum(fixed, a)) > 382 ? 1 : 0; if (v !== prev) { n++; prev = v; } }
+    return n;
+  };
+  const tc = [count(true), count(false)];
+  let G = Math.round((tc[0] + 4 - 6) / 8) * 8;
+  if (Math.abs(tc[0] - tc[1]) > 2) G = Math.round(((tc[0] + tc[1]) / 2 - 2) / 8) * 8;
+  if (G < 16 || G > 256) throw new Error('Could not count the squares. Try a sharper screenshot.');
+  const cw = W / (G + 6), ch = H / (G + 6), bytes = new Uint8Array(Math.floor(G * G * 3 / 8));
+  for (let i = 0; i < G * G; i++) {
+    const cx = B.x0 + (3 + (i % G) + 0.5) * cw, cy = B.y0 + (3 + ((i / G) | 0) + 0.5) * ch, r = Math.max(0, Math.floor(Math.min(cw, ch) * 0.2));
+    let sr = 0, sg = 0, sb = 0, n = 0;
+    for (let y = Math.round(cy - r); y <= Math.round(cy + r); y++) for (let x = Math.round(cx - r); x <= Math.round(cx + r); x++) { const k = (y * w + x) * 4; sr += d[k]; sg += d[k + 1]; sb += d[k + 2]; n++; }
+    let v = (sr / n > 127 ? 4 : 0) | (sg / n > 127 ? 2 : 0) | (sb / n > 127 ? 1 : 0); v ^= codeMask(i);
+    for (let b = 0; b < 3; b++) { const bi = i * 3 + b; if ((bi >> 3) < bytes.length && (v >> (2 - b)) & 1) bytes[bi >> 3] |= 1 << (7 - (bi & 7)); }
+  }
+  if (bytes[0] !== 83 || bytes[1] !== 66) throw new Error('This is not a Starblock save picture, or it is too blurry.');
+  const len = new DataView(bytes.buffer).getUint32(4, true);
+  if (len > bytes.length - 12) throw new Error('The save picture is cut off.');
+  const crc = new DataView(bytes.buffer).getUint32(8 + len, true);
+  if (crc !== crc32(bytes.subarray(0, 8 + len))) throw new Error('The picture is too blurry or small. Try a sharper screenshot.');
+  return { flags: bytes[3], body: bytes.slice(8, 8 + len) };
+}
+async function loadSaveImage(file) {
+  const r = await readCodeImage(file);
+  const raw = r.flags & 1 ? await zip(r.body, true) : r.body;
+  if (!raw) throw new Error('This browser cannot unpack the save.');
+  const d = unpackSave(raw);
+  best = d.b && typeof d.b === 'object' ? d.b : {};
+  inv = {}; for (const t of HUB_TYPES) if (d.i && d.i[t] > 0) inv[t] = Math.floor(d.i[t]);
+  hubEdits = d.ed;
+  if (typeof d.n === 'string') setName(d.n);
+  try { localStorage.setItem('starblock.best', JSON.stringify(best)); } catch (e) {}
+  saveStore(); fillPickers();
+  if (L.hub) { const p = player.pos.clone(); loadLevel(); player.pos.copy(p); }
+  return d;
+}
+function codeOverlay(show, txt) {
+  $('codeOv').hidden = !show; $('codeTxt').textContent = txt || ''; $('codeCv').hidden = true; $('codeDl').hidden = true;
+  if (document.pointerLockElement) document.exitPointerLock();
+}
+async function showSaveCode() {
+  codeOverlay(true, 'Making your save picture…');
+  try {
+    const bytes = await makeSaveBytes(), G = drawCode(bytes);
+    if (!G) { codeOverlay(true, 'Your base is too big for one save picture. Remove some blocks and try again.'); return; }
+    $('codeCv').hidden = false; $('codeDl').hidden = false;
+    const nm = Object.keys(best).length, nb = hubEdits.size;
+    $('codeTxt').textContent = `Take a screenshot of this picture (or download it). Later: LOAD SAVE and pick the picture. Inside: ${nm} missions, ${nb} built blocks, your block storage.`;
+  } catch (e) { codeOverlay(true, 'Could not make the save picture: ' + e.message); }
+}
+
 function loadLevel() {
-  L = LEVELS[run.order[run.i]]; LS = {}; webHp.clear(); netCarried = false; stasisNet = 0;
+  L = hubMode && !NET ? HUB : LEVELS[run.order[run.i]]; LS = {}; webHp.clear(); netCarried = false; stasisNet = 0;
   while (lvlG.children.length) lvlG.remove(lvlG.children[0]);
   artifactCell = null; turretSpots = []; minigunSpot.set(0, -999, 0);
   movers = []; rockets.forEach((r) => scene.remove(r.m)); rockets = []; saucerGate = 0; lvlTime = 0; dmgTaken = 0; setFlip(false); player.roll = 0; player.down = 0;
@@ -2618,6 +2911,7 @@ function loadLevel() {
   if (L.setup) L.setup();
   if (L.items) for (const it of L.items()) addItem(it);
   if (NET) NET.blk = blocks;
+  $('hubBtn').hidden = $('hubInv').hidden = !L.hub; $('stats').hidden = !!L.hub; beacon.visible = !L.hub;
   selectTool(0);
   updateHud();
 }
@@ -2929,6 +3223,11 @@ function playerOverlaps(cx, cy, cz) {
   return cx < p.x + PW && cx + 1 > p.x - PW && cy < p.y + PH && cy + 1 > p.y && cz < p.z + PW && cz + 1 > p.z - PW;
 }
 function breakBlock(hit) {
+  if (L.hub) { // your own blocks go back into storage
+    const k = idx(hit.x, hit.y, hit.z); if (!hubEdits.has(k)) return;
+    set(hit.x, hit.y, hit.z, AIR); buildMeshes(); hubEdits.delete(k); addInv(hit.type, 1); saveInvSoon();
+    burst(new V3(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5), CHIP[hit.type] || 0x8fb4d6, 22, 3.5); sfx.break(); return;
+  }
   const c = new V3(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
   set(hit.x, hit.y, hit.z, AIR); buildMeshes(); myEdit(hit.x, hit.y, hit.z, AIR);
   burst(c, CHIP[hit.type] || 0x8fb4d6, 22, 3.5);
@@ -2941,7 +3240,7 @@ function breakBlock(hit) {
     burst(c, 0x5dffa8, 60, 6, 0);
     saucers.forEach(s => { if (!s.dead) s.drop = Math.min(s.drop, 1.5); });
   } else if (hit.type === WEB) sfx.break();
-  else { blocks++; mined++; sfx.break(); }
+  else { blocks++; mined++; sfx.break(); addInv(hit.type, 1); }
 }
 // bridge assist: looking down at an edge places the next block in front of your feet
 function bridgeCell() {
@@ -2959,6 +3258,13 @@ function bridgeCell() {
   return null;
 }
 function placeBlock(hit) {
+  if (L.hub) {
+    if (!(inv[hubType] > 0)) { toast(`No ${BLOCK_NAME[hubType]} left. Mine more in missions, or pick another block.`); placeCd = 0.8; return; }
+    const x = hit.x + hit.nx, y = hit.y + hit.ny, z = hit.z + hit.nz;
+    if (!inB(x, y, z) || get(x, y, z) || playerOverlaps(x, y, z)) return;
+    set(x, y, z, hubType); buildMeshes(); hubEdits.set(idx(x, y, z), hubType); addInv(hubType, -1); sfx.place();
+    burst(new V3(x + 0.5, y + 0.5, z + 0.5), CHIP[hubType], 8, 1.5); return;
+  }
   if (blocks <= 0) { toast('No blocks. Dig some rock with the pickaxe.'); placeCd = 0.8; return; }
   const x = hit.x + hit.nx, y = hit.y + hit.ny, z = hit.z + hit.nz;
   if (!inB(x, y, z) || get(x, y, z) || playerOverlaps(x, y, z)) return;
@@ -3383,7 +3689,7 @@ const promptEl = $('prompt'), ring = $('ring'), marker = $('marker'), mdist = $(
 let markerMode = '';
 function updateHud() {
   $('hpfill').style.width = Math.max(0, player.hp) + '%';
-  $('blockCount').textContent = blocks;
+  $('blockCount').textContent = L.hub ? (inv[hubType] || 0) : blocks;
   $('kills').textContent = kills;
   $('time').textContent = fmtTime(playTime);
   const h = (L.hud && L.hud()) || (carrying ? ['Return to your ship', 'Aliens are swarming'] : netCarried ? ['Escort the artifact', 'A crewmate has it · meet at the ship'] : ['Reach the artifact', L.sub || 'Mine rock · build a bridge']);
@@ -3399,6 +3705,7 @@ function updateHud() {
 }
 const tv = new V3();
 function updateMarker() {
+  marker.hidden = !!L.hub; if (L.hub) return;
   const target = objTarget();
   const d = player.pos.distanceTo(target);
   mdist.textContent = Math.round(d) + ' m';
@@ -3488,6 +3795,7 @@ window.addEventListener('keydown', (e) => {
   keys.add(e.code);
   const km = { Digit1: 0, Digit2: 1, Digit3: 3, Digit4: 2, Digit5: 4, Digit6: 5, Digit7: 6 };
   const ak = { KeyQ: 0, KeyE: 1, KeyR: 2, KeyT: 3, KeyG: 4 };
+  if (L.hub && e.code === 'KeyB' && !e.repeat) { cycleHubType(); return; }
   if (e.code in km) selectTool(km[e.code]);
   else if (e.code in ak) { if (!e.repeat) useAbility(ak[e.code]); }
   else if (e.code === 'KeyF' || e.code === 'Enter') input.act = true;
@@ -3506,7 +3814,7 @@ function begin() {
   if (matchMedia('(pointer: coarse)').matches) {
     try { const r = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); if (r && r.catch) r.catch(() => {}); } catch (e) {}
   }
-  $('bnEye').textContent = (NET ? `Co-op · game ${NET.code}` : `Mission ${run.i + 1} of ${run.order.length}`) + ` · ${DIFF[diff].n}`; $('bnName').textContent = L.name; $('bnBrief').textContent = L.brief;
+  $('bnEye').textContent = L.hub ? 'Home base' : (NET ? `Co-op · game ${NET.code}` : `Mission ${run.i + 1} of ${run.order.length}`) + ` · ${DIFF[diff].n}`; $('bnName').textContent = L.name; $('bnBrief').textContent = L.brief;
   $('banner').classList.add('show'); bannerT = 4.5;
 }
 let bannerT = 0, paused = false;
@@ -3517,10 +3825,11 @@ function pauseGame() {
   if (document.pointerLockElement) document.exitPointerLock();
   const sel = $('pauseLvl'); sel.innerHTML = '';
   LEVELS.forEach((lv, i) => { if (lv.coop && !(NET && NET.host)) return; const o = document.createElement('option'); o.value = i; o.textContent = lv.name + (lv.coop ? ' (co-op)' : ''); sel.appendChild(o); });
-  sel.value = String(LEVELS.indexOf(L));
+  sel.value = String(LEVELS.indexOf(L)); if (sel.selectedIndex < 0) sel.selectedIndex = 0;
   const guest = !!(NET && !NET.host);
   sel.disabled = $('pauseGo').disabled = guest;
-  $('pauseNote').textContent = !NET ? 'The game is stopped.' : guest ? 'Co-op: the game keeps going for your crew. Only the host can change the mission.' : 'Co-op: the game keeps going for your crew. A new mission starts for everyone.';
+  $('hubGo').hidden = !!NET || !!L.hub;
+  $('pauseNote').textContent = L.hub ? 'You are in your mothership. Pick a mission to fly out.' : !NET ? 'The game is stopped.' : guest ? 'Co-op: the game keeps going for your crew. Only the host can change the mission.' : 'Co-op: the game keeps going for your crew. A new mission starts for everyone.';
   $('pause').hidden = false;
 }
 function resumeGame() { if (!paused) return; paused = false; $('pause').hidden = true; if (state === 'paused') state = 'play'; }
@@ -3528,10 +3837,23 @@ $('pauseBtn').addEventListener('click', pauseGame);
 $('nameBtn').addEventListener('click', () => { const i = $('pauseName'); if (i.hidden) { i.hidden = false; i.value = myName; i.focus(); $('nameBtn').textContent = 'SAVE NAME'; } else { setName(i.value); i.hidden = true; $('nameBtn').textContent = 'CHANGE NAME'; toast(myName ? `Your name: ${myName}` : 'Name cleared', 1.6); } });
 $('pauseName').addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') $('nameBtn').click(); });
 $('resumeBtn').addEventListener('click', resumeGame);
+$('hubBtn').addEventListener('click', (e) => { e.stopPropagation(); if (!L.hub) return; player.pos.copy(HUB_SPAWN); player.vel.set(0, 0, 0); player.yaw = -Math.PI / 2; player.pitch = -0.08; toast('Back on the bridge', 1.2); });
+$('hubStart').addEventListener('click', () => { initAudio(); enterHub(); });
+$('hubGo').addEventListener('click', () => enterHub());
+document.querySelectorAll('.saveBtn').forEach((b) => b.addEventListener('click', () => { if (L.hub) saveStore(); showSaveCode(); }));
+document.querySelectorAll('.loadBtn').forEach((b) => b.addEventListener('click', () => { $('codeFile').value = ''; $('codeFile').click(); }));
+$('codeFile').addEventListener('change', async () => {
+  const f = $('codeFile').files[0]; if (!f) return;
+  codeOverlay(true, 'Reading the save picture…');
+  try { const d = await loadSaveImage(f); codeOverlay(true, `Save loaded! ${Object.keys(best).length} missions, ${d.ed.size} built blocks, ${Object.values(inv).reduce((a, b) => a + b, 0)} blocks in storage.`); }
+  catch (e) { codeOverlay(true, 'Could not load: ' + e.message); }
+});
+$('codeClose').addEventListener('click', () => { $('codeOv').hidden = true; });
+$('codeDl').addEventListener('click', () => { const a = document.createElement('a'); a.download = 'starblock-save.png'; a.href = $('codeCv').toDataURL('image/png'); a.click(); });
 $('pauseGo').addEventListener('click', () => {
   if (NET && !NET.host) return;
   const k = +$('pauseLvl').value; if (!LEVELS[k]) return;
-  paused = false; $('pause').hidden = true; state = 'play';
+  paused = false; $('pause').hidden = true; state = 'play'; leaveHub();
   run.order = [k, ...shuffle(LEVELS.map((_, i) => i).filter((i) => i !== k && !LEVELS[i].coop))]; run.i = 0;
   if (NET) coopReset(); else { loadLevel(); begin(); }
 });
@@ -4115,7 +4437,7 @@ function frame(now) {
         mineProg += dt / (pwr ? pwr.time : tur.enemy ? 3 : tur.sat ? 2.5 : 0.8);
         if (mineSoundT <= 0) { sfx.chip(); mineSoundT = 0.22; burst(pwr ? cellV(hit.x, hit.y, hit.z) : tur.head, 0x9fd8ff, 4, 2); }
         if (mineProg >= 1) { if (pwr) pwr.done(); else turretAction(hit); mineProg = 0; mineKey = ''; placeCd = 0.4; }
-      } else if (input.act && hit && hit.type !== TURRET && HARD[hit.type] < 50) {
+      } else if (input.act && hit && hit.type !== TURRET && HARD[hit.type] < 50 && (!L.hub || hubEdits.has(idx(hit.x, hit.y, hit.z)))) {
         const key = hit.x + ',' + hit.y + ',' + hit.z;
         if (key !== mineKey) { mineKey = key; mineProg = 0; }
         mineProg += dt / HARD[hit.type];
@@ -4157,6 +4479,7 @@ function frame(now) {
   if (hit && hit.type === TURRET) { const t = turrets.find((q) => q.x === hit.x && q.y === hit.y && q.z === hit.z); if (t) pr = t.enemy ? 'Alien turret · hold the pickaxe on it to take it over' : t.sat ? (t.hp <= 0 ? 'Broken satellite · hold the pickaxe on it to fix it' : `Satellite ${Math.ceil(t.hp)}%` + (t.hp < 100 ? ' · pickaxe to fix' : '')) : t.hp <= 0 ? 'Broken turret · hold the pickaxe on it to fix it (3 blocks)' : `Turret ${Math.ceil(t.hp)}%` + (t.hp < 100 ? ' · pickaxe repair: 1 block' : ''); }
   else if (hit && hit.type === PWR && L.pwrPrompt) pr = L.pwrPrompt(hit);
   else if (hit && hit.type === CACHE) pr = 'Hidden box! Dig it';
+  else if (hit && curTool === 0 && L.hub && !hubEdits.has(idx(hit.x, hit.y, hit.z))) pr = 'Ship wall · you can only dig blocks you built';
   else if (hit && curTool === 0 && HARD[hit.type] >= 50) pr = hit.type === FIELD ? 'Force field · you cannot dig it' : hit.type === WEB ? 'Alien web · shoot it or use a rocket' : 'Too hard to dig';
   else if (hit && curTool === 4) pr = hit.ny === 1 ? `Build turret here · ${TURRET_COST} blocks` : '';
   if (revivePrompt) pr = revivePrompt;
@@ -4240,7 +4563,7 @@ document.querySelectorAll('#diffSel button').forEach((b) => b.addEventListener('
 setDiff(diff, false);
 newRun(); loadLevel(); menuInfo();
 requestAnimationFrame(frame);
-window.__game = { setBlock: (x, y, z, t) => { set(x, y, z, t); meshDirty = true; }, downSaucer: (s) => { s.hp = 0.1; hitSaucer(s, 1, s.mesh.position.clone()); }, fire: (o) => fireGun(eye, o), rocket: () => fireRocket(eye), GUN, FREEZE, saucerGate: () => saucerGate, eyeV: () => eye, lv: () => ({ lvlTime, dmgTaken }), get best() { return best; }, secrets: () => [secretsFound(), secretsTotal()], movers: () => movers, get flip() { return player.flip; }, setFlip, takeAll: () => (LS.items || []).forEach((it) => takeItem(it, true)), get hasRocket() { return hasRocket; }, get hp() { return player.hp; }, turretList: () => turrets, queenHit: (i, d) => queenHit(i, d, LS.q.g.position.clone()), get diff() { return diff; }, get stasisNet() { return stasisNet; }, spawnAlien: (p, k) => spawnAlien(new THREE.Vector3(...p), k), ship, get carrying() { return carrying; }, get: (x, y, z) => get(x, y, z), run, LEVELS, get L() { return L; }, get LS() { return LS; }, load(i) { run.order[run.i] = i; loadLevel(); }, win, get o2() { return o2; }, get frost() { return frost; }, upg, player, get state() { return state; }, selectTool, input, begin, world: () => world, get blocks() { return blocks; }, set blocks(v) { blocks = v; }, turrets: () => turrets, useAbility, abCd, abOn, get hasMinigun() { return hasMinigun; }, minigunSpot, aliens: () => aliens, get NET() { return NET; }, avatars, hitAlien, breakAt: (x, y, z) => breakBlock({ x, y, z, type: get(x, y, z) }), saucers: () => saucers };
+window.__game = { hub: { enterHub, get inv() { return inv; }, set inv(v) { inv = v; }, get edits() { return hubEdits; }, get type() { return hubType; }, set type(v) { hubType = v; }, makeSaveBytes, drawCode, decodeCode, loadSaveImage, showSaveCode, packSave, unpackSave, saveStore, setBest: (b) => { best = b; } }, setBlock: (x, y, z, t) => { set(x, y, z, t); meshDirty = true; }, downSaucer: (s) => { s.hp = 0.1; hitSaucer(s, 1, s.mesh.position.clone()); }, fire: (o) => fireGun(eye, o), rocket: () => fireRocket(eye), GUN, FREEZE, saucerGate: () => saucerGate, eyeV: () => eye, lv: () => ({ lvlTime, dmgTaken }), get best() { return best; }, secrets: () => [secretsFound(), secretsTotal()], movers: () => movers, get flip() { return player.flip; }, setFlip, takeAll: () => (LS.items || []).forEach((it) => takeItem(it, true)), get hasRocket() { return hasRocket; }, get hp() { return player.hp; }, turretList: () => turrets, queenHit: (i, d) => queenHit(i, d, LS.q.g.position.clone()), get diff() { return diff; }, get stasisNet() { return stasisNet; }, spawnAlien: (p, k) => spawnAlien(new THREE.Vector3(...p), k), ship, get carrying() { return carrying; }, get: (x, y, z) => get(x, y, z), run, LEVELS, get L() { return L; }, get LS() { return LS; }, load(i) { run.order[run.i] = i; loadLevel(); }, win, get o2() { return o2; }, get frost() { return frost; }, upg, player, get state() { return state; }, selectTool, input, begin, world: () => world, get blocks() { return blocks; }, set blocks(v) { blocks = v; }, turrets: () => turrets, useAbility, abCd, abOn, get hasMinigun() { return hasMinigun; }, minigunSpot, aliens: () => aliens, get NET() { return NET; }, avatars, hitAlien, breakAt: (x, y, z) => breakBlock({ x, y, z, type: get(x, y, z) }), saucers: () => saucers };
 })();
 </script>
 <!-- GAME-END -->
