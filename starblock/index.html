@@ -191,16 +191,22 @@ h1 { margin: 0; font-size: clamp(40px, 9vw, 64px); line-height: .95; letter-spac
 /* co-op */
 .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .cta.ghost { background: transparent; color: var(--text); border-color: var(--panel-line); }
-#coop { display: grid; gap: 10px; border: 1px solid var(--panel-line); background: var(--panel); border-radius: 8px; padding: 12px; }
+#coop { display: grid; gap: 8px; }
+.startList { display: grid; gap: 10px; }
+.startList > .cta, .startList .row > .cta { min-width: 250px; }
+#coopCode { width: 64px; font-size: 20px; text-align: center; }
 #coop[hidden] { display: none; }
-#coop .cta { font-size: 15px; padding: 10px 20px; }
+
 #coopCode { width: 78px; font: 700 26px var(--font-hud); letter-spacing: .2em; text-align: center; padding: 6px; border-radius: 6px;
   border: 2px solid var(--panel-line); background: rgba(3,8,20,.6); color: var(--text); }
 #coopCode:focus { outline: none; border-color: var(--green); }
 #coopMsg { font-size: 13px; color: var(--muted); min-height: 1.2em; }
 #coopMsg b { color: var(--green); font-size: 22px; letter-spacing: .2em; }
 #crew { position: absolute; right: max(12px, env(safe-area-inset-right, 0px)); top: calc(env(safe-area-inset-top, 0px) + 70px); font-size: 12px; letter-spacing: .08em; padding: 6px 10px; }
-#crew b { color: var(--green); }
+#crew b { color: var(--green); font-size: 16px; letter-spacing: .1em; }
+#bnCode { font-size: 14px; letter-spacing: .08em; color: var(--text); margin: 4px 0 6px; }
+#bnCode b { color: var(--green); font-size: 34px; letter-spacing: .2em; }
+#bnCode[hidden] { display: none; }
 .cta:disabled { opacity: .5; cursor: default; }
 .pick { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .sel { display: flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
@@ -279,7 +285,7 @@ body.down #downFx { display: grid; }
     <button class="ab ready" data-ab="3" aria-label="Stasis field"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#5dffa8" stroke-width="2"/><path d="M12 6v6l4 3" stroke="#e4f3ff" stroke-width="2" fill="none" stroke-linecap="round"/></svg><span class="t"></span><span class="key">T</span></button>
     <button class="ab ready" data-ab="4" aria-label="Nano repair"><svg viewBox="0 0 24 24"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z" fill="#46e07a"/><circle cx="12" cy="12" r="2.2" fill="#e4f3ff"/></svg><span class="t"></span><span class="key">G</span></button>
   </div>
-  <div id="banner"><div id="bnEye"></div><div id="bnName"></div><div id="bnBrief"></div></div>
+  <div id="banner"><div id="bnEye"></div><div id="bnCode" hidden></div><div id="bnName"></div><div id="bnBrief"></div></div>
   <div id="toast" class="chip"></div>
   <div id="crew" class="chip" hidden></div>
 </div>
@@ -295,15 +301,16 @@ body.down #downFx { display: grid; }
       <label class="sel"><span>First mission</span><select id="lvlSel"><option value="-1">Random</option></select></label>
       <div class="seg" id="diffSel" role="radiogroup" aria-label="Difficulty"><button data-d="0" role="radio">EASY</button><button data-d="1" role="radio">NORMAL</button><button data-d="2" role="radio">HARD</button><button data-d="3" role="radio">INSANE</button></div>
     </div>
-    <div class="row"><button id="start" class="cta">START</button><button id="coopBtn" class="cta ghost">CO-OP</button><button id="hubStart" class="cta ghost">MOTHERSHIP</button></div>
-    <div class="row"><button class="cta ghost small saveBtn">SAVE PICTURE</button><button class="cta ghost small loadBtn">LOAD SAVE</button></div>
-    <div id="coop" hidden>
-      <div class="hint">Play together. One phone is the host. The others type the host's 2-digit code and join.</div>
-      <div class="row"><button id="hostBtn" class="cta">HOST</button><span class="hint">or</span>
-        <input id="coopCode" inputmode="numeric" maxlength="2" placeholder="00" aria-label="Game code"><button id="joinBtn" class="cta ghost">JOIN</button></div>
+    <div class="startList">
+      <button id="start" class="cta">START SINGLEPLAYER</button>
+      <div class="row"><button id="hostBtn" class="cta ghost">HOST CO-OP</button><span class="hint">You get a number. Friends type it to join you.</span></div>
+      <div class="row"><button id="joinBtn" class="cta ghost">JOIN CO-OP</button><input id="coopCode" inputmode="numeric" maxlength="2" placeholder="nr" aria-label="The host's number"><span class="hint">Type the host's number</span></div>
+    </div>
+    <div id="coop">
       <label class="sel"><span>Co-op mission</span><select id="coopLvl"><option value="-1">Same as above</option><optgroup label="Co-op only" id="coopOnly"></optgroup></select></label>
       <div id="coopMsg" role="status"></div>
     </div>
+    <div class="row"><button id="hubStart" class="cta ghost">MOTHERSHIP</button><button class="cta ghost small saveBtn">SAVE PICTURE</button><button class="cta ghost small loadBtn">LOAD SAVE</button></div>
     <p>You pick the first mission. After that the missions come in a random order. Dig blocks, build bridges, fix turrets and shoot the aliens. Every mission has 3 hidden boxes under orange glowing stones, a bonus goal, and up to 3 stars.</p>
     <div class="ctrls">
       <div><b>Phone</b>Left thumb: walk. Right thumb: look around. Big button: use your tool (drag it to aim). Arrow: jump. Bottom bar: change tool. To build a bridge: pick blocks, look down at the edge and tap.</div>
@@ -2549,7 +2556,7 @@ const run = { order: [0, 1, 2, 3, 4, 5, 6], i: 0 };
 // difficulty scales how many aliens come and how fast; pickLv -1 = all solo missions in random order; pickCoop: co-op panel choice
 const DIFF = [{ n: 'Easy', m: 0.6 }, { n: 'Normal', m: 1 }, { n: 'Hard', m: 1.6 }, { n: 'Insane', m: 2.4 }];
 let diff = 1, pickLv = -1, pickCoop = -1;
-const VERSION = 'v3.0';
+const VERSION = 'v3.1';
 document.querySelectorAll('.ver').forEach((e) => { e.textContent = VERSION; });
 const cleanName = (n) => String(n || '').replace(/[^\p{L}\p{N} _.!?-]/gu, '').trim().slice(0, 12);
 let myName = ''; try { myName = cleanName(localStorage.getItem('starblock.name')); } catch (e) {}
@@ -3814,8 +3821,9 @@ function begin() {
   if (matchMedia('(pointer: coarse)').matches) {
     try { const r = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); if (r && r.catch) r.catch(() => {}); } catch (e) {}
   }
-  $('bnEye').textContent = L.hub ? 'Home base' : (NET ? `Co-op · game ${NET.code}` : `Mission ${run.i + 1} of ${run.order.length}`) + ` · ${DIFF[diff].n}`; $('bnName').textContent = L.name; $('bnBrief').textContent = L.brief;
-  $('banner').classList.add('show'); bannerT = 4.5;
+  $('bnEye').textContent = L.hub ? 'Home base' : (NET ? (NET.host ? 'Co-op' : `Co-op number ${NET.code}`) : `Mission ${run.i + 1} of ${run.order.length}`) + ` · ${DIFF[diff].n}`;
+  $('bnCode').hidden = !(NET && NET.host); if (NET) $('bnCode').innerHTML = `CO-OP NUMBER <b>${NET.code}</b><br>Friends: press JOIN CO-OP and type ${NET.code}`; $('bnName').textContent = L.name; $('bnBrief').textContent = L.brief;
+  $('banner').classList.add('show'); bannerT = NET && NET.host ? 8 : 4.5;
 }
 let bannerT = 0, paused = false;
 function pauseGame() {
@@ -3829,7 +3837,7 @@ function pauseGame() {
   const guest = !!(NET && !NET.host);
   sel.disabled = $('pauseGo').disabled = guest;
   $('hubGo').hidden = !!NET || !!L.hub;
-  $('pauseNote').textContent = L.hub ? 'You are in your mothership. Pick a mission to fly out.' : !NET ? 'The game is stopped.' : guest ? 'Co-op: the game keeps going for your crew. Only the host can change the mission.' : 'Co-op: the game keeps going for your crew. A new mission starts for everyone.';
+  $('pauseNote').textContent = L.hub ? 'You are in your mothership. Pick a mission to fly out.' : !NET ? 'The game is stopped.' : guest ? `Co-op number ${NET.code}. The game keeps going for your crew. Only the host can change the mission.` : `Co-op number ${NET.code} (friends type it to join). The game keeps going for your crew. A new mission starts for everyone.`;
   $('pause').hidden = false;
 }
 function resumeGame() { if (!paused) return; paused = false; $('pause').hidden = true; if (state === 'paused') state = 'play'; }
@@ -4169,8 +4177,8 @@ function hosted(r, code) {
   startNet(r, code, true);
   newRun(); loadLevel();
   sendPresence();
-  coopMsg(`Your code: <b>${code}</b> · mission: ${L.name} · tell your crew, then launch`);
-  $('start').textContent = 'LAUNCH';
+  coopMsg(`Your co-op number: <b>${code}</b>`);
+  begin(); // the game starts right away; friends can join at any time with the number
 }
 const newCode = () => String(10 + Math.floor(Math.random() * 90));
 async function hostGame() {
@@ -4196,7 +4204,7 @@ async function hostGame() {
 }
 async function joinGame() {
   const code = $('coopCode').value.trim();
-  if (!/^\d\d$/.test(code)) { coopMsg('Type the two-digit code from the host.'); return; }
+  if (!/^\d\d$/.test(code)) { coopMsg('Type the host\'s number first (2 digits), then press JOIN CO-OP.'); $('coopCode').focus(); return; }
   coopMsg('Connecting…');
   const room = await roomP;
   if (NET) stopNet();
@@ -4348,7 +4356,7 @@ function updateNet(dt) {
   revivePrompt = reviving >= 0 ? `Reviving crewmate… ${reviving}%` : '';
   $('chat').hidden = state !== 'play';
   const n = crew.length;
-  $('crew').innerHTML = `Code <b>${NET.code}</b> · ${n} aboard · ${DIFF[diff].n}`;
+  $('crew').innerHTML = `Co-op nr <b>${NET.code}</b> · ${n} aboard · ${DIFF[diff].n}`;
 
   if (NET.guest) {
     const hp = hostPeer();
@@ -4369,7 +4377,6 @@ function updateNet(dt) {
 function coopReset() { // host: new round of the same asteroid for everyone
   NET.ep++; NET.edits.clear(); netCarried = false; loadLevel(); sendPresence(); begin();
 }
-$('coopBtn').addEventListener('click', () => { $('coop').hidden = !$('coop').hidden; });
 $('hostBtn').addEventListener('click', () => { if (NET && NET.host) return; if (NET) stopNet(); hostGame(); });
 $('joinBtn').addEventListener('click', joinGame);
 $('coopCode').addEventListener('keydown', (e) => { if (e.key === 'Enter') joinGame(); e.stopPropagation(); });
