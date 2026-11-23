@@ -47,7 +47,7 @@ body {
 #hubBtn[hidden], #hubInv[hidden] { display: none; }
 #hubInv { position: absolute; left: 0; right: 0; margin: 0 auto; width: max-content; bottom: calc(env(safe-area-inset-bottom, 0px) + 74px); display: flex; gap: 4px; pointer-events: auto; flex-wrap: wrap; justify-content: center; max-width: 92vw; }
 #hubInv .hb { display: flex; align-items: center; gap: 3px; padding: 2px 6px 2px 3px; border-radius: 6px; border: 2px solid var(--panel-line); background: var(--panel); color: var(--text); font: 700 12px var(--font-hud); cursor: pointer; }
-#hubInv .hb i { width: 14px; height: 14px; border-radius: 3px; display: block; }
+#hubInv .hb img { width: 22px; height: 22px; display: block; image-rendering: pixelated; }
 #hubInv .hb.on { border-color: var(--green); }
 #codeOv { position: fixed; inset: 0; z-index: 60; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 10px; }
 #codeOv[hidden] { display: none; }
@@ -2711,7 +2711,7 @@ const run = { order: [0, 1, 2, 3, 4, 5, 6], i: 0 };
 // difficulty scales how many aliens come and how fast; pickLv -1 = all solo missions in random order; pickCoop: co-op panel choice
 const DIFF = [{ n: 'Easy', m: 0.6 }, { n: 'Normal', m: 1 }, { n: 'Hard', m: 1.6 }, { n: 'Insane', m: 2.4 }];
 let diff = 1, pickLv = -1, pickCoop = -1;
-const VERSION = 'v3.5';
+const VERSION = 'v3.6';
 document.querySelectorAll('.ver').forEach((e) => { e.textContent = VERSION; });
 const cleanName = (n) => String(n || '').replace(/[^\p{L}\p{N} _.!?-]/gu, '').trim().slice(0, 12);
 let myName = ''; try { myName = cleanName(localStorage.getItem('starblock.name')); } catch (e) {}
@@ -2934,10 +2934,18 @@ function makeStatue(female) {
   // hips, belt, body
   ball(P(0, 1.15, 0), 0.2, female ? 1.35 : 1.2, 0.8, 0.85);
   const belt = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.035, 6, 18), mat); belt.rotation.x = Math.PI / 2; belt.scale.set(female ? 1.0 : 1.08, 0.75, 1); belt.position.y = 1.24; g.add(belt);
-  const prof = female ? [[0.2, 0], [0.17, 0.14], [0.21, 0.3], [0.24, 0.43], [0.23, 0.53], [0.2, 0.62], [0.08, 0.68]] : [[0.21, 0], [0.23, 0.15], [0.29, 0.4], [0.32, 0.55], [0.27, 0.66], [0.09, 0.72]];
+  const prof = female ? [[0.2, 0], [0.19, 0.14], [0.22, 0.3], [0.24, 0.45], [0.24, 0.55], [0.2, 0.63], [0.08, 0.68]] : [[0.21, 0], [0.23, 0.15], [0.29, 0.4], [0.32, 0.55], [0.27, 0.66], [0.09, 0.72]];
   const torso = new THREE.Mesh(new THREE.LatheGeometry(prof.map(([r, y]) => new THREE.Vector2(r, y)), 18), mat); torso.position.y = 1.2; torso.scale.z = 0.68; g.add(torso);
-  if (female) for (const s of [-1, 1]) ball(P(s * 0.09, 1.6, 0.1), 0.095, 1, 0.9, 0.8);
-  else { const plate = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.24, 0.06), mat); plate.position.set(0, 1.62, 0.2); plate.rotation.x = -0.12; g.add(plate); }
+  // space suit: chest control box, neck ring for the helmet, life support backpack with a hose, wrist and boot cuffs
+  { const cz = female ? 0.17 : 0.2, w = female ? 0.26 : 0.32;
+    const plate = new THREE.Mesh(new THREE.BoxGeometry(w, 0.2, 0.07), mat); plate.position.set(0, 1.58, cz); plate.rotation.x = -0.1; g.add(plate);
+    for (const k of [-1, 0, 1]) { const btn = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.03, 8), mat); btn.rotation.x = Math.PI / 2; btn.position.set(k * w * 0.28, 1.6, cz + 0.045); g.add(btn); }
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(female ? 0.12 : 0.14, 0.035, 8, 20), mat); ring.rotation.x = Math.PI / 2; ring.position.y = 1.9; g.add(ring);
+    const pack = new THREE.Mesh(new THREE.BoxGeometry(female ? 0.36 : 0.44, 0.52, 0.2), mat); pack.position.set(0, 1.56, -(female ? 0.25 : 0.29)); g.add(pack);
+    for (const sx of [-1, 1]) { const tank = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.46, 10), mat); tank.position.set(sx * (female ? 0.12 : 0.15), 1.56, -(female ? 0.37 : 0.41)); g.add(tank); }
+    chain([P(-(female ? 0.17 : 0.21), 1.42, -0.2), P(-(female ? 0.24 : 0.3), 1.45, 0.02), P(-w * 0.45, 1.52, cz)], [0.025, 0.025, 0.025]); // hose
+    for (const s of [-1, 1]) { const cuff = new THREE.Mesh(new THREE.TorusGeometry(0.085, 0.025, 6, 14), mat); cuff.rotation.x = Math.PI / 2; cuff.position.set(s * 0.16, 0.24, s > 0 ? 0.13 : -0.08); g.add(cuff); }
+  }
   for (const s of [-1, 1]) ball(P(s * sh, 1.84, 0), female ? 0.09 : 0.125, 1, 0.8, 1); // shoulder pads
   // neck and head, looking a little up and far away
   limb(P(0, 1.86, 0), P(0, 2.02, 0.01), 0.07, 0.06);
@@ -2953,7 +2961,7 @@ function makeStatue(female) {
   const up = female ? 1 : -1; // Luke raises his right arm, Simo her left
   const S = (s) => P(s * sh, 1.84, 0);
   chain([S(up), P(up * (sh + 0.15), 2.18, 0.06), P(up * (sh + 0.19), 2.55, 0.1)], [0.08, 0.065, 0.05]);
-  ball(P(up * (sh + 0.2), 2.6, 0.1), 0.065);
+  ball(P(up * (sh + 0.2), 2.6, 0.1), 0.075); ball(P(up * (sh + 0.19), 2.5, 0.1), 0.068); // glove and cuff
   if (female) { // a pickaxe held up high
     limb(P(up * (sh + 0.2), 2.1, 0.1), P(up * (sh + 0.21), 3.0, 0.1), 0.025, 0.025);
     const hd = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.08, 0.08), mat); hd.position.set(up * (sh + 0.21), 2.98, 0.1); hd.rotation.z = 0.08; g.add(hd);
@@ -2965,14 +2973,6 @@ function makeStatue(female) {
     chain([S(-up), P(-up * (sh + 0.09), 1.48, -0.02), P(-up * (sh + 0.05), 1.2, 0.14)], [0.08, 0.065, 0.05]);
     ball(P(-up * (sh + 0.07), 1.2, 0.3), 0.17);
     const vis = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.025, 6, 16), mat); vis.position.set(-up * (sh + 0.07), 1.22, 0.46); g.add(vis);
-    // a cape blowing back
-    const cg = new THREE.PlaneGeometry(1, 1, 6, 10), cp = cg.attributes.position;
-    for (let v = 0; v < cp.count; v++) {
-      const u = cp.getX(v), t = 0.5 - cp.getY(v);
-      cp.setXYZ(v, u * (0.66 + t * 0.34), 1.86 - t * 1.55, -0.2 - t * 0.32 - 0.06 * Math.sin(u * 6 + t * 4) - 0.08 * t * u);
-    }
-    cg.computeVertexNormals();
-    g.add(new THREE.Mesh(cg, Object.assign(mat.clone(), { side: THREE.DoubleSide })));
   }
   return g;
 }
@@ -3049,8 +3049,7 @@ function missionIcon(c, i, x, y, s) {
   else rock(50, 50, 30);
   c.restore();
 }
-function plaqueTexture(i, b) {
-  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 150; const c = cv.getContext('2d');
+function drawPlaque(c, i, b) {
   const g = c.createLinearGradient(0, 0, 0, 150); g.addColorStop(0, '#d8e0ea'); g.addColorStop(0.5, '#9aa6b4'); g.addColorStop(1, '#c4ced8');
   c.fillStyle = g; c.fillRect(0, 0, 512, 150);
   for (let k = 0; k < 150; k += 3) { c.fillStyle = `rgba(255,255,255,${0.04 + (k * 7 % 5) * 0.012})`; c.fillRect(0, k, 512, 1); }
@@ -3064,20 +3063,57 @@ function plaqueTexture(i, b) {
   c.fillText(nm, 158, 56);
   c.font = '700 34px sans-serif'; c.fillStyle = b ? '#7a5a00' : '#4a5666';
   c.fillText(b ? '★'.repeat(b.s) + '☆'.repeat(3 - b.s) + '  ' + fmtTime(b.t) : 'not won yet', 158, 108);
-  const t = new THREE.CanvasTexture(cv); t.anisotropy = 4; return t;
 }
-function addTrophyShelf(i) {
-  const sp = TROPHY_SPOTS[i]; if (!sp) return;
-  const [x, lv] = sp, y0 = lv ? 1.6 : 0, b = best[i], tier = b ? clamp(b.s, 1, 3) : 0;
-  const g = new THREE.Group(); g.position.set(x, y0, TROPHY_ROOM.z1 + 0.55); g.rotation.y = Math.PI; lvlG.add(g); // the group's +z looks into the room
-  const shelfMat = new THREE.MeshPhongMaterial({ color: 0x6a4a30, map: woodTexture(), shininess: 20 });
-  const board = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.08, 0.8), shelfMat); board.position.set(0, 1.0, 0); g.add(board);
-  const back = new THREE.Mesh(new THREE.BoxGeometry(2.38, 1.6, 0.06), new THREE.MeshPhongMaterial({ color: 0x1d2a3c, shininess: 30 })); back.position.set(0, 0.8 + (lv ? 0.2 : 0.1), -0.42); g.add(back);
-  for (const bx of [-1.15, 1.15]) { const br = new THREE.Mesh(new THREE.BoxGeometry(0.07, lv ? 1.6 : 1.04, 0.8), shelfMat); br.position.set(bx, lv ? 0.85 : 0.52, -0.02); g.add(br); }
-  const plq = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.47), new THREE.MeshPhongMaterial({ map: plaqueTexture(i, b), shininess: 80, specular: 0x666666 }));
-  plq.position.set(0, 0.68, 0.36); g.add(plq);
-  const cup = cupModel(tier); cup.position.set(0, 1.04, 0); cup.scale.setScalar(0.95); g.add(cup); LS.trophies.push(cup);
-  if (tier) { const l = new THREE.PointLight(tier === 3 ? 0xffd27a : tier === 2 ? 0xdfe8ff : 0xffb070, 0.45, 2.4); l.position.set(0, 1.9, 0.4); g.add(l); }
+// all trophies share a few meshes (instancing): one draw for every shelf, one per cup colour, one for all plaques
+function mergeGeos(list) {
+  const pos = [], nor = [], uv = [];
+  for (const [geo, mtx] of list) {
+    const g = (geo.index ? geo.toNonIndexed() : geo.clone()); g.applyMatrix4(mtx);
+    const P = g.attributes.position, N = g.attributes.normal, U = g.attributes.uv;
+    for (let k = 0; k < P.count; k++) { pos.push(P.getX(k), P.getY(k), P.getZ(k)); nor.push(N.getX(k), N.getY(k), N.getZ(k)); uv.push(U ? U.getX(k) : 0, U ? U.getY(k) : 0); }
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); out.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); out.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  return out;
+}
+let trophyGeo = null;
+function trophyGeos() {
+  if (trophyGeo) return trophyGeo;
+  const cup = cupModel(1); cup.updateMatrixWorld(true);
+  const parts = cup.children.map((m) => [m.geometry, m.matrix]);
+  const M = (x, y, z) => new THREE.Matrix4().makeTranslation(x, y, z);
+  trophyGeo = {
+    base: mergeGeos(parts.slice(0, 1)), metal: mergeGeos(parts.slice(1)),
+    wood: mergeGeos([[new THREE.BoxGeometry(2.3, 0.08, 0.8), M(0, 1.0, 0)], [new THREE.BoxGeometry(0.07, 1.04, 0.8), M(-1.15, 0.52, -0.02)], [new THREE.BoxGeometry(0.07, 1.04, 0.8), M(1.15, 0.52, -0.02)]]),
+    back: mergeGeos([[new THREE.BoxGeometry(2.38, 1.6, 0.06), M(0, 0.9, -0.42)]]),
+  };
+  return trophyGeo;
+}
+function buildTrophies() {
+  const n = Math.min(LEVELS.length, TROPHY_SPOTS.length), G = trophyGeos(), o = new THREE.Object3D();
+  const spotM = (i) => { const [x, lv] = TROPHY_SPOTS[i]; o.position.set(x, lv ? 1.6 : 0, TROPHY_ROOM.z1 + 0.55); o.rotation.set(0, Math.PI, 0); o.scale.setScalar(1); o.updateMatrix(); return o.matrix.clone(); };
+  const cupLocal = new THREE.Matrix4().compose(new V3(0, 1.04, 0), new THREE.Quaternion(), new V3(0.95, 0.95, 0.95));
+  const inst = (geo, mat, mats) => { if (!mats.length) return; const m = new THREE.InstancedMesh(geo, mat, mats.length); mats.forEach((q, k) => m.setMatrixAt(k, q)); m.instanceMatrix.needsUpdate = true; m.frustumCulled = false; lvlG.add(m); };
+  const all = [], byTier = [[], [], [], []];
+  for (let i = 0; i < n; i++) { const S = spotM(i); all.push(S); const b = best[i]; byTier[b ? clamp(b.s, 1, 3) : 0].push(S.clone().multiply(cupLocal)); }
+  inst(G.wood, new THREE.MeshPhongMaterial({ color: 0x6a4a30, map: woodTexture(), shininess: 20 }), all);
+  inst(G.back, new THREE.MeshPhongMaterial({ color: 0x1d2a3c, shininess: 30 }), all);
+  const dark = new THREE.MeshPhongMaterial({ color: 0x2a1c14, shininess: 40 });
+  byTier.forEach((mats, t) => { inst(G.metal, trophyMat(t), mats); inst(G.base, t ? dark : trophyMat(0), mats); });
+  // every plaque on one picture
+  const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 2048; const c = cv.getContext('2d'), CH = 150;
+  const pos = [], uv = [], idxs = [];
+  for (let i = 0; i < n; i++) {
+    const col = i % 2, row = i >> 1; c.save(); c.translate(col * 512, row * CH); drawPlaque(c, i, best[i]); c.restore();
+    const u0 = col * 0.5, u1 = u0 + 0.5, vt = 1 - row * CH / 2048, vb = 1 - (row + 1) * CH / 2048;
+    const pl = new THREE.PlaneGeometry(1.6, 0.47); pl.applyMatrix4(all[i].clone().multiply(new THREE.Matrix4().makeTranslation(0, 0.68, 0.36)));
+    const P = pl.attributes.position, U = pl.attributes.uv, base = pos.length / 3;
+    for (let k = 0; k < P.count; k++) { pos.push(P.getX(k), P.getY(k), P.getZ(k)); uv.push(u0 + U.getX(k) * (u1 - u0), vb + U.getY(k) * (vt - vb)); }
+    for (let k = 0; k < pl.index.count; k++) idxs.push(base + pl.index.getX(k));
+  }
+  const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); pg.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); pg.setIndex(idxs); pg.computeVertexNormals();
+  const tex = new THREE.CanvasTexture(cv); tex.anisotropy = 4;
+  lvlG.add(new THREE.Mesh(pg, new THREE.MeshPhongMaterial({ map: tex, shininess: 80, specular: 0x666666 })));
 }
 // ---- costumes: earn them with stars
 const COSTUMES = [
@@ -3273,7 +3309,7 @@ function refreshCostumes() {
 let fastSign = null;
 function setupHub() {
   LS.trophies = []; LS.rocks = []; LS.texts = []; LS.press = []; LS.cos = [];
-  LEVELS.forEach((lv, i) => addTrophyShelf(i));
+  buildTrophies();
   { const l = textSprite('TROPHY ROOM', '#ffd166', 3.2); l.position.set(-24.5, 5.6, TROPHY_ROOM.z1 + 0.2); lvlG.add(l); }
   // signs over the doors in the hall
   for (const [x, z, t, c, w] of [[-24.5, 2.4, 'TROPHIES', '#ffd166', 2.4], [-3.5, 2.4, 'COSTUMES', '#ffd166', 2.4], [16.5, 2.4, 'SHOOTING RANGE', '#5ff2ff', 3],
@@ -3342,7 +3378,6 @@ function setupHub() {
 }
 function updHub(dt) {
   player.hp = 100;
-  for (const t of LS.trophies) t.rotation.y += dt * 0.5;
   for (const q of LS.cos) q.av.rotation.y += dt * 0.6;
   updRange(dt);
   for (const r of LS.rocks) { r.rotation.y += dt * r.userData.spin; r.rotation.x += dt * r.userData.spin * 0.5; }
@@ -3358,11 +3393,27 @@ function hudHub() {
 const HUB = { name: 'Your mothership', hub: true, brief: 'Your home. Build here with the blocks you mined in missions. Your trophies stand in the trophy room.',
   gen: genHub, setup: setupHub, update: updHub, hud: hudHub, secrets: () => {}, targets: rangeTargets, saucers: [], sc: [0, 0, 0], par: 9999, target: () => HUB_SPAWN,
   sky: { earth: [900, 160, 120], es: 0.7, hemi: [0x9fc4ff, 0x2a3550, 0.75], sun: 0.85 } };
+// a small cube drawn from the block's own textures (top and two sides)
+const blockIcons = {};
+function blockIcon(t) {
+  if (blockIcons[t]) return blockIcons[t];
+  const S = 48, cv = document.createElement('canvas'); cv.width = cv.height = S; const c = cv.getContext('2d'), img = atlas.image, tl = TILES[t] || [0, 0, 0];
+  c.imageSmoothingEnabled = false;
+  const face = (tile, a, b, cc, d, e, f, shade) => {
+    c.save(); c.setTransform(a / 16, b / 16, cc / 16, d / 16, e, f); c.drawImage(img, tile * 16, 0, 16, 16, 0, 0, 16, 16);
+    if (shade) { c.fillStyle = `rgba(0,0,0,${shade})`; c.fillRect(0, 0, 16, 16); } c.restore();
+  };
+  const h = S / 2, q = S / 4;
+  face(tl[0], h, -q, h, q, 0, q, 0);          // top
+  face(tl[1], h, q, 0, h, 0, q, 0.22);        // left side
+  face(tl[1], h, -q, 0, h, h, h, 0.4);        // right side
+  return (blockIcons[t] = cv.toDataURL());
+}
 function fillHubInv() {
   const el = $('hubInv'); el.innerHTML = '';
   for (const t of HUB_TYPES) {
     const b = document.createElement('button'); b.className = 'hb' + (t === hubType ? ' on' : '');
-    b.innerHTML = `<i style="background:#${CHIP[t].toString(16).padStart(6, '0')}"></i>${inv[t] || 0}`;
+    b.innerHTML = `<img src="${blockIcon(t)}" alt="">${inv[t] || 0}`;
     b.title = BLOCK_NAME[t]; b.setAttribute('aria-label', BLOCK_NAME[t]);
     b.addEventListener('click', (e) => { e.stopPropagation(); hubType = t; fillHubInv(); selectTool(2); });
     el.appendChild(b);
@@ -4019,7 +4070,16 @@ const lamp = new THREE.SpotLight(0xe8f4ff, 0, 30, 0.62, 0.45, 1.1); camera.add(l
 // soft glow around the player in missions that ask for it (about 4 blocks)
 const aura = new THREE.PointLight(0xdfeaff, 0, 5.5, 1.2); camera.add(aura); aura.position.set(0, -0.3, 0);
 function setDark(on) { lamp.intensity = on ? 2.2 : 0; aura.intensity = on && L.aura ? 1.4 : 0; LS.dark = on; if (on) { hemi.intensity = 0.09; sun.intensity = 0.06; } else applySky(); }
-const shotDir = new V3();
+const shotDir = new V3(), mzV = new V3(), mzA = new V3(), mzB = new V3();
+// where the beam starts: the muzzle of the gun you see, moved from the gun camera into the world (the two cameras have a different field of view)
+function muzzleStart(eye) {
+  const t = tools[curTool], m = t && t.userData.muzzle;
+  if (!m || !t.visible || !t.parent) return eye.clone().addScaledVector(camRight, 0.2).addScaledVector(camUp, -0.17).addScaledVector(camDir, 0.55);
+  t.updateMatrixWorld(true); vmCam.updateMatrixWorld(); camera.updateMatrixWorld();
+  t.localToWorld(mzV.copy(m)); const dist = clamp(mzV.length(), 0.3, 1.2); mzV.project(vmCam);
+  mzA.set(mzV.x, mzV.y, -1).unproject(camera); mzB.set(mzV.x, mzV.y, 0.5).unproject(camera);
+  return eye.clone().addScaledVector(mzB.sub(mzA).normalize(), dist);
+}
 function fireGun(eye, o) {
   if (LS.range && LS.range.phase === 'run') LS.range.shots++;
   const camDir = shotDir.copy(camDirW);
@@ -4036,7 +4096,7 @@ function fireGun(eye, o) {
   }
   if (L.targets) for (const tg of L.targets()) { const t = raySphere(eye, camDir, tg.p, tg.r); if (t >= 0 && t < bt) { bt = t; best = { tg }; } }
   const end = eye.clone().addScaledVector(camDir, bt);
-  const start = eye.clone().addScaledVector(camRight, 0.2).addScaledVector(camUp, -0.17).addScaledVector(camDir, 0.55);
+  const start = muzzleStart(eye);
   if (o.flash) { showBeam(start, end, o.color, 2.6, 0.16); showBeam(start, end, 0xffffff, 0.8, 0.1); worldGlow(end, o.color, 1.1, 0.18); worldGlow(start, o.color, 0.5, 0.06); }
   else if (o.smg) { showBeam(start, end, o.color, 1.6, 0.1); worldGlow(end, o.color, 0.6, 0.1); }
   else if (o.freeze) { showBeam(start, end, o.color, 2.2, 0.12); worldGlow(end, 0xe4ffff, 0.9, 0.15); }
