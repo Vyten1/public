@@ -2711,7 +2711,7 @@ const run = { order: [0, 1, 2, 3, 4, 5, 6], i: 0 };
 // difficulty scales how many aliens come and how fast; pickLv -1 = all solo missions in random order; pickCoop: co-op panel choice
 const DIFF = [{ n: 'Easy', m: 0.6 }, { n: 'Normal', m: 1 }, { n: 'Hard', m: 1.6 }, { n: 'Insane', m: 2.4 }];
 let diff = 1, pickLv = -1, pickCoop = -1;
-const VERSION = 'v3.4';
+const VERSION = 'v3.5';
 document.querySelectorAll('.ver').forEach((e) => { e.textContent = VERSION; });
 const cleanName = (n) => String(n || '').replace(/[^\p{L}\p{N} _.!?-]/gu, '').trim().slice(0, 12);
 let myName = ''; try { myName = cleanName(localStorage.getItem('starblock.name')); } catch (e) {}
@@ -2804,14 +2804,17 @@ function saveStore() {
   } catch (e) {}
 }
 function addInv(t, n) { if (!HUB_TYPES.includes(t)) return; inv[t] = Math.max(0, (inv[t] || 0) + n); saveInvSoon(); if (L.hub) fillHubInv(); }
-const HUB_SPAWN = new V3(54.5, 0, 0.5);
-// trophy shelves on the two side walls of the bridge (a gap on the right wall for the costume room door)
+const HUB_SPAWN = new V3(43.5, 0, 0.5);
+// trophy room and costume room sit side by side across the hall from the hangar
+const TROPHY_ROOM = { x0: -36, x1: -14, z0: 4, z1: 13 };
+const COS_ROOM = { x0: -12, x1: 5, z0: 4, z1: 13 };
+// trophy cabinet on the far wall: 9 columns, 2 shelves high (lower shelf first)
 const TROPHY_SPOTS = [];
-for (let x = 52; x <= 84; x += 4) TROPHY_SPOTS.push([x, -1]);
-for (const x of [52, 56, 60, 64, 72, 76, 80, 84]) TROPHY_SPOTS.push([x, 1]);
-// shooting range (next to the hall) and costume room (next to the bridge)
-const RANGE = { x0: 8, x1: 46, z0: 6, z1: 46, btnZ: 10, btn: [29, 26, 23] }; // seen from the shooting line: EASY left, HARD right
-const COS_ROOM = { x0: 57, x1: 83, z0: 30, z1: 45 };
+for (const lv of [0, 1]) for (let k = 0; k < 9; k++) TROPHY_SPOTS.push([-24.5 + (k - 4) * 2.4, lv]);
+// shooting range next to the costume room
+const RANGE = { x0: 7, x1: 25, z0: 4, z1: 31, btnZ: 7, btn: [19, 16, 13] }; // seen from the shooting line: EASY left, HARD right
+// the bridge, with the statue of Luke and Simo
+const BRIDGE = { x0: 41, x1: 61, z0: -10, z1: 10 };
 const DOME = { x: -70, z: 0, R: 25 };
 const HANGAR_PADS = [[-28, -14, 'ship'], [-16, -14, 'ship'], [-4, -14, 'rover'], [-28, -30, 'ship'], [-16, -30, 'ship'], [-4, -30, 'car']];
 // soil and the sample hut in the dome: you may dig these (dug cells are saved as 0 in hubEdits)
@@ -2844,48 +2847,54 @@ function genHub() {
   hut(-79, 1, 4, ICE); hut(-79, 1, 9, ICE); hut(-82, 1, 6, ICE); hut(-82, 1, 7, ICE); // windows
   for (let x = -83; x <= -75; x++) for (let z = 3; z <= 10; z++) hut(x, 3, z, PANEL);
   hut(-81, 0, 8, CRYSTAL); hut(-81, 0, 5, ALLOY);
-  box(-47, -1, -5, 49, 7, 5, HULL);           // main hall
-  box(48, -1, -29, 92, 16, 29, HULL);         // bridge
-  box(-36, -1, 5, 6, 15, 42, HULL);           // build bay
-  box(-36, -1, -42, 6, 15, -5, HULL);         // hangar
-  box(7, -1, 5, 47, 14, 47, HULL);            // shooting range
-  box(56, -1, 29, 84, 11, 46, HULL);          // costume room
-  box(-52, 0, -4, 48, 6, 4, AIR);             // hall inside (opens into the dome and the bridge)
-  box(49, 0, -28, 91, 15, 28, AIR);           // bridge inside
-  box(-35, 0, 6, 5, 14, 41, AIR); box(-35, 0, -41, 5, 14, -6, AIR);
-  for (const z of [5, -5]) box(-20, 0, z, -10, 6, z, AIR); // wide doors to the bay and the hangar
-  box(RANGE.x0, 0, RANGE.z0, RANGE.x1, 13, RANGE.z1, AIR);
-  box(COS_ROOM.x0, 0, COS_ROOM.z0, COS_ROOM.x1, 10, COS_ROOM.z1, AIR);
+  box(-47, -1, -3, 41, 6, 3, HULL);           // main hall (5 wide inside)
+  box(40, -1, BRIDGE.z0 - 1, BRIDGE.x1 + 1, 10, BRIDGE.z1 + 1, HULL); // bridge
+  box(-36, -1, -42, 6, 15, -3, HULL);         // hangar
+  box(6, -1, -42, 40, 15, -3, HULL);          // build bay (next to the hangar)
+  box(TROPHY_ROOM.x0 - 1, -1, 3, TROPHY_ROOM.x1 + 1, 8, TROPHY_ROOM.z1 + 1, HULL); // trophy room
+  box(COS_ROOM.x0 - 1, -1, 3, COS_ROOM.x1 + 1, 8, COS_ROOM.z1 + 1, HULL);          // costume room
+  box(RANGE.x0 - 1, -1, 3, RANGE.x1 + 1, 11, RANGE.z1 + 1, HULL);                  // shooting range
+  box(-52, 0, -2, 41, 5, 2, AIR);             // hall inside (opens into the dome and the bridge)
+  box(BRIDGE.x0, 0, BRIDGE.z0, BRIDGE.x1, 9, BRIDGE.z1, AIR);
+  box(-35, 0, -41, 5, 14, -4, AIR); box(7, 0, -41, 39, 14, -4, AIR);
+  box(-20, 0, -3, -10, 4, -3, AIR); box(18, 0, -3, 28, 4, -3, AIR); // wide doors to the hangar and the bay
+  box(TROPHY_ROOM.x0, 0, TROPHY_ROOM.z0, TROPHY_ROOM.x1, 7, TROPHY_ROOM.z1, AIR);
+  box(COS_ROOM.x0, 0, COS_ROOM.z0, COS_ROOM.x1, 7, COS_ROOM.z1, AIR);
+  box(RANGE.x0, 0, RANGE.z0, RANGE.x1, 10, RANGE.z1, AIR);
+  box(-26, 0, 3, -24, 3, 3, AIR); box(-5, 0, 3, -3, 3, 3, AIR); box(15, 0, 3, 17, 3, 3, AIR); // doors from the hall
+  box(-13, 0, 8, -13, 3, 9, AIR);             // door between the trophy room and the costume room
   // fast lane down the middle of the hall
-  box(-46, -1, -1, 47, -1, 1, FAST);
+  box(-46, -1, -1, 40, -1, 1, FAST);
   // windows
-  for (let x = -44; x <= 46; x += 6) if (x + 2 < -36 || x > 6) for (const z of [-5, 5]) box(x, 1, z, x + 2, 5, z, GLASS);
-  for (let x = -44; x <= 46; x += 10) box(x, 7, -2, x + 3, 7, 2, GLASS);
-  box(92, 2, -20, 92, 13, 20, GLASS);                        // big front window
-  for (let x = 54; x <= 86; x += 8) for (const z of [-29, 29]) box(x, 3, z, x + 4, 12, z, GLASS);
-  box(60, 16, -10, 80, 16, 10, GLASS);                       // bridge sky window
-  for (let x = -32; x <= 0; x += 8) { box(x, 2, 42, x + 4, 11, 42, GLASS); box(x, 15, 12, x + 4, 15, 36, GLASS); }
-  for (const x of [-36, 6]) { box(x, 2, 12, x, 11, 36, GLASS); box(x, 2, -36, x, 11, -14, GLASS); }
+  for (const x of [-44, -41]) for (const z of [-3, 3]) box(x, 1, z, x + 1, 4, z, GLASS);
+  for (const x of [28, 32, 36]) box(x, 1, 3, x + 2, 4, 3, GLASS);
+  for (let x = -40; x <= 36; x += 12) box(x, 6, -1, x + 2, 6, 1, GLASS);
+  box(BRIDGE.x1 + 1, 2, -7, BRIDGE.x1 + 1, 8, 7, GLASS);   // front window
+  for (const x of [45, 51, 56]) for (const z of [BRIDGE.z0 - 1, BRIDGE.z1 + 1]) box(x, 2, z, x + 2, 7, z, GLASS);
+  box(46, 10, -4, 57, 10, 4, GLASS);                         // bridge sky window
+  box(10, 2, -42, 36, 11, -42, GLASS); for (let x = 10; x <= 34; x += 8) box(x, 15, -36, x + 4, 15, -12, GLASS); // bay windows
+  box(-36, 2, -36, -36, 11, -14, GLASS);
   box(-30, 1, -42, 0, 12, -42, GLASS);                       // hangar space door
   for (let x = -32; x <= 0; x += 8) box(x, 15, -36, x + 4, 15, -12, GLASS);
+  box(COS_ROOM.x0 + 2, 3, COS_ROOM.z1 + 1, COS_ROOM.x1 - 2, 6, COS_ROOM.z1 + 1, GLASS); // costume room window to space
+  box(COS_ROOM.x0, 0, 10, COS_ROOM.x1, 0, COS_ROOM.z1, PANEL);   // a step for the back row of costumes
   // floors and lights
-  box(49, -1, -28, 91, -1, 28, ALLOY);
-  for (let x = -40; x <= 44; x += 8) set(x, 7, 0, SHARD);
-  for (const [x, z] of [[56, -20], [56, 20], [84, -20], [84, 20], [70, 0]]) set(x, 16, z, SHARD);
-  for (const [x, z] of [[-30, 20], [-10, 20], [-30, 34], [-10, 34]]) set(x, 15, z, SHARD);
+  box(BRIDGE.x0, -1, BRIDGE.z0, BRIDGE.x1, -1, BRIDGE.z1, ALLOY);
+  for (let x = -34; x <= 34; x += 12) set(x, 6, 0, SHARD);
+  for (const [x, z] of [[44, -7], [44, 7], [58, -7], [58, 7]]) set(x, 10, z, SHARD);
+  for (const [x, z] of [[14, -12], [32, -12], [14, -32], [32, -32]]) set(x, 15, z, SHARD);
+  for (const x of [-31, -24, -17]) set(x, 8, 8, SHARD);
+  for (const x of [-8, 1]) set(x, 8, 8, SHARD);
+  // statue of Luke and Simo on the bridge: a stone base (the ship cannot be dug)
+  box(51, 0, -2, 55, 0, 2, ALLOY); box(52, 1, -1, 54, 1, 1, ALLOY);
   // hangar: landing pads with yellow marks
   for (const [x, z] of HANGAR_PADS) { box(x - 3, -1, z - 3, x + 3, -1, z + 3, ALLOY); for (let k = -3; k <= 3; k++) { set(x + k, -1, z - 3, PWR); set(x + k, -1, z + 3, PWR); } }
-  // shooting range: counter, button posts, distance lines, lights, sky windows
-  box(9, 0, 12, 45, 0, 12, PANEL);
+  // shooting range: counter, button posts, distance lines, lights, sky window
+  box(RANGE.x0 + 1, 0, RANGE.btnZ + 2, RANGE.x1 - 1, 0, RANGE.btnZ + 2, PANEL);
   for (const x of RANGE.btn) set(x, 0, RANGE.btnZ, ALLOY);
-  for (const z of [20, 30, 40]) box(RANGE.x0, -1, z, RANGE.x1, -1, z, PWR);
-  for (const [x, z] of [[14, 9], [27, 9], [40, 9], [14, 28], [40, 28], [27, 40]]) set(x, 14, z, SHARD);
-  for (const z of [16, 34]) box(12, 14, z, 42, 14, z + 4, GLASS);
-  box(25, 0, 5, 27, 4, 5, AIR);                              // door from the hall
-  // costume room: window to space, lights, door from the bridge
-  box(60, 3, 46, 80, 8, 46, GLASS);
-  for (const x of [62, 70, 78]) set(x, 11, 37, SHARD);
-  box(67, 0, 29, 69, 4, 29, AIR);
+  for (const z of [15, 21, 27]) box(RANGE.x0, -1, z, RANGE.x1, -1, z, PWR);
+  for (const [x, z] of [[10, 6], [22, 6], [10, 22], [22, 22]]) set(x, 11, z, SHARD);
+  box(12, 11, 12, 20, 11, 16, GLASS);
   // your own building (blocks that no longer fit, after the ship got bigger, go back to your storage)
   let back = 0;
   for (const [k, t] of [...hubEdits]) {
@@ -2895,6 +2904,89 @@ function genHub() {
   }
   if (back) { saveStore(); setTimeout(() => toast(`${back} of your blocks did not fit in the bigger ship. They are back in your storage.`, 3.5), 600); }
   spawn.copy(HUB_SPAWN); shipPos.set(0, -400, 0);
+}
+// ---- the stone statue of Luke and Simo on the bridge (meshes only: it cannot be dug)
+let stoneMat = null;
+function stoneMaterial() {
+  if (stoneMat) return stoneMat;
+  const cv = document.createElement('canvas'); cv.width = cv.height = 128; const c = cv.getContext('2d');
+  c.fillStyle = '#b9b3a6'; c.fillRect(0, 0, 128, 128);
+  for (let i = 0; i < 900; i++) { const v = 150 + ((i * 97) % 70); c.fillStyle = `rgba(${v},${v - 4},${v - 12},.35)`; c.fillRect((i * 53) % 128, (i * 29 + (i >> 3)) % 128, 1 + (i % 3), 1 + (i % 2)); }
+  for (let i = 0; i < 6; i++) { c.strokeStyle = 'rgba(90,86,78,.25)'; c.lineWidth = 1; c.beginPath(); c.moveTo((i * 41) % 128, 0); c.lineTo((i * 41 + 30) % 128, 128); c.stroke(); }
+  const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  stoneMat = new THREE.MeshPhongMaterial({ color: 0xd8d2c4, map: t, shininess: 6, specular: 0x222222 }); return stoneMat;
+}
+function makeStatue(female) {
+  const g = new THREE.Group(), mat = stoneMaterial(), P = (x, y, z) => new V3(x, y, z);
+  const ball = (p, r, sx = 1, sy = 1, sz = 1) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 10), mat); m.position.copy(p); m.scale.set(sx, sy, sz); g.add(m); return m; };
+  const limb = (a, b, r1, r2) => {
+    const d = b.clone().sub(a), m = new THREE.Mesh(new THREE.CylinderGeometry(r2, r1, d.length(), 12), mat);
+    m.position.copy(a).add(b).multiplyScalar(0.5); m.quaternion.setFromUnitVectors(P(0, 1, 0), d.normalize()); g.add(m); ball(a, r1); ball(b, r2); return m;
+  };
+  const chain = (pts, rs) => { for (let k = 0; k + 1 < pts.length; k++) limb(pts[k], pts[k + 1], rs[k], rs[k + 1]); };
+  // legs and boots: a strong, wide stance, one foot forward
+  const sh = female ? 0.25 : 0.33;
+  for (const [s, fz] of [[-1, -0.08], [1, 0.13]]) {
+    chain([P(s * 0.13, 1.12, 0), P(s * (female ? 0.14 : 0.16), 0.64, fz * 0.9), P(s * 0.16, 0.22, fz)], [female ? 0.11 : 0.12, 0.085, 0.075]);
+    const boot = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.2, 0.36), mat); boot.position.set(s * 0.16, 0.1, fz + 0.06); g.add(boot);
+    ball(P(s * (female ? 0.14 : 0.16), 0.64, fz * 0.9 + 0.06), 0.07);  // knee pad
+  }
+  // hips, belt, body
+  ball(P(0, 1.15, 0), 0.2, female ? 1.35 : 1.2, 0.8, 0.85);
+  const belt = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.035, 6, 18), mat); belt.rotation.x = Math.PI / 2; belt.scale.set(female ? 1.0 : 1.08, 0.75, 1); belt.position.y = 1.24; g.add(belt);
+  const prof = female ? [[0.2, 0], [0.17, 0.14], [0.21, 0.3], [0.24, 0.43], [0.23, 0.53], [0.2, 0.62], [0.08, 0.68]] : [[0.21, 0], [0.23, 0.15], [0.29, 0.4], [0.32, 0.55], [0.27, 0.66], [0.09, 0.72]];
+  const torso = new THREE.Mesh(new THREE.LatheGeometry(prof.map(([r, y]) => new THREE.Vector2(r, y)), 18), mat); torso.position.y = 1.2; torso.scale.z = 0.68; g.add(torso);
+  if (female) for (const s of [-1, 1]) ball(P(s * 0.09, 1.6, 0.1), 0.095, 1, 0.9, 0.8);
+  else { const plate = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.24, 0.06), mat); plate.position.set(0, 1.62, 0.2); plate.rotation.x = -0.12; g.add(plate); }
+  for (const s of [-1, 1]) ball(P(s * sh, 1.84, 0), female ? 0.09 : 0.125, 1, 0.8, 1); // shoulder pads
+  // neck and head, looking a little up and far away
+  limb(P(0, 1.86, 0), P(0, 2.02, 0.01), 0.07, 0.06);
+  const head = new THREE.Group(); head.position.set(0, 2.15, 0.01); head.rotation.x = -0.12; g.add(head);
+  const hb = (p, r, sx, sy, sz) => { const m = ball(p, r, sx, sy, sz); g.remove(m); head.add(m); return m; };
+  hb(P(0, 0, 0), 0.13, 0.88, 1.12, 0.98);
+  { const n = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.07, 0.05), mat); n.position.set(0, -0.01, 0.125); head.add(n); }
+  { const j = new THREE.Mesh(new THREE.BoxGeometry(female ? 0.15 : 0.19, 0.08, 0.14), mat); j.position.set(0, -0.09, 0.04); head.add(j); }
+  const hair = new THREE.Mesh(new THREE.SphereGeometry(0.14, 16, 10, 0, Math.PI * 2, 0, Math.PI * (female ? 0.62 : 0.5)), mat);
+  hair.scale.set(0.9, 1.12, 1.02); hair.position.set(0, 0.012, -0.012); hair.rotation.x = -0.35; head.add(hair);
+  if (female) chain([P(0, 2.2, -0.1), P(0, 1.98, -0.17), P(0.02, 1.7, -0.2)], [0.1, 0.085, 0.045]); // long hair down the back
+  // arms: the outer arm is raised high
+  const up = female ? 1 : -1; // Luke raises his right arm, Simo her left
+  const S = (s) => P(s * sh, 1.84, 0);
+  chain([S(up), P(up * (sh + 0.15), 2.18, 0.06), P(up * (sh + 0.19), 2.55, 0.1)], [0.08, 0.065, 0.05]);
+  ball(P(up * (sh + 0.2), 2.6, 0.1), 0.065);
+  if (female) { // a pickaxe held up high
+    limb(P(up * (sh + 0.2), 2.1, 0.1), P(up * (sh + 0.21), 3.0, 0.1), 0.025, 0.025);
+    const hd = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.08, 0.08), mat); hd.position.set(up * (sh + 0.21), 2.98, 0.1); hd.rotation.z = 0.08; g.add(hd);
+    for (const s of [-1, 1]) { const tip = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.16, 8), mat); tip.position.set(up * (sh + 0.21) + s * 0.38, 2.98 - 0.02, 0.1); tip.rotation.z = -s * (Math.PI / 2 + 0.25); g.add(tip); }
+    chain([S(-up), P(-up * (sh + 0.17), 1.45, -0.08), P(-up * (sh - 0.01), 1.22, 0.04)], [0.075, 0.06, 0.05]); // hand on the hip
+    ball(P(-up * (sh - 0.02), 1.21, 0.05), 0.055);
+  } else { // a star held up to the sky, the helmet under the other arm
+    const st = new THREE.Mesh(new THREE.OctahedronGeometry(0.17), mat); st.position.set(up * (sh + 0.21), 2.83, 0.1); st.rotation.y = 0.4; g.add(st);
+    chain([S(-up), P(-up * (sh + 0.09), 1.48, -0.02), P(-up * (sh + 0.05), 1.2, 0.14)], [0.08, 0.065, 0.05]);
+    ball(P(-up * (sh + 0.07), 1.2, 0.3), 0.17);
+    const vis = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.025, 6, 16), mat); vis.position.set(-up * (sh + 0.07), 1.22, 0.46); g.add(vis);
+    // a cape blowing back
+    const cg = new THREE.PlaneGeometry(1, 1, 6, 10), cp = cg.attributes.position;
+    for (let v = 0; v < cp.count; v++) {
+      const u = cp.getX(v), t = 0.5 - cp.getY(v);
+      cp.setXYZ(v, u * (0.66 + t * 0.34), 1.86 - t * 1.55, -0.2 - t * 0.32 - 0.06 * Math.sin(u * 6 + t * 4) - 0.08 * t * u);
+    }
+    cg.computeVertexNormals();
+    g.add(new THREE.Mesh(cg, Object.assign(mat.clone(), { side: THREE.DoubleSide })));
+  }
+  return g;
+}
+function addStatue() {
+  const base = 2, z = 0.5, x = 53.5;
+  [[false, z - 0.9], [true, z + 0.9]].forEach(([f, zz]) => { const st = makeStatue(f); st.position.set(x, base, zz); st.scale.setScalar(1.2); st.rotation.y = -Math.PI / 2 + (f ? -0.12 : 0.12); lvlG.add(st); });
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128; const c = cv.getContext('2d');
+  const gr = c.createLinearGradient(0, 0, 0, 128); gr.addColorStop(0, '#e9d38a'); gr.addColorStop(0.5, '#b8912e'); gr.addColorStop(1, '#d9bc62');
+  c.fillStyle = gr; c.fillRect(0, 0, 512, 128); c.strokeStyle = '#6a4e10'; c.lineWidth = 6; c.strokeRect(4, 4, 504, 120);
+  c.fillStyle = '#3a2806'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = '900 54px serif'; c.fillText('LUKE  &  SIMO', 256, 52);
+  c.font = 'italic 700 26px serif'; c.fillText('heroes of the Starblock fleet', 256, 98);
+  const pl = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 0.8), new THREE.MeshPhongMaterial({ map: new THREE.CanvasTexture(cv), shininess: 90, specular: 0x886622 }));
+  pl.position.set(50.98, 0.5, z); pl.rotation.y = -Math.PI / 2; lvlG.add(pl);
+  const l = new THREE.PointLight(0xfff0d0, 0.9, 10); l.position.set(48.5, 5.5, z); lvlG.add(l);
 }
 // ---- trophies: the same cup in gold (3 stars), silver (2) or wood (1)
 let woodTex = null;
@@ -2976,16 +3068,16 @@ function plaqueTexture(i, b) {
 }
 function addTrophyShelf(i) {
   const sp = TROPHY_SPOTS[i]; if (!sp) return;
-  const [x, side] = sp, zf = side > 0 ? 28.55 : -27.55, b = best[i], tier = b ? clamp(b.s, 1, 3) : 0;
-  const g = new THREE.Group(); g.position.set(x + 0.5, 0, zf); if (side > 0) g.rotation.y = Math.PI; lvlG.add(g); // the group's +z looks into the room
+  const [x, lv] = sp, y0 = lv ? 1.6 : 0, b = best[i], tier = b ? clamp(b.s, 1, 3) : 0;
+  const g = new THREE.Group(); g.position.set(x, y0, TROPHY_ROOM.z1 + 0.55); g.rotation.y = Math.PI; lvlG.add(g); // the group's +z looks into the room
   const shelfMat = new THREE.MeshPhongMaterial({ color: 0x6a4a30, map: woodTexture(), shininess: 20 });
-  const board = new THREE.Mesh(new THREE.BoxGeometry(4, 0.1, 0.9), shelfMat); board.position.set(0, 1.0, 0); g.add(board);
-  const back = new THREE.Mesh(new THREE.BoxGeometry(4, 1.9, 0.06), new THREE.MeshPhongMaterial({ color: 0x1d2a3c, shininess: 30 })); back.position.set(0, 1.0, -0.42); g.add(back);
-  for (const bx of [-1.6, 1.6]) { const br = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.9, 0.7), shelfMat); br.position.set(bx, 0.5, -0.05); g.add(br); }
-  const plq = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 0.56), new THREE.MeshPhongMaterial({ map: plaqueTexture(i, b), shininess: 80, specular: 0x666666 }));
-  plq.position.set(0, 0.62, 0.46); g.add(plq);
-  const cup = cupModel(tier); cup.position.set(0, 1.05, 0); cup.scale.setScalar(1.25); g.add(cup); LS.trophies.push(cup);
-  if (tier) { const l = new THREE.PointLight(tier === 3 ? 0xffd27a : tier === 2 ? 0xdfe8ff : 0xffb070, 0.5, 3); l.position.set(0, 2.1, 0.4); g.add(l); }
+  const board = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.08, 0.8), shelfMat); board.position.set(0, 1.0, 0); g.add(board);
+  const back = new THREE.Mesh(new THREE.BoxGeometry(2.38, 1.6, 0.06), new THREE.MeshPhongMaterial({ color: 0x1d2a3c, shininess: 30 })); back.position.set(0, 0.8 + (lv ? 0.2 : 0.1), -0.42); g.add(back);
+  for (const bx of [-1.15, 1.15]) { const br = new THREE.Mesh(new THREE.BoxGeometry(0.07, lv ? 1.6 : 1.04, 0.8), shelfMat); br.position.set(bx, lv ? 0.85 : 0.52, -0.02); g.add(br); }
+  const plq = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.47), new THREE.MeshPhongMaterial({ map: plaqueTexture(i, b), shininess: 80, specular: 0x666666 }));
+  plq.position.set(0, 0.68, 0.36); g.add(plq);
+  const cup = cupModel(tier); cup.position.set(0, 1.04, 0); cup.scale.setScalar(0.95); g.add(cup); LS.trophies.push(cup);
+  if (tier) { const l = new THREE.PointLight(tier === 3 ? 0xffd27a : tier === 2 ? 0xdfe8ff : 0xffb070, 0.45, 2.4); l.position.set(0, 1.9, 0.4); g.add(l); }
 }
 // ---- costumes: earn them with stars
 const COSTUMES = [
@@ -3033,13 +3125,14 @@ function dressAvatar(g, ci, col, locked) {
 }
 // ---- shooting range: hologram aliens, 3 levels, score, saved best
 const RANGE_MODES = [
-  { n: 'EASY', col: '#5dffa8', hex: 0x5dffa8, at: 3, sc: 1.35, spd: 0, life: 0, z: [17, 28], y: [1.3, 4.5], mul: 1, info: '3 big targets that stand still' },
-  { n: 'MEDIUM', col: '#ffd166', hex: 0xffd166, at: 2, sc: 1, spd: 3.2, life: 0, z: [19, 36], y: [1.3, 6.5], mul: 1.25, info: '2 targets that slide left and right' },
-  { n: 'HARD', col: '#ff5a6a', hex: 0xff5a6a, at: 1, sc: 0.7, spd: 6.5, life: 1.5, z: [20, 44], y: [1.3, 9.5], mul: 1.6, info: '1 small fast target, gone after 1.5 s' },
+  { n: 'EASY', col: '#5dffa8', hex: 0x5dffa8, at: 3, sc: 1.35, spd: 0, life: 0, z: [14, 21], y: [1.3, 4.5], info: '3 big targets that stand still' },
+  { n: 'MEDIUM', col: '#ffd166', hex: 0xffd166, at: 2, sc: 1, spd: 3.2, life: 0, z: [15, 25], y: [1.3, 6], info: '2 targets that slide left and right' },
+  { n: 'HARD', col: '#ff5a6a', hex: 0xff5a6a, at: 1, sc: 0.7, spd: 6.5, life: 1.5, z: [16, 29], y: [1.3, 8], info: '1 small fast target, gone after 1.5 s' },
 ];
-const RANGE_TIME = 40;
+const RANGE_TIME = 16;
+// best number of targets hit per level (the old points-based scores lived in 'starblock.range')
 let rangeBest = [0, 0, 0];
-try { const a = JSON.parse(localStorage.getItem('starblock.range') || '[]'); if (Array.isArray(a)) rangeBest = [0, 1, 2].map((i) => Math.max(0, Math.floor(+a[i] || 0))); } catch (e) {}
+try { const a = JSON.parse(localStorage.getItem('starblock.range2') || '[]'); if (Array.isArray(a)) rangeBest = [0, 1, 2].map((i) => Math.max(0, Math.floor(+a[i] || 0))); } catch (e) {}
 function makeHolo(col) {
   const g = new THREE.Group(), add = { transparent: true, blending: THREE.AdditiveBlending, depthWrite: false };
   const mat = basic(col, Object.assign({ opacity: 0.32 }, add)), wire = basic(col, Object.assign({ opacity: 0.75, wireframe: true }, add)), hot = basic(0xffffff, Object.assign({ opacity: 0.9 }, add));
@@ -3051,9 +3144,6 @@ function makeHolo(col) {
     const tip = new THREE.Mesh(alienGeo.tip, hot); tip.position.set(s * 0.22, 0.67, 0); g.add(tip);
   }
   for (let i = 0; i < 3; i++) { const t = new THREE.Mesh(alienGeo.tent, wire); const a = i / 3 * Math.PI * 2; t.position.set(Math.cos(a) * 0.2, -0.5, Math.sin(a) * 0.2); t.rotation.x = Math.PI; g.add(t); }
-  // the glowing ring in the middle: hit it for double points
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.025, 6, 20), hot); ring.position.set(0, -0.1, 0.44); g.add(ring);
-  const dot = new THREE.Mesh(new THREE.CircleGeometry(0.06, 12), hot); dot.position.set(0, -0.1, 0.45); g.add(dot);
   const scan = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.012, 4, 28), hot); scan.rotation.x = Math.PI / 2; g.add(scan);
   const base = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.03, 4, 24), wire); base.rotation.x = Math.PI / 2; base.position.y = -0.85; g.add(base);
   g.userData = { mat, wire, hot, scan };
@@ -3070,18 +3160,18 @@ function rangeBoard() {
   const c = R.cv.getContext('2d'); c.clearRect(0, 0, 1024, 512);
   c.fillStyle = 'rgba(3,10,22,.92)'; c.fillRect(0, 0, 1024, 512); c.strokeStyle = '#5ff2ff'; c.lineWidth = 8; c.strokeRect(6, 6, 1012, 500);
   c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#5ff2ff'; c.font = '900 64px sans-serif'; c.fillText('SHOOTING RANGE', 512, 62);
-  RANGE_MODES.forEach((m, i) => { c.fillStyle = m.col; c.font = '800 40px sans-serif'; c.fillText(m.n, 200 + i * 312, 140); c.font = '700 34px sans-serif'; c.fillStyle = '#dfe8f2'; c.fillText(`best ${rangeBest[i]}`, 200 + i * 312, 190); });
+  RANGE_MODES.forEach((m, i) => { c.fillStyle = m.col; c.font = '800 40px sans-serif'; c.fillText(m.n, 200 + i * 312, 140); c.font = '700 34px sans-serif'; c.fillStyle = '#dfe8f2'; c.fillText(`best ${rangeBest[i]} hits`, 200 + i * 312, 190); });
   c.font = '800 46px sans-serif';
   if (R.phase === 'count') { c.fillStyle = RANGE_MODES[R.mode].col; c.fillText(`${RANGE_MODES[R.mode].n} starts in ${Math.ceil(R.t)}`, 512, 300); }
-  else if (R.phase === 'run') { const acc = R.shots ? Math.round(R.hits / R.shots * 100) : 100; c.fillStyle = '#fff'; c.fillText(`${Math.ceil(R.t)} s   ·   ${R.pts} points   ·   ${acc}%`, 512, 300); c.font = '700 34px sans-serif'; c.fillStyle = '#9fd8ff'; c.fillText(`hits ${R.hits}   ·   middle rings ${R.bulls}   ·   missed ${R.miss}`, 512, 370); }
-  else if (R.last) { const l = R.last; c.fillStyle = RANGE_MODES[l.mode].col; c.fillText(`Last: ${RANGE_MODES[l.mode].n} · ${l.score} points${l.nb ? ' · NEW BEST!' : ''}`, 512, 290); c.font = '700 32px sans-serif'; c.fillStyle = '#dfe8f2'; c.fillText(`accuracy ${l.acc}% · hits ${l.hits} · middle rings ${l.bulls} · avg ${l.rt} s per target`, 512, 350); c.fillStyle = '#ffd166'; c.fillText(l.tip, 512, 410); }
-  else { c.fillStyle = '#dfe8f2'; c.font = '700 36px sans-serif'; c.fillText('Shoot or tap a button below to start.', 512, 300); c.fillText('Hit the glowing ring in the middle for double points.', 512, 360); }
+  else if (R.phase === 'run') { c.fillStyle = '#fff'; c.font = '900 72px sans-serif'; c.fillText(`${R.hits} hits`, 512, 300); c.font = '700 40px sans-serif'; c.fillStyle = '#9fd8ff'; c.fillText(`${Math.ceil(R.t)} s left`, 512, 380); }
+  else if (R.last) { const l = R.last; c.fillStyle = RANGE_MODES[l.mode].col; c.fillText(`Last: ${RANGE_MODES[l.mode].n} · ${l.hits} hits${l.nb ? ' · NEW BEST!' : ''}`, 512, 290); c.font = '700 32px sans-serif'; c.fillStyle = '#dfe8f2'; c.fillText(`about ${l.rt} s per target${l.miss ? ` · ${l.miss} got away` : ''}`, 512, 350); c.fillStyle = '#ffd166'; c.fillText(l.tip, 512, 410); }
+  else { c.fillStyle = '#dfe8f2'; c.font = '700 36px sans-serif'; c.fillText('Shoot or tap a button below to start.', 512, 300); c.fillText(`Hit as many targets as you can in ${RANGE_TIME} seconds.`, 512, 360); }
   R.tex.needsUpdate = true;
 }
 function startRange(mode) {
   const R = LS.range; if (!R) return;
   for (const h of R.holos) lvlG.remove(h.g);
-  Object.assign(R, { mode, phase: 'count', t: 3, beepT: 0, shots: 0, hits: 0, bulls: 0, miss: 0, pts: 0, rts: [], holos: [], boardT: 0 });
+  Object.assign(R, { mode, phase: 'count', t: 3, beepT: 0, shots: 0, hits: 0, miss: 0, rts: [], holos: [], boardT: 0 });
   R.btns[mode].push = 1; sfx.pickup(); selectTool(1);
   toast(`${RANGE_MODES[mode].n}: ${RANGE_MODES[mode].info}. ${RANGE_TIME} seconds. Use your space gun.`, 3);
   rangeBoard();
@@ -3094,10 +3184,10 @@ function spawnHolo() {
   const R = LS.range, m = RANGE_MODES[R.mode];
   let p = null;
   for (let k = 0; k < 20 && !p; k++) {
-    const q = new V3(11 + Math.random() * 32, m.y[0] + Math.random() * (m.y[1] - m.y[0]), m.z[0] + Math.random() * (m.z[1] - m.z[0]));
+    const q = new V3(RANGE.x0 + 3 + Math.random() * (RANGE.x1 - RANGE.x0 - 5), m.y[0] + Math.random() * (m.y[1] - m.y[0]), m.z[0] + Math.random() * (m.z[1] - m.z[0]));
     if (R.holos.every((h) => h.g.position.distanceTo(q) > 3.5) && (!R.lastP || R.lastP.distanceTo(q) > 4)) p = q;
   }
-  if (!p) p = new V3(27, 3, 26);
+  if (!p) p = new V3((RANGE.x0 + RANGE.x1 + 1) / 2, 3, 20);
   R.lastP = p.clone();
   const g = makeHolo(m.hex); g.position.copy(p); g.scale.setScalar(0.01); lvlG.add(g);
   const a = Math.random() * Math.PI * 2;
@@ -3108,32 +3198,27 @@ function spawnHolo() {
 function holoHit(h, end) {
   const R = LS.range; if (!R || R.phase !== 'run' || h.dead) return;
   const m = RANGE_MODES[R.mode], c = h.g.position;
-  // how close to the middle did the shot pass?
-  const d = c.clone().sub(eye).cross(shotDir).length() / h.sc, bull = d < 0.24;
-  const speed = Math.max(0, 1 - h.age / 1.6), pts = Math.round((100 + speed * 60) * (bull ? 2 : 1) * m.mul / 10) * 10;
-  R.hits++; if (bull) R.bulls++; R.pts += pts; R.rts.push(h.age);
+  R.hits++; R.rts.push(h.age);
   h.dead = true; lvlG.remove(h.g); R.holos = R.holos.filter((q) => q !== h);
-  burst(c, m.hex, 26, 4, 0); burst(c, 0xffffff, 10, 2, 0); holoText(`${bull ? 'MIDDLE ' : ''}+${pts}`, bull ? '#ffffff' : m.col, c.clone().setY(c.y + 0.9));
-  if (bull) { tone(1400, 2400, 0.09, 'triangle', 0.06); tone(2400, 3000, 0.08, 'sine', 0.04, 0.07); } else tone(900, 1600, 0.08, 'triangle', 0.05);
+  burst(c, m.hex, 26, 4, 0); burst(c, 0xffffff, 10, 2, 0); holoText(`${R.hits}`, m.col, c.clone().setY(c.y + 0.9));
+  tone(1100, 2000, 0.08, 'triangle', 0.05);
   setTimeout(() => { if (LS.range === R && R.phase === 'run') spawnHolo(); }, R.mode === 2 ? 120 : 60);
 }
 function endRange() {
   const R = LS.range, m = RANGE_MODES[R.mode];
   for (const h of R.holos) lvlG.remove(h.g); R.holos = [];
-  const acc = R.shots ? R.hits / R.shots : 0, score = Math.round(R.pts * (0.5 + 0.5 * acc));
-  const rt = R.rts.length ? R.rts.reduce((a, b) => a + b, 0) / R.rts.length : 0;
-  const nb = score > rangeBest[R.mode]; if (nb) { rangeBest[R.mode] = score; try { localStorage.setItem('starblock.range', JSON.stringify(rangeBest)); } catch (e) {} }
-  const tip = acc < 0.6 ? 'Tip: you miss a lot. Slow down a little and make each shot count.'
-    : R.hits && R.bulls / R.hits < 0.3 ? 'Tip: aim for the glowing ring in the middle. It gives double points.'
+  const score = R.hits, rt = R.rts.length ? R.rts.reduce((a, b) => a + b, 0) / R.rts.length : 0;
+  const nb = score > rangeBest[R.mode]; if (nb) { rangeBest[R.mode] = score; try { localStorage.setItem('starblock.range2', JSON.stringify(rangeBest)); } catch (e) {} }
+  const tip = R.miss > R.hits / 3 ? 'Tip: many targets got away. Move your aim to the next one sooner.'
     : rt > 0.9 ? 'Tip: good aim! Now move to the next target faster.'
     : R.mode < 2 ? 'Great shooting! Try the next level.' : 'Amazing! You are a real space sharpshooter.';
-  R.last = { mode: R.mode, score, acc: Math.round(acc * 100), hits: R.hits, bulls: R.bulls, rt: rt.toFixed(2), nb, tip };
+  R.last = { mode: R.mode, hits: R.hits, miss: R.miss, rt: rt.toFixed(2), nb, tip };
   R.phase = 'idle'; rangeBoard(); R.btnLab.forEach((l, i) => setBtnLab(i));
-  sfx.win(); toast(`${m.n}: ${score} points${nb ? ' · NEW BEST!' : ''} · accuracy ${Math.round(acc * 100)}%. ${tip}`, 6);
+  sfx.win(); toast(`${m.n}: ${score} hits.${nb ? ' NEW BEST!' : ''} ${tip}`, 6);
 }
 function setBtnLab(i) {
   const R = LS.range, old = R.btnLab[i]; if (old) lvlG.remove(old);
-  const l = textSprite(`${RANGE_MODES[i].n} · best ${rangeBest[i]}`, RANGE_MODES[i].col, 1.5); l.position.set(RANGE.btn[i] + 0.5, 1.5, RANGE.btnZ + 0.5); lvlG.add(l); R.btnLab[i] = l;
+  const l = textSprite(`${RANGE_MODES[i].n} · best ${rangeBest[i]} hits`, RANGE_MODES[i].col, 1.5); l.position.set(RANGE.btn[i] + 0.5, 1.5, RANGE.btnZ + 0.5); lvlG.add(l); R.btnLab[i] = l;
 }
 function updRange(dt) {
   const R = LS.range; if (!R) return;
@@ -3156,7 +3241,7 @@ function updRange(dt) {
     h.age += dt; const g = h.g, u = g.userData;
     g.scale.setScalar(h.sc * Math.min(1, h.age * 6));
     g.position.addScaledVector(h.v, dt);
-    if (g.position.x < 10.5 || g.position.x > 43.5) { h.v.x *= -1; g.position.x = clamp(g.position.x, 10.5, 43.5); }
+    if (g.position.x < RANGE.x0 + 2.5 || g.position.x > RANGE.x1 - 1.5) { h.v.x *= -1; g.position.x = clamp(g.position.x, RANGE.x0 + 2.5, RANGE.x1 - 1.5); }
     if (g.position.y < m.y[0] || g.position.y > m.y[1]) { h.v.y *= -1; g.position.y = clamp(g.position.y, m.y[0], m.y[1]); }
     if (R.mode === 1) g.position.y += Math.sin(clock * 2 + h.age) * dt * 0.6;
     g.lookAt(eye.x, g.position.y, eye.z);
@@ -3179,34 +3264,37 @@ function refreshCostumes() {
     dressAvatar(q.av, q.i, 0x5dffa8, locked);
     q.ring.material.color.setHex(wear ? 0xffd166 : locked ? 0xff5a6a : 0x5dffa8);
     if (q.lab) q.g.remove(q.lab);
-    q.lab = textSprite(locked ? `${C.n} · needs ★${C.s}` : wear ? `${C.n} · WEARING` : `${C.n} · ★${C.s}`, wear ? '#ffd166' : locked ? '#ff8a96' : '#5dffa8', 2.4);
+    q.lab = textSprite(locked ? `${C.n} · needs ★${C.s}` : wear ? `${C.n} · WEARING` : `${C.n} · ★${C.s}`, wear ? '#ffd166' : locked ? '#ff8a96' : '#5dffa8', 1.9);
     q.lab.position.y = 2.75; q.g.add(q.lab);
   }
   if (LS.cosSign) lvlG.remove(LS.cosSign);
-  LS.cosSign = textSprite(`COSTUMES · you have ★ ${have} of ${starMax()}`, '#ffd166', 5); LS.cosSign.position.set(70.5, 6.3, 31); lvlG.add(LS.cosSign);
+  LS.cosSign = textSprite(`COSTUMES · ★ ${have} of ${starMax()}`, '#ffd166', 3.4); LS.cosSign.position.set((COS_ROOM.x0 + COS_ROOM.x1 + 1) / 2, 6.3, COS_ROOM.z1 + 0.2); lvlG.add(LS.cosSign);
 }
 let fastSign = null;
 function setupHub() {
   LS.trophies = []; LS.rocks = []; LS.texts = []; LS.press = []; LS.cos = [];
   LEVELS.forEach((lv, i) => addTrophyShelf(i));
-  for (const [z, t] of [[-26.5, 'TROPHIES · gold 3★ · silver 2★ · wood 1★'], [26.5, 'TROPHIES']]) { const l = textSprite(t, '#ffd166', z < 0 ? 5 : 2.6); l.position.set(68.5, 4.6, z); lvlG.add(l); }
-  { const l = textSprite('COSTUMES', '#ffd166', 2.6); l.position.set(68.5, 5.4, 28); lvlG.add(l); }
-  { const l = textSprite('SHOOTING RANGE', '#5ff2ff', 3.4); l.position.set(26.5, 5.4, 4.2); lvlG.add(l); }
+  { const l = textSprite('TROPHY ROOM', '#ffd166', 3.2); l.position.set(-24.5, 5.6, TROPHY_ROOM.z1 + 0.2); lvlG.add(l); }
+  // signs over the doors in the hall
+  for (const [x, z, t, c, w] of [[-24.5, 2.4, 'TROPHIES', '#ffd166', 2.4], [-3.5, 2.4, 'COSTUMES', '#ffd166', 2.4], [16.5, 2.4, 'SHOOTING RANGE', '#5ff2ff', 3],
+    [-14.5, -2.4, 'HANGAR', '#9fd8ff', 2.4], [23.5, -2.4, 'BUILD BAY', '#9fd8ff', 2.4]]) { const l = textSprite(t, c, w); l.position.set(x, 4.5, z); lvlG.add(l); }
+  addStatue();
   // costume room: a dummy for every costume, on a turning stand
   checkCostume();
   COSTUMES.forEach((C, i) => {
-    const g = new THREE.Group(); g.position.set(COS_ROOM.x1 - 0.7 - i * 2.5, 0, 42.5); lvlG.add(g);
+    const k = i % 5, back = i < 5; // two rows of 5, the front row moved half a step so you see the back row
+    const g = new THREE.Group(); g.position.set(-2.2 + (2 - k) * 3.2 - (back ? 0 : 1.6), back ? 1 : 0, back ? 11.6 : 7.6); lvlG.add(g);
     const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.9, 0.3, 20), phong(0x2a3a52)); ped.position.y = 0.15; g.add(ped);
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.82, 0.04, 6, 28), basic(0x5dffa8)); ring.rotation.x = Math.PI / 2; ring.position.y = 0.31; g.add(ring);
     const av = makeAvatar(0x5dffa8); av.position.y = 0.3; av.userData.tag.visible = false; g.add(av);
     const q = { i, g, av, ring, lab: null }; LS.cos.push(q);
-    LS.press.push({ p: new V3(g.position.x, 1.4, 42.5), r: 0.85, label: () => { const lk = C.s > starTotal(); return lk ? `${C.n} · needs ${C.s} stars (you have ${starTotal()})` : i === costume ? `${C.n} · you wear this` : `${C.n} · press to wear`; }, fn: () => wearCostume(i) });
+    LS.press.push({ p: new V3(g.position.x, g.position.y + 1.4, g.position.z), r: 0.85, label: () => { const lk = C.s > starTotal(); return lk ? `${C.n} · needs ${C.s} stars (you have ${starTotal()})` : i === costume ? `${C.n} · you wear this` : `${C.n} · press to wear`; }, fn: () => wearCostume(i) });
   });
   refreshCostumes();
   // shooting range: buttons, score board
   {
     const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 512; const tex = new THREE.CanvasTexture(cv);
-    const board = new THREE.Mesh(new THREE.PlaneGeometry(24, 12), new THREE.MeshBasicMaterial({ map: tex })); board.position.set(27.5, 7.6, RANGE.z1 + 0.95); board.rotation.y = Math.PI; lvlG.add(board);
+    const board = new THREE.Mesh(new THREE.PlaneGeometry(17, 8.5), new THREE.MeshBasicMaterial({ map: tex })); board.position.set((RANGE.x0 + RANGE.x1 + 1) / 2, 6.3, RANGE.z1 + 0.95); board.rotation.y = Math.PI; lvlG.add(board);
     LS.range = { phase: 'idle', mode: 0, cv, tex, holos: [], btns: [], btnLab: [], last: null };
     RANGE_MODES.forEach((m, i) => {
       const x = RANGE.btn[i] + 0.5, z = RANGE.btnZ + 0.5;
@@ -3227,7 +3315,6 @@ function setupHub() {
     lvlG.add(m);
   });
   { const l = textSprite('SAMPLE HUT · dig the soil, build your own', '#ffd166', 4.2); l.position.set(-78.5, 4.6, 6.5); lvlG.add(l); }
-  for (const [z, t] of [[-3.6, 'HANGAR'], [3.6, 'BUILD BAY']]) { const l = textSprite(t, '#9fd8ff', 3); l.position.set(-14.5, 5.3, z); lvlG.add(l); }
   // painted on the floor of the fast lane
   if (!fastSign) {
     const cv = document.createElement('canvas'); cv.width = 512; cv.height = 256; const c = cv.getContext('2d');
@@ -3235,7 +3322,7 @@ function setupHub() {
     c.fillStyle = '#5ff2ff'; c.font = '900 92px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
     c.fillText('MOVE FAST', 256, 82); c.fillText('HERE', 256, 182); fastSign = new THREE.CanvasTexture(cv);
   }
-  [40, 20, 0, -20, -40].forEach((x0) => [[x0 - 1, -Math.PI / 2], [x0 + 2, Math.PI / 2]].forEach(([x, r]) => {
+  [30, 10, -10, -30].forEach((x0) => [[x0 - 1, -Math.PI / 2], [x0 + 2, Math.PI / 2]].forEach(([x, r]) => {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 1.4), new THREE.MeshBasicMaterial({ map: fastSign, transparent: true, side: THREE.DoubleSide }));
     m.rotation.set(-Math.PI / 2, 0, r); m.position.set(x + 0.5, 0.02, 0.5); lvlG.add(m);
   }));
@@ -3264,11 +3351,11 @@ function updHub(dt) {
 function hudHub() {
   const R = LS.range;
   if (R && R.phase === 'count') return [`Shooting range · ${RANGE_MODES[R.mode].n}`, `Get ready… ${Math.ceil(R.t)}`];
-  if (R && R.phase === 'run') return [`Shooting range · ${RANGE_MODES[R.mode].n} · ${Math.ceil(R.t)} s`, `${R.pts} points · hits ${R.hits} · accuracy ${R.shots ? Math.round(R.hits / R.shots * 100) : 100}% · middle rings ${R.bulls}`];
+  if (R && R.phase === 'run') return [`Shooting range · ${RANGE_MODES[R.mode].n} · ${Math.ceil(R.t)} s`, `${R.hits} targets hit`];
   const n = inv[hubType] || 0;
   return ['Your mothership', `Building with: ${BLOCK_NAME[hubType]} ×${n} · B or tap below to change · blocks come from mining in missions`];
 }
-const HUB = { name: 'Your mothership', hub: true, brief: 'Your home. Build here with the blocks you mined in missions. Your trophies stand on the bridge.',
+const HUB = { name: 'Your mothership', hub: true, brief: 'Your home. Build here with the blocks you mined in missions. Your trophies stand in the trophy room.',
   gen: genHub, setup: setupHub, update: updHub, hud: hudHub, secrets: () => {}, targets: rangeTargets, saucers: [], sc: [0, 0, 0], par: 9999, target: () => HUB_SPAWN,
   sky: { earth: [900, 160, 120], es: 0.7, hemi: [0x9fc4ff, 0x2a3550, 0.75], sun: 0.85 } };
 function fillHubInv() {
@@ -3303,7 +3390,7 @@ function packSave() {
   const keys = [...hubEdits.keys()].sort((a, b) => a - b), eb = [];
   let prev = 0;
   for (const k of keys) { let d = k - prev; prev = k; while (d >= 128) { eb.push((d & 127) | 128); d >>>= 7; } eb.push(d); eb.push(hubEdits.get(k)); }
-  const js = new TextEncoder().encode(JSON.stringify({ v: 2, n: myName, b: best, i: inv, c: costume, r: rangeBest }));
+  const js = new TextEncoder().encode(JSON.stringify({ v: 2, n: myName, b: best, i: inv, c: costume, h: rangeBest }));
   const out = []; let n = js.length; while (n >= 128) { out.push((n & 127) | 128); n >>>= 7; } out.push(n);
   return new Uint8Array([...out, ...js, ...eb]);
 }
@@ -3401,7 +3488,7 @@ async function loadSaveImage(file) {
   inv = {}; for (const t of HUB_TYPES) if (d.i && d.i[t] > 0) inv[t] = Math.floor(d.i[t]);
   hubEdits = d.ed;
   if (typeof d.n === 'string') setName(d.n);
-  if (Array.isArray(d.r)) { rangeBest = [0, 1, 2].map((i) => Math.max(0, Math.floor(+d.r[i] || 0))); try { localStorage.setItem('starblock.range', JSON.stringify(rangeBest)); } catch (e) {} }
+  if (Array.isArray(d.h)) { rangeBest = [0, 1, 2].map((i) => Math.max(0, Math.floor(+d.h[i] || 0))); try { localStorage.setItem('starblock.range2', JSON.stringify(rangeBest)); } catch (e) {} }
   if (Number.isInteger(d.c) && COSTUMES[d.c]) { costume = d.c; try { localStorage.setItem('starblock.cos', String(costume)); } catch (e) {} }
   checkCostume();
   try { localStorage.setItem('starblock.best', JSON.stringify(best)); } catch (e) {}
