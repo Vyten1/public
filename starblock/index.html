@@ -50,9 +50,12 @@ body {
 #hubInv .hb img { width: 22px; height: 22px; display: block; image-rendering: pixelated; }
 #hubInv .hb.on, #hubMore .hb.on { border-color: var(--green); }
 #hubInv .hb.more { padding: 2px 8px; color: var(--green); }
+#hubInv .hb span { padding-right: 2px; }
+#hubInv .hcount { align-self: center; font: 700 12px var(--font-hud); color: var(--text); background: var(--panel); border: 2px solid var(--panel-line); border-radius: 6px; padding: 4px 8px; }
 #hubMore { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 112px); width: min(640px, 94vw); max-height: 52vh; overflow-y: auto; pointer-events: auto;
   background: var(--panel); border: 2px solid var(--panel-line); border-radius: 10px; padding: 8px; z-index: 6; }
 #hubMore .hm-t { font: 700 12px var(--font-hud); color: var(--muted); margin: 0 2px 6px; }
+#hubMore .hm-h { font: 800 12px var(--font-hud); color: var(--green); margin: 8px 2px 4px; letter-spacing: .04em; text-transform: uppercase; }
 #hubMore .hm-g { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 4px; }
 #hubMore .hb { display: flex; align-items: center; gap: 4px; padding: 3px 5px; border-radius: 6px; border: 2px solid var(--panel-line); background: rgba(255,255,255,.04); color: var(--text); font: 700 11px var(--font-hud); cursor: pointer; text-align: left; }
 #hubMore .hb img { width: 24px; height: 24px; flex: none; image-rendering: pixelated; }
@@ -167,6 +170,9 @@ h1 { margin: 0; font-size: clamp(40px, 9vw, 64px); line-height: .95; letter-spac
   background: linear-gradient(100deg, var(--blue), var(--green)); cursor: pointer;
 }
 .hint { font-size: 12px; color: var(--muted); }
+.legacy { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 14px; padding-top: 8px; border-top: 1px solid var(--panel-line); font-size: 11px; color: var(--muted); }
+.legacy select { font: 11px var(--font-hud, sans-serif); background: var(--panel); color: var(--muted); border: 1px solid var(--panel-line); border-radius: 5px; padding: 2px 4px; max-width: 60vw; }
+.legacy button { font: 700 11px var(--font-hud, sans-serif); background: transparent; color: var(--muted); border: 1px solid var(--panel-line); border-radius: 5px; padding: 2px 8px; cursor: pointer; }
 .statgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
 .statgrid div { background: var(--panel); border: 1px solid var(--panel-line); border-radius: 6px; padding: 10px; }
 .statgrid b { display: block; font-size: 24px; color: var(--green); font-variant-numeric: tabular-nums; }
@@ -324,6 +330,7 @@ body.down #downFx { display: grid; }
       <div><b>Powers</b>Buttons on the left, or Q and E. Q: far jump (dash). E: hero power — shock wave, heal, shield and +50% damage for 6 seconds. Each one needs time to load again.</div>
     </div>
     <div class="hint" id="rotHint">Best with the phone sideways. <span id="firstMission"></span></div>
+    <div class="legacy"><span>Legacy missions (the old versions)</span><select id="legacySel" aria-label="Legacy missions"></select><button id="legacyGo">PLAY</button></div>
   </div>
 </div>
 
@@ -408,30 +415,49 @@ const AIR = 0, ROCK = 1, ICE = 2, MOSS = 3, CRYSTAL = 4, ALLOY = 5, PANEL = 6, A
 // building blocks for the mothership (variants: 4 facings for stairs, ladders, doors and signs)
 const PLANK = 28, LOG = 29, BRICK = 30, SBRICK = 31, SAND = 32, GRAVEL = 33, SOIL = 34, LAMP = 35, WATER = 36, CHEST = 37, WOOL = 38, // WOOL..WOOL+7: colours
   SLABW = 46, SLABS = 47, STAIRW = 48, STAIRS = 52, FENCE = 56, LADDER = 57, DOOR = 61, TABLE = 65, PLANT = 66, FLOWER = 67, AFLOWER = 68, SIGN = 69;
-const NTYPES = 73;
-const baseOf = (t) => (t >= STAIRW && t < STAIRW + 4 ? STAIRW : t >= STAIRS && t < STAIRS + 4 ? STAIRS : t >= LADDER && t < LADDER + 4 ? LADDER : t >= DOOR && t < DOOR + 4 ? DOOR : t >= SIGN && t < SIGN + 4 ? SIGN : t);
-const isDoor = (t) => t >= DOOR && t < DOOR + 4, isSign = (t) => t >= SIGN && t < SIGN + 4, isLadder = (t) => t >= LADDER && t < LADDER + 4;
+// space blocks: ores, nature, space tech, movement and combat (groups have one type per direction)
+const ORE_GOLD = 73, ORE_EN = 74, ORE_TECH = 75, STRIPE = 76, LAVA = 77, APLANT = 78, ALOG = 79, ALEAF = 80, ATREE = 81, VINE = 82, // VINE..+3
+  CONSOLE = 86, PIPE = 90, CABLE = 93, STRIP = 96, ANTENNA = 104, AIRLOCK = 105, // PIPE/CABLE: x, y, z · STRIP: floor x/z, ceiling x/z, 4 walls · AIRLOCK: x, z, open x, open z
+  CONVEYOR = 109, GRAVPAD = 113, TELE = 114, CRUMBLE = 115, BOOST = 116, CRATE = 120, EGGWALL = 121, BAR_BLUE = 122, BAR_RED = 123;
+const NTYPES = 124;
+const BASE = Array.from({ length: 256 }, (_, i) => i);
+for (const [b, n] of [[48, 4], [52, 4], [57, 4], [61, 4], [69, 4], [VINE, 4], [CONSOLE, 4], [PIPE, 3], [CABLE, 3], [STRIP, 8], [AIRLOCK, 4], [CONVEYOR, 4], [BOOST, 4]]) for (let k = 0; k < n; k++) BASE[b + k] = b;
+const baseOf = (t) => BASE[t] ?? t;
+const isDoor = (t) => t >= 61 && t < 65, isSign = (t) => t >= 69 && t < 73, isLadder = (t) => (t >= 57 && t < 61) || (t >= VINE && t < VINE + 4);
+const isAirlock = (t) => t >= AIRLOCK && t < AIRLOCK + 4, isBar = (t) => t === BAR_BLUE || t === BAR_RED;
+const ATW = 128; // block texture atlas: 128 tiles of 16 x 16
 const INVIS = (t) => t === ARTIFACT || t === TURRET;
-const GLOWS = new Set([CRYSTAL, GEN, FIELD, PAD, O2, RUNE, CACHE, RELIC, EGG, SHARD, SWITCH, PWR, WEB, FAST, LAMP, AFLOWER]);
+const GLOWS = new Set([CRYSTAL, GEN, FIELD, PAD, O2, RUNE, CACHE, RELIC, EGG, SHARD, SWITCH, PWR, WEB, FAST, LAMP, AFLOWER, LAVA, ALEAF, APLANT, ORE_EN, EGGWALL, GRAVPAD, TELE, BOOST]);
 const TURRET_COST = 6;
 const HARD = [0, 0.45, 0.32, 0.38, 0.75, 1.3, 0.28, 0.9, 99, 0.36, 0.9, 99, 99, 99, 99, 0.8, 0.6, 0.55, 0.6, 0.5, 0.25, 0.6, 1.4, 99, 99, 99, 99, 99];
 for (let t = 28; t < NTYPES; t++) HARD[t] = [PLANT, FLOWER, AFLOWER, WATER].includes(t) ? 0.12 : [BRICK, SBRICK, SLABS].includes(t) || (t >= STAIRS && t < STAIRS + 4) ? 0.45 : 0.32;
-const hardOf = (t) => (t === GLASS && L.hub ? 0.25 : HARD[t]); // glass you built in the mothership can be dug
+for (const [t, h] of [[ORE_GOLD, 0.7], [ORE_EN, 0.75], [ORE_TECH, 0.8], [STRIPE, 0.5], [LAVA, 99], [APLANT, 0.12], [ALOG, 0.35], [ALEAF, 0.15], [ANTENNA, 99], [GRAVPAD, 99], [TELE, 99], [CRUMBLE, 0.3], [CRATE, 0.25], [EGGWALL, 0.8], [BAR_BLUE, 99], [BAR_RED, 99]]) HARD[t] = h;
+for (let k = 0; k < 8; k++) { HARD[STRIP + k] = 0.3; if (k < 4) { HARD[VINE + k] = 0.15; HARD[CONSOLE + k] = 99; HARD[AIRLOCK + k] = 99; HARD[CONVEYOR + k] = 99; HARD[BOOST + k] = 99; } if (k < 3) { HARD[PIPE + k] = 0.5; HARD[CABLE + k] = 0.3; } }
+const hardOf = (t) => (L.hub ? Math.min(HARD[t], 0.6) : HARD[t]); // everything you built in the mothership can be dug
 const TILES = { 1: [0, 0, 0], 2: [1, 1, 1], 3: [2, 3, 0], 4: [4, 4, 4], 5: [5, 5, 5], 6: [6, 6, 6], 9: [8, 7, 7], 10: [9, 9, 9], 11: [10, 10, 10], 12: [11, 14, 14], 13: [12, 12, 12], 14: [13, 13, 13], 15: [14, 14, 14],
   16: [15, 15, 15], 17: [16, 16, 16], 18: [17, 17, 17], 19: [18, 18, 18], 20: [19, 19, 19], 21: [20, 20, 20], 22: [21, 21, 21], 23: [22, 22, 22], 24: [23, 23, 23], 25: [24, 24, 24], 26: [25, 25, 25], 27: [26, 26, 26],
   [PLANK]: [27, 27, 27], [LOG]: [29, 28, 29], [BRICK]: [30, 30, 30], [SBRICK]: [31, 31, 31], [SAND]: [32, 32, 32], [GRAVEL]: [33, 33, 33], [SOIL]: [34, 34, 34], [LAMP]: [35, 35, 35],
   [WATER]: [36, 36, 36], [CHEST]: [38, 37, 38], [SLABW]: [27, 27, 27], [SLABS]: [31, 31, 31], [FENCE]: [27, 27, 27], [TABLE]: [27, 27, 27], [PLANT]: [50, 50, 50], [FLOWER]: [51, 51, 51], [AFLOWER]: [52, 52, 52] };
 for (let k = 0; k < 8; k++) TILES[WOOL + k] = [39 + k, 39 + k, 39 + k];
+Object.assign(TILES, { [ORE_GOLD]: [53, 53, 53], [ORE_EN]: [54, 54, 54], [ORE_TECH]: [55, 55, 55], [STRIPE]: [56, 56, 56], [LAVA]: [57, 57, 57], [APLANT]: [58, 58, 58], [ALOG]: [60, 59, 60], [ALEAF]: [61, 61, 61],
+  [ATREE]: [61, 59, 61], [ANTENNA]: [65, 65, 65], [GRAVPAD]: [70, 63, 63], [TELE]: [71, 63, 63], [CRUMBLE]: [72, 72, 72], [CRATE]: [74, 74, 74], [EGGWALL]: [75, 75, 75], [BAR_BLUE]: [76, 76, 76], [BAR_RED]: [77, 77, 77] });
+for (let k = 0; k < 8; k++) { TILES[STRIP + k] = [67, 67, 67]; if (k < 4) { TILES[VINE + k] = [62, 62, 62]; TILES[CONSOLE + k] = [63, 64, 63]; TILES[AIRLOCK + k] = [68, 68, 68]; TILES[CONVEYOR + k] = [69, 63, 63]; TILES[BOOST + k] = [73, 63, 63]; } if (k < 3) { TILES[PIPE + k] = [65, 65, 65]; TILES[CABLE + k] = [66, 66, 66]; } }
 for (let f = 0; f < 4; f++) { TILES[STAIRW + f] = [27, 27, 27]; TILES[STAIRS + f] = [31, 31, 31]; TILES[LADDER + f] = [47, 47, 47]; TILES[DOOR + f] = [48, 48, 48]; TILES[SIGN + f] = [27, 27, 27]; }
 // full, solid cubes hide the faces next to them; glass, water and the shaped blocks do not
-const FULL_NEW = new Set([PLANK, LOG, BRICK, SBRICK, SAND, GRAVEL, SOIL, LAMP, WOOL, WOOL + 1, WOOL + 2, WOOL + 3, WOOL + 4, WOOL + 5, WOOL + 6, WOOL + 7]);
+const FULL_NEW = new Set([PLANK, LOG, BRICK, SBRICK, SAND, GRAVEL, SOIL, LAMP, WOOL, WOOL + 1, WOOL + 2, WOOL + 3, WOOL + 4, WOOL + 5, WOOL + 6, WOOL + 7,
+  ORE_GOLD, ORE_EN, ORE_TECH, STRIPE, ALOG, GRAVPAD, TELE, CRUMBLE, CRATE, EGGWALL, CONVEYOR, CONVEYOR + 1, CONVEYOR + 2, CONVEYOR + 3, BOOST, BOOST + 1, BOOST + 2, BOOST + 3]);
 const OPAQ = new Uint8Array(NTYPES);
 for (let t = 1; t < NTYPES; t++) OPAQ[t] = !INVIS(t) && t !== GLASS && (t < 28 || FULL_NEW.has(t)) ? 1 : 0;
-const CROSS = new Set([PLANT, FLOWER, AFLOWER]), ENT = (t) => isDoor(t) || isSign(t);
+const CROSS = new Set([PLANT, FLOWER, AFLOWER, APLANT]), ENT = (t) => isDoor(t) || isSign(t) || t === ANTENNA;
+const SELF_CULL = new Set([GLASS, WATER, LAVA, ALEAF, BAR_BLUE, BAR_RED]); // faces between two of these are hidden
 const rotB = (b, f) => { let [x0, y0, z0, x1, y1, z1] = b; for (let k = 0; k < f; k++) { const a0 = 1 - z1, a1 = 1 - z0; z0 = x0; z1 = x1; x0 = a0; x1 = a1; } return [x0, y0, z0, x1, y1, z1]; };
 // collision boxes: undefined = full cube, [] = you walk through it
 const COLL = [];
-for (const t of [WATER, PLANT, FLOWER, AFLOWER]) COLL[t] = [];
+for (const t of [WATER, PLANT, FLOWER, AFLOWER, LAVA, APLANT, BAR_BLUE]) COLL[t] = [];
+COLL[ANTENNA] = [[0.4, 0, 0.4, 0.6, 1, 0.6]];
+for (let k = 0; k < 8; k++) { COLL[STRIP + k] = []; if (k < 4) { COLL[VINE + k] = []; COLL[CONSOLE + k] = [rotB([0.05, 0, 0.15, 0.95, 0.7, 0.95], k)]; } }
+COLL[AIRLOCK] = [[0, 0, 0.35, 1, 1, 0.65]]; COLL[AIRLOCK + 1] = [[0.35, 0, 0, 0.65, 1, 1]]; COLL[AIRLOCK + 2] = COLL[AIRLOCK + 3] = [];
+COLL[PIPE] = [[0, 0.3, 0.3, 1, 0.7, 0.7]]; COLL[PIPE + 1] = [[0.3, 0, 0.3, 0.7, 1, 0.7]]; COLL[PIPE + 2] = [[0.3, 0.3, 0, 0.7, 0.7, 1]]; COLL[CABLE] = COLL[CABLE + 1] = COLL[CABLE + 2] = [];
 for (let f = 0; f < 4; f++) { COLL[LADDER + f] = []; COLL[DOOR + f] = []; COLL[SIGN + f] = []; COLL[STAIRW + f] = COLL[STAIRS + f] = [[0, 0, 0, 1, 0.5, 1], rotB([0, 0.5, 0, 1, 1, 0.5], f)]; }
 COLL[SLABW] = COLL[SLABS] = [[0, 0, 0, 1, 0.5, 1]]; COLL[CHEST] = [[0.06, 0, 0.06, 0.94, 0.88, 0.94]];
 const D4 = [[0, -1], [1, 0], [0, 1], [-1, 0]]; // facing 0 = -z, 1 = +x, 2 = +z, 3 = -x
@@ -439,6 +465,13 @@ function shapeBoxes(t, x, y, z) {
   const b = baseOf(t), f = t - b;
   if (b === SLABW || b === SLABS || b === STAIRW || b === STAIRS || b === CHEST) return COLL[t];
   if (b === LADDER) return [rotB([0.04, 0, 0, 0.96, 1, 0.07], f)];
+  if (b === VINE) return [rotB([0.02, 0, 0, 0.98, 1, 0.05], f)];
+  if (b === CONSOLE) { const M = [63, 63, 63], S = [64, 64, 64]; return [[...rotB([0.05, 0, 0.15, 0.95, 0.7, 0.95], f), M], [...rotB([0.1, 0.7, 0.55, 0.9, 0.76, 0.9], f), S], [...rotB([0.1, 0.7, 0.15, 0.9, 1, 0.26], f), S]]; }
+  if (b === PIPE) { const ax = f, B0 = [0, 0.3, 0.3, 1, 0.7, 0.7], F1 = [0, 0.25, 0.25, 0.1, 0.75, 0.75], F2 = [0.9, 0.25, 0.25, 1, 0.75, 0.75];
+    const sw = (q) => (ax === 0 ? q : ax === 1 ? [q[1], q[0], q[2], q[4], q[3], q[5]] : [q[2], q[1], q[0], q[5], q[4], q[3]]); return [sw(B0), sw(F1), sw(F2)]; }
+  if (b === CABLE) { const q = [0, 0.42, 0.42, 1, 0.58, 0.58]; return [f === 0 ? q : f === 1 ? [0.42, 0, 0.42, 0.58, 1, 0.58] : [0.42, 0.42, 0, 0.58, 0.58, 1]]; }
+  if (b === STRIP) return [[[0, 0, 0.4, 1, 0.06, 0.6], [0.4, 0, 0, 0.6, 0.06, 1], [0, 0.94, 0.4, 1, 1, 0.6], [0.4, 0.94, 0, 0.6, 1, 1]][f] || rotB([0, 0.45, 0, 1, 0.55, 0.06], f - 4)];
+  if (b === AIRLOCK) return f < 2 ? COLL[t] : f === 2 ? [[0, 0, 0.35, 0.07, 1, 0.65], [0.93, 0, 0.35, 1, 1, 0.65]] : [[0.35, 0, 0, 0.65, 1, 0.07], [0.35, 0, 0.93, 0.65, 1, 1]];
   if (b === TABLE) return [[0, 0.82, 0, 1, 1, 1], [0.06, 0, 0.06, 0.2, 0.82, 0.2], [0.8, 0, 0.06, 0.94, 0.82, 0.2], [0.06, 0, 0.8, 0.2, 0.82, 0.94], [0.8, 0, 0.8, 0.94, 0.82, 0.94]];
   if (b === FENCE) {
     const out = [[0.375, 0, 0.375, 0.625, 1, 0.625]];
@@ -450,6 +483,9 @@ function shapeBoxes(t, x, y, z) {
 const WOOL_COL = [0xececf0, 0xd63a34, 0xf08c28, 0xf6d438, 0x54b646, 0x3468d6, 0x9248c4, 0x22242c];
 const CHIP = { [PLANK]: 0xa8763f, [LOG]: 0x6a4a2a, [BRICK]: 0xb24c38, [SBRICK]: 0x8a8e98, [SAND]: 0xe2cc90, [GRAVEL]: 0x8c8a8c, [SOIL]: 0x7e5838, [LAMP]: 0xffe296, [WATER]: 0x2c70cc, [CHEST]: 0xa4703a, [SLABW]: 0xa8763f, [SLABS]: 0x8a8e98, [FENCE]: 0xa8763f, [TABLE]: 0xa8763f, [PLANT]: 0x3ea046, [FLOWER]: 0xe63c50, [AFLOWER]: 0x5ff2ff, 1: 0x3a4d6b, 2: 0x8fd8ff, 3: 0x46c46a, 4: 0x6dffa8, 5: 0x2d6fb8, 6: 0x1f9c8a, 7: 0x5dffa8, 9: 0x5a6070, 10: 0x5dffa8, 15: 0x96aac4, 16: 0xffc857, 17: 0xffd166, 18: 0xff7ab8, 19: 0x9a3a86, 20: 0xb6ff5a, 21: 0x7af6ff, 22: 0xcfeeff, 23: 0xffc857, 24: 0xffd166, 25: 0x8dff5a, 26: 0xbfe4ff, 27: 0x5ff2ff };
 for (let k = 0; k < 8; k++) CHIP[WOOL + k] = WOOL_COL[k];
+Object.assign(CHIP, { [ORE_GOLD]: 0xffce40, [ORE_EN]: 0xff5adc, [ORE_TECH]: 0x5dffa8, [STRIPE]: 0xfac828, [LAVA]: 0xff7a1e, [APLANT]: 0xb45aff, [ALOG]: 0x5a2878, [ALEAF]: 0x3cdcc8, [ATREE]: 0x3cdcc8, [ANTENNA]: 0x96a0b0,
+  [GRAVPAD]: 0x9a5cff, [TELE]: 0xff78ff, [CRUMBLE]: 0x96826e, [CRATE]: 0x46a05a, [EGGWALL]: 0xb4ff5a, [BAR_BLUE]: 0x4fb3ff, [BAR_RED]: 0xff5a6a });
+for (let k = 0; k < 8; k++) { CHIP[STRIP + k] = 0xdcfaff; if (k < 4) { CHIP[VINE + k] = 0x3cb46e; CHIP[CONSOLE + k] = 0x5dffa8; CHIP[AIRLOCK + k] = 0x6e8296; CHIP[CONVEYOR + k] = 0xffc828; CHIP[BOOST + k] = 0xff7828; } if (k < 3) { CHIP[PIPE + k] = 0x96a0b0; CHIP[CABLE + k] = 0x2a2e34; } }
 for (let f = 0; f < 4; f++) { CHIP[STAIRW + f] = 0xa8763f; CHIP[STAIRS + f] = 0x8a8e98; CHIP[LADDER + f] = 0xa8763f; CHIP[DOOR + f] = 0xa4703a; CHIP[SIGN + f] = 0xa8763f; }
 
 const N = 64, OFF = 32; // mission worlds are 64 blocks each way; the mothership uses a bigger world
@@ -549,7 +585,7 @@ function genWorld() {
 
 // ---------------------------------------------------------------- textures
 function makeAtlas() {
-  const T = 16, W = T * 64, cv = document.createElement('canvas'); cv.width = W; cv.height = T;
+  const T = 16, W = T * ATW, cv = document.createElement('canvas'); cv.width = W; cv.height = T;
   const ctx = cv.getContext('2d'), img = ctx.createImageData(W, T), d = img.data, rnd = mulberry32(7);
   const px = (tx, x, y, c, v = 14) => {
     const k = (rnd() - 0.5) * v, i = (y * W + tx * T + x) * 4;
@@ -704,6 +740,54 @@ function makeAtlas() {
   for (let y = 0; y < 8; y++) for (let x = 3; x < 12; x++) { const d = Math.hypot(x - 7, y - 3.5); if (d < 1.3) px(51, x, y, [255, 214, 60], 6); else if (d < 3.6) px(51, x, y, (Math.floor((Math.atan2(y - 3.5, x - 7) + 4) * 1.6) % 2) ? [226, 52, 76] : [252, 96, 116], 8); }
   for (let k = 0; k < 9; k++) { px(52, 7, 15 - k, [70, 140, 150], 6); px(52, clamp(7 - (k >> 1), 0, 15), 15 - k - 2 < 0 ? 0 : 15 - k - 2, [70, 140, 150], 4); }
   for (const [cx, cy, rr] of [[7, 4, 3.2], [3, 9, 2.2], [12, 8, 2.2]]) for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const d = Math.hypot(x - cx, y - cy); if (d < rr) px(52, x, y, d < rr * 0.45 ? [236, 255, 250] : [95, 242, 255], 6); }
+  // ---- space blocks (tiles 53 and up)
+  const nug = [[3, 3], [10, 4], [6, 9], [12, 11], [2, 12], [9, 14]];
+  for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
+    const edge = x === 0 || y === 0 || x === T - 1 || y === T - 1, r = rnd(), ctr = Math.hypot(x - 7.5, y - 7.5);
+    let c;
+    // 53 gold ore, 54 energy ore, 55 alien tech ore
+    c = r < 0.15 ? [38, 52, 80] : [56, 76, 108]; for (const [gx, gy] of nug) { const d = Math.abs(gx - x) + Math.abs(gy - y); if (d <= 1) c = d ? [214, 160, 40] : [255, 222, 90]; } px(53, x, y, c, 10);
+    c = r < 0.2 ? [22, 26, 48] : [32, 38, 64]; if (Math.abs(Math.sin(x * 0.7) * 4 + 7.5 - y) < 1 || Math.abs(Math.cos(y * 0.6) * 4 + 7.5 - x) < 0.8) c = (x + y) % 3 ? [255, 90, 220] : [255, 200, 250]; px(54, x, y, c, 8);
+    c = edge ? [26, 30, 40] : [44, 50, 62]; if (((x === 3 || x === 12) && y > 2 && y < 13) || ((y === 4 || y === 11) && x > 2 && x < 13) || (x === 7 && y < 5)) c = [93, 255, 168]; if (Math.abs(x - 7.5) < 1.6 && Math.abs(y - 7.5) < 1.6) c = [200, 255, 230]; px(55, x, y, c, 6);
+    // 56 warning stripes
+    c = edge ? [24, 24, 28] : ((x + y) >> 2) % 2 ? [250, 200, 40] : [30, 30, 34]; px(56, x, y, c, 6);
+    // 57 lava
+    { const w = Math.sin(x * 0.9 + Math.sin(y * 0.7) * 2) + Math.sin(y * 1.1 - x * 0.3); c = w > 1 ? [255, 230, 120] : w > 0 ? [255, 150, 40] : w > -0.9 ? [232, 80, 20] : [120, 30, 12]; px(57, x, y, c, 10); }
+    // 59 alien bark, 60 alien wood rings
+    c = Math.sin(x * 1.6 + Math.floor(y / 4) * 1.7) > 0.3 ? [62, 26, 88] : [96, 44, 128]; px(59, x, y, c, 10);
+    c = ctr > 7 ? [62, 26, 88] : Math.floor(ctr * 1.2) % 2 ? [200, 110, 220] : [150, 70, 180]; px(60, x, y, c, 8);
+    // 61 alien leaves: see-through gaps, glowing seeds
+    if (hash3(x, y, 1, 61) > 0.22) px(61, x, y, hash3(x, y, 2, 61) > 0.9 ? [210, 255, 250] : hash3(x, y, 3, 61) > 0.5 ? [50, 210, 196] : [28, 150, 160], 10);
+    // 62 vines: wavy stems with leaves (see-through)
+    { const v1 = Math.abs(x - (4 + Math.sin(y * 0.8) * 1.5)) < 0.8, v2 = Math.abs(x - (11 + Math.sin(y * 0.7 + 2) * 1.5)) < 0.8, lf = (y % 4 === 1) && (Math.abs(x - (4 + Math.sin(y * 0.8) * 1.5) - 1.5) < 1.2 || Math.abs(x - (11 + Math.sin(y * 0.7 + 2) * 1.5) + 1.5) < 1.2);
+      if (v1 || v2) px(62, x, y, [40, 130, 70], 8); else if (lf) px(62, x, y, [80, 200, 110], 10); }
+    // 63 machine metal, 64 console screen
+    c = edge ? [40, 48, 60] : (y === 5 || y === 10) && x > 2 && x < 13 && x % 2 ? [30, 36, 46] : [74, 84, 100]; px(63, x, y, c, 6);
+    c = edge || x === 1 || x === 14 || y === 1 || y === 14 ? [70, 80, 96] : (y % 3 === 0 && x > 2 && x < 3 + ((x * 7 + y * 3) % 10)) ? [93, 255, 168] : (x > 9 && y > 9 && x < 13 && y < 13) ? [79, 179, 255] : [10, 22, 36]; px(64, x, y, c, 4);
+    // 65 pipe metal, 66 cable, 67 light strip
+    c = x % 8 === 0 ? [90, 100, 116] : y === 4 ? [200, 210, 224] : [150, 160, 176]; px(65, x, y, c, 6);
+    c = (x % 6 === 2 && y % 6 === 2) ? [79, 179, 255] : [28, 32, 38]; px(66, x, y, c, 4);
+    c = Math.abs(y - 7.5) < 3 ? [235, 252, 255] : [95, 242, 255]; px(67, x, y, c, 3);
+    // 68 airlock panel: hazard edges, a seam and a red light
+    c = (x < 3 || x > 12) ? (((x + y) >> 1) % 2 ? [250, 200, 40] : [30, 30, 34]) : (x === 7 || x === 8) ? [50, 58, 70] : y % 5 === 0 ? [80, 92, 110] : [104, 118, 138]; if (Math.abs(x - 7.5) < 2 && y < 2) c = [255, 70, 70]; px(68, x, y, c, 6);
+    // 69 conveyor (yellow arrows to the top of the tile), 73 boost pad (orange double arrows)
+    { const k = y % 8, on = k >= 1 && k <= 5 && Math.abs(Math.abs(x - 7.5) - (k - 0.5)) < 1; c = edge ? [24, 26, 30] : on ? [255, 200, 40] : y % 2 ? [40, 44, 52] : [50, 54, 62]; px(69, x, y, c, 6);
+      const k2 = y % 7, on2 = k2 >= 1 && k2 <= 5 && Math.abs(Math.abs(x - 7.5) - (k2 + 0.5)) < 1.1; c = edge ? [255, 120, 40] : on2 ? [255, 230, 120] : [90, 34, 18]; px(73, x, y, c, 6); }
+    // 70 gravity pad: purple ring with up/down arrows
+    c = edge ? [60, 30, 110] : Math.abs(ctr - 6) < 1 ? [200, 160, 255] : (Math.abs(x - 7.5) < 1 && y > 2 && y < 13) || (Math.abs(Math.abs(x - 7.5) - Math.abs(y - 7.5) + 3.5) < 0.8 && Math.abs(y - 7.5) > 2) ? [240, 220, 255] : [110, 60, 190]; px(70, x, y, c, 6);
+    // 71 teleporter: rings
+    c = ctr < 1.6 ? [255, 255, 255] : ctr > 7 ? [40, 30, 70] : Math.floor(ctr) % 2 ? [255, 120, 255] : [90, 50, 170]; px(71, x, y, c, 6);
+    // 72 crumbling stone: cracks
+    c = (Math.abs(x - y) < 1 && x < 9) || (Math.abs(x + y - 15) < 1 && x > 6) || (y === 8 && x > 3 && x < 12) || (x === 11 && y > 10) ? [58, 48, 40] : r < 0.15 ? [132, 114, 96] : [158, 138, 116]; px(72, x, y, c, 10);
+    // 74 supply crate: white cross on green
+    c = edge || x === 1 || y === 1 || x === 14 || y === 14 ? [40, 70, 50] : (Math.abs(x - 7.5) < 2 && y > 3 && y < 12) || (Math.abs(y - 7.5) < 2 && x > 3 && x < 12) ? [240, 250, 240] : [70, 120, 80]; px(74, x, y, c, 6);
+    // 75 alien egg wall: green eggs in purple flesh
+    { const e = hash3(x >> 2, y >> 2, 5, 75), ex = (x & 3) - 1.5, ey = (y & 3) - 1.5; c = e > 0.35 && Math.hypot(ex, ey * 0.8) < 1.5 ? (Math.hypot(ex, ey) < 0.8 ? [230, 255, 160] : [170, 240, 80]) : r < 0.3 ? [70, 20, 70] : [100, 34, 96]; px(75, x, y, c, 8); }
+    // 76 blue energy barrier, 77 red energy barrier (hex grid)
+    { const hx = (x + (Math.floor(y / 4) % 2) * 2) % 4 === 0 || y % 4 === 0; px(76, x, y, edge || hx ? [200, 240, 255] : [79, 179, 255], 4); px(77, x, y, edge || hx ? [255, 210, 210] : [255, 70, 84], 4); }
+  }
+  // 58 alien grass (see-through): purple blades with cyan tips
+  for (let b = 0; b < 6; b++) { const x0 = 2 + b * 2 + (b % 2), h = 7 + ((b * 7) % 7), lean = (b % 3) - 1; for (let k = 0; k < h; k++) px(58, clamp(Math.round(x0 + lean * k * 0.3), 0, 15), 15 - k, k > h - 3 ? [95, 242, 255] : [170, 80, 240], 10); }
   ctx.putImageData(img, 0, 0);
   const tex = new THREE.CanvasTexture(cv);
   tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false;
@@ -817,7 +901,8 @@ const atlas = makeAtlas();
 const worldMat = new THREE.MeshLambertMaterial({ map: atlas, vertexColors: true, alphaTest: 0.5 });
 const glowMat = new THREE.MeshBasicMaterial({ map: atlas, vertexColors: true, alphaTest: 0.5 });
 const waterMat = new THREE.MeshLambertMaterial({ map: atlas, vertexColors: true, transparent: true, opacity: 0.62, depthWrite: false });
-let waterMesh = null;
+let waterMesh = null, barMesh = null;
+const barMat = new THREE.MeshBasicMaterial({ map: atlas, vertexColors: true, transparent: true, opacity: 0.5, depthWrite: false, side: THREE.DoubleSide }); // energy barriers
 const glassMat = new THREE.MeshBasicMaterial({ map: atlas, vertexColors: true, transparent: true, opacity: 0.22, depthWrite: false });
 let glassMesh = null;
 const FACES = [
@@ -832,6 +917,7 @@ let worldMesh = null, glowMesh = null;
 // texture coordinates of a box face, from the point's place inside the cell (matches FACES)
 const UVF = [[(p) => p[2], (p) => p[1]], [(p) => 1 - p[2], (p) => p[1]], [(p) => p[0], (p) => 1 - p[2]], [(p) => 1 - p[0], (p) => p[2]], [(p) => 1 - p[0], (p) => p[1]], [(p) => p[0], (p) => p[1]]];
 function emitBox(b, x, y, z, bx, tl, tint) { // a shaped block (slab, stairs, fence...) is made of small boxes
+  if (bx[6]) tl = bx[6]; // a box can have its own textures (the console screen)
   FACES.forEach((f, fi) => {
     const d = f.d;
     const onEdge = (d[0] < 0 && bx[0] <= 0) || (d[0] > 0 && bx[3] >= 1) || (d[1] < 0 && bx[1] <= 0) || (d[1] > 0 && bx[4] >= 1) || (d[2] < 0 && bx[2] <= 0) || (d[2] > 0 && bx[5] >= 1);
@@ -840,7 +926,7 @@ function emitBox(b, x, y, z, bx, tl, tint) { // a shaped block (slab, stairs, fe
     for (const q of f.c) {
       const pt = [q[0] ? bx[3] : bx[0], q[1] ? bx[4] : bx[1], q[2] ? bx[5] : bx[2]];
       b.p.push(x + pt[0], y + pt[1], z + pt[2]); b.n.push(d[0], d[1], d[2]);
-      b.u.push((tile * 16 + 0.2 + UVF[fi][0](pt) * 15.6) / 1024, 0.0125 + UVF[fi][1](pt) * 0.975); b.c.push(shade, shade, shade);
+      b.u.push((tile * 16 + 0.2 + UVF[fi][0](pt) * 15.6) / (16 * ATW), 0.0125 + UVF[fi][1](pt) * 0.975); b.c.push(shade, shade, shade);
     }
     b.i.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
   });
@@ -849,16 +935,24 @@ function emitCross(b, x, y, z, tile) { // plants: two crossed pictures, seen fro
   const s = 0.15;
   for (const [ax, az, ex, ez] of [[s, s, 1 - s, 1 - s], [s, 1 - s, 1 - s, s]]) for (const back of [0, 1]) {
     const base = b.p.length / 3;
-    for (const [qx, qy, qz, u, v] of [[ax, 0, az, 0, 0], [ex, 0, ez, 1, 0], [ax, 0.9, az, 0, 1], [ex, 0.9, ez, 1, 1]]) { b.p.push(x + qx, y + qy, z + qz); b.n.push(0, 1, 0); b.u.push((tile * 16 + 0.2 + u * 15.6) / 1024, 0.0125 + v * 0.975); b.c.push(0.95, 0.95, 0.95); }
+    for (const [qx, qy, qz, u, v] of [[ax, 0, az, 0, 0], [ex, 0, ez, 1, 0], [ax, 0.9, az, 0, 1], [ex, 0.9, ez, 1, 1]]) { b.p.push(x + qx, y + qy, z + qz); b.n.push(0, 1, 0); b.u.push((tile * 16 + 0.2 + u * 15.6) / (16 * ATW), 0.0125 + v * 0.975); b.c.push(0.95, 0.95, 0.95); }
     if (back) b.i.push(base, base + 2, base + 1, base + 1, base + 2, base + 3); else b.i.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
   }
 }
+// conveyors and boost pads: turn the arrow on the top face to the way the block faces
+const uvTop = (f, x, z) => (f === 2 ? [1 - x, z] : f === 1 ? [z, x] : f === 0 ? [x, 1 - z] : [1 - z, 1 - x]);
+const SPEC = { tele: [], egg: [], air: [], bar: [], ent: [] }; // special blocks found while meshing
 function buildMeshes() {
-  const B = [0, 1, 2, 3].map(() => ({ p: [], n: [], u: [], c: [], i: [] }));
+  const B = [0, 1, 2, 3, 4].map(() => ({ p: [], n: [], u: [], c: [], i: [] }));
+  SPEC.tele = []; SPEC.egg = []; SPEC.air = []; SPEC.bar = []; SPEC.ent = [];
   for (let z = -OZ; z < NZ - OZ; z++) for (let y = -OY; y < NY - OY; y++) for (let x = -OX; x < NX - OX; x++) {
     const t = world[idx(x, y, z)];
-    if (!t || INVIS(t) || ENT(t)) continue;
-    const b = B[t === GLASS ? 2 : t === WATER ? 3 : GLOWS.has(t) ? 1 : 0];
+    if (!t) continue;
+    if (t >= 73) { if (t === TELE) SPEC.tele.push({ x, y, z }); else if (t === EGGWALL) SPEC.egg.push({ x, y, z }); else if (isAirlock(t)) SPEC.air.push({ x, y, z }); else if (isBar(t)) SPEC.bar.push({ x, y, z }); }
+    if (ENT(t)) { SPEC.ent.push([x, y, z, t]); continue; }
+    if (INVIS(t)) continue;
+    const bt = baseOf(t), b = B[t === GLASS ? 2 : t === WATER ? 3 : isBar(t) ? 4 : GLOWS.has(bt) || bt === STRIP ? 1 : 0];
+    const rf = (bt === CONVEYOR || bt === BOOST) ? t - bt : -1;
     const tint = 0.92 + hash3(x, y, z, 9) * 0.12;
     if (t >= 28) {
       if (CROSS.has(t)) { emitCross(b, x, y, z, TILES[t][1]); continue; }
@@ -867,13 +961,14 @@ function buildMeshes() {
     }
     for (const f of FACES) {
       const nb = get(x + f.d[0], y + f.d[1], z + f.d[2]);
-      if (OPAQ[nb] || (nb === t && (t === GLASS || t === WATER))) continue; // glass, water and shaped blocks do not hide what is behind them
+      if (OPAQ[nb] || (nb === t && SELF_CULL.has(t))) continue; // glass, water and shaped blocks do not hide what is behind them
       const tile = TILES[t][f.d[1] > 0 ? 0 : f.d[1] < 0 ? 2 : 1];
       const shade = (f.d[1] > 0 ? 1 : f.d[1] < 0 ? 0.55 : f.d[0] !== 0 ? 0.82 : 0.7) * tint;
       const base = b.p.length / 3;
       for (const q of f.c) {
         b.p.push(x + q[0], y + q[1], z + q[2]); b.n.push(f.d[0], f.d[1], f.d[2]);
-        b.u.push((tile * 16 + 0.2 + q[3] * 15.6) / 1024, 0.0125 + q[4] * 0.975);
+        const uv = rf >= 0 && f.d[1] > 0 ? uvTop(rf, q[0], q[2]) : [q[3], q[4]];
+        b.u.push((tile * 16 + 0.2 + uv[0] * 15.6) / (16 * ATW), 0.0125 + uv[1] * 0.975);
         b.c.push(shade, shade, shade);
       }
       b.i.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
@@ -893,7 +988,8 @@ function buildMeshes() {
   glowMesh = mk(B[1], glowMat, glowMesh);
   glassMesh = mk(B[2], glassMat, glassMesh); glassMesh.renderOrder = 2;
   waterMesh = mk(B[3], waterMat, waterMesh); waterMesh.renderOrder = 3;
-  if (L && L.hub) syncDecor();
+  barMesh = mk(B[4], barMat, barMesh); barMesh.renderOrder = 4;
+  if (L) syncDecor();
 }
 
 // voxel ray (Amanatides & Woo)
@@ -1152,7 +1248,7 @@ let muzzleFlash;
   tools.push(g);
 }
 { // block in hand
-  const tex = atlas.clone(); tex.needsUpdate = true; tex.repeat.set(1 / 64, 1); tex.offset.set(6 / 64, 0);
+  const tex = atlas.clone(); tex.needsUpdate = true; tex.repeat.set(1 / ATW, 1); tex.offset.set(6 / ATW, 0);
   const m = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, 0.22), new THREE.MeshLambertMaterial({ map: tex }));
   m.userData.base = { p: new V3(0.34, -0.32, -0.66), r: new THREE.Euler(0.25, 0.6, 0) };
   tools.push(m);
@@ -1666,7 +1762,7 @@ function stationKey(k, mine) {
   if (k.got) return;
   k.got = true; k.m.visible = false; LS.got++; sfx.pickup(); burst(k.p, 0x5dffa8, 40, 4, 0);
   if (mine) netOp(['c', LS.keys.indexOf(k)]);
-  if (LS.got === 3) { box(14, 1, -1, 14, 3, 1, AIR); meshDirty = true; toast('All 3 keycards! The vault door is open.', 3.5); }
+  if (LS.got === 3) { box(14, 1, -1, 14, 3, 1, L.v2 ? BAR_BLUE : AIR); if (L.v2) { set(-20, 0, 4, TELE); toast('All 3 keycards! The vault barrier is open, and a teleporter by your ship turned on.', 4); } else toast('All 3 keycards! The vault door is open.', 3.5); meshDirty = true; }
   else toast(mine ? `Keycard ${LS.got} of 3` : `A crewmate found keycard ${LS.got} of 3`);
 }
 function updStation(dt) {
@@ -2830,14 +2926,148 @@ const LEVELS = [
       else if (k === 'zap' && a.length >= 6 && a.every(fin)) zap(new V3(a[0], a[1], a[2]), new V3(a[3], a[4], a[5]));
     } }
 ];
+// ================================================================ new missions (built with the new blocks)
+const lvBy = (n) => LEVELS.find((l) => l.name === n);
+const putTree = (x, z) => { const t = topAt(x, z); if (t === null) return; for (const [cx, cy, cz, ct] of hubCells(ATREE, x, t + 1, z)) if (!get(cx, cy, cz)) set(cx, cy, cz, ct); };
+function alienPlants(x0, x1, z0, z1, seed, keep) { // alien grass and flowers on mossy ground
+  const rnd = mulberry32(seed);
+  for (let x = x0; x <= x1; x++) for (let z = z0; z <= z1; z++) { const t = topAt(x, z); if (t === null || get(x, t, z) !== MOSS || (keep && keep(x, z))) continue; const r = rnd(); if (r < 0.12) set(x, t + 1, z, APLANT); else if (r < 0.15) set(x, t + 1, z, AFLOWER); }
+}
+function oreVeins(n, seed, pick, ok) { // ore cells near the surface, where you dig
+  const rnd = mulberry32(seed);
+  for (let k = 0; k < n; k++) { const c = pick(rnd); if (!c) continue; const [x, y, z] = c; if (ok(get(x, y, z))) set(x, y, z, rnd() < 0.45 ? ORE_GOLD : rnd() < 0.6 ? ORE_EN : ORE_TECH); }
+}
+// --- K-7 mining outpost: ores, alien trees, a teleporter, a boost pad and a combat arena around the artifact
+function genK7b() {
+  genWorld();
+  const nearPad = (x, z) => (x < -1 && z < 0) || Math.hypot(x, z) < 2.2 || Math.abs(x) <= 1 || Math.hypot(x - 3, z + 3) < 1.6 || Math.hypot(x + 3, z - 4) < 1.6;
+  oreVeins(55, 7101, (r) => { const x = Math.floor(r() * 19) - 9, z = Math.floor(r() * 19) - 9, t = topAt(x, z); return t === null ? null : [x, t - Math.floor(r() * 3), z]; }, (b) => b === ROCK || b === MOSS);
+  alienPlants(-10, 10, -10, 10, 7102, nearPad);
+  putTree(6, 6); putTree(-7, 6); putTree(7, -6);
+  // teleporter: main rock <-> the little rock with ore and a supply crate
+  { const t = topAt(2, 2); set(2, t, 2, TELE); set(2, t + 1, 2, AIR); }
+  { const t = topAt(-15, 10); if (t !== null) { set(-15, t, 10, TELE); for (const [x, z] of [[-14, 10], [-16, 10], [-15, 9], [-15, 11]]) { const q = topAt(x, z); if (q !== null) set(x, q, z, ORE_TECH); } const c = topAt(-14, 9); if (c !== null) set(-14, c + 1, 9, CRATE); } }
+  // a radar dish and light strips at the landing pad
+  for (const [x, z] of [[-9, -1], [-8, 0], [-7, 1], [-9, -7], [-5, 2]]) { const t = topAt(x, z); if (t !== null && !get(x, t + 1, z)) { set(x, t + 1, z, ANTENNA); break; } }
+  // boost pad on the edge facing the artifact: it throws you to the arena
+  { let xe = 9; while (xe > 0 && topAt(xe, 3) === null) xe--; const t = topAt(xe - 1, 3); if (t !== null) { set(xe - 1, t, 3, BOOST + 1); set(xe - 2, t, 3, STRIPE); } }
+  // the arena: a stone floor around the caged artifact, a ring of energy barriers, 2 alien egg walls
+  const base = artifactCell.y - 1, A = { x: AX + 0.5, z: AZ + 0.5, y: base, eggs: [], on: false, done: false };
+  for (let dx = -7; dx <= 7; dx++) for (let dz = -7; dz <= 7; dz++) {
+    const d = Math.hypot(dx, dz), x = AX + dx, z = AZ + dz; if (d > 6.6) continue;
+    const inCage = Math.abs(dx) <= 1 && Math.abs(dz) <= 1;
+    if (!inCage) { set(x, base - 1, z, get(x, base - 1, z) ? get(x, base - 1, z) : SBRICK); for (let y = base; y <= base + 4; y++) set(x, y, z, AIR); }
+    if (d >= 5.7) for (let y = base; y <= base + 2; y++) set(x, y, z, BAR_BLUE);
+    else if (!inCage) set(x, base - 1, z, d > 4.6 && d < 5.4 ? STRIPE : SBRICK);
+  }
+  for (const [dx, dz] of [[0, -4], [0, 4]]) { for (let y = 0; y < 2; y++) { set(AX + dx, base + y, AZ + dz, EGGWALL); A.eggs.push([AX + dx, base + y, AZ + dz]); } }
+  set(AX + 4, base, AZ, CRATE);
+  for (const [dx, dz] of [[-3, -3], [3, 3], [-3, 3], [3, -3]]) set(AX + dx, base, AZ + dz, STRIP);
+  LS.arena = A;
+}
+function updK7b(dt) {
+  updK7();
+  const A = LS.arena; if (!A || A.done || isGuest()) return;
+  const inside = Math.hypot(player.pos.x - A.x, player.pos.z - A.z) < 5.2 && Math.abs(player.pos.y - A.y) < 4;
+  if (!A.on && (inside || crewTargets.some((c) => Math.hypot(c.x - A.x, c.z - A.z) < 5.2 && Math.abs(c.y - A.y) < 5))) {
+    A.on = true; arenaGates(true); sfx.drop(); netOp(['L', 'arena', 1]);
+    for (let k = 0; k < capA(4); k++) { const a = k / capA(4) * Math.PI * 2; spawnAlien(new V3(A.x + Math.cos(a) * 3.5, A.y + 0.6, A.z + Math.sin(a) * 3.5)); }
+    toast('ARENA! The barriers turned red. Break the 2 egg walls and beat every alien inside.', 3.5);
+  }
+  if (A.on) {
+    A.eggsLeft = cellsLeft(A.eggs, EGGWALL); A.near = aliens.filter((a) => a.hp > 0 && Math.hypot(a.pos.x - A.x, a.pos.z - A.z) < 7.5).length;
+    if (!A.eggsLeft && !A.near) { A.on = false; A.done = true; arenaGates(false); sfx.win(); netOp(['L', 'arena', 2]); toast('Arena clear! The barriers are blue again.', 3); }
+  }
+}
+function hudK7b() {
+  const A = LS.arena;
+  if (A && A.on) return ['Clear the arena', `${A.eggsLeft ?? 2} egg wall blocks · ${A.near ?? 0} aliens left · red barriers stay closed until then`];
+  if (carrying) return null;
+  return ['Reach the artifact', 'Bridge to the arena, or use the orange boost pad · ores give 3 to 5 blocks'];
+}
+// --- Station Helios: airlock and console, conveyor, light strips, pipes, a pit with a crumbling bridge, an energy-barrier vault
+function genStationB() {
+  genStation();
+  box(14, 1, -1, 14, 3, 1, BAR_RED); // vault: red barrier until you have the 3 keycards
+  for (let x = -17; x <= -8; x++) set(x, 0, 0, CONVEYOR + 1); // the west hall carries you to the middle room
+  for (let x = -17; x <= -7; x++) { set(x, 1, -1, STRIP); set(x, 3, 1, PIPE); set(x, 3, -1, CABLE); }
+  for (let x = 7; x <= 13; x++) { set(x, 1, 1, STRIP); set(x, 3, -1, PIPE); }
+  for (let z = -13; z <= -6; z++) { set(1, 1, z, STRIP + 1); set(-1, 3, z, PIPE + 2); }
+  for (let z = 6; z <= 12; z++) { set(-1, 1, z, STRIP + 1); set(1, 3, z, CABLE + 2); }
+  // south hall: an airlock, opened from the console in the middle room
+  box(-1, 1, -10, 1, 3, -10, HULL); for (const [x, y] of [[-1, 1], [0, 1], [-1, 2], [0, 2]]) set(x, y, -10, AIRLOCK);
+  set(-2, 1, -5, CONSOLE); for (const x of [-3, -1]) set(x, 0, -5, STRIPE);
+  // north wing: a pit across the room, a crumbling bridge and a ladder to climb out
+  box(-6, -4, 16, 6, -1, 19, HULL); box(-5, -3, 17, 5, -1, 18, AIR); box(-5, 0, 17, 5, 0, 18, AIR);
+  for (let x = -5; x <= 5; x++) { set(x, 0, 16, STRIPE); set(x, 0, 19, STRIPE); }
+  set(0, 0, 17, CRUMBLE); set(0, 0, 18, CRUMBLE); set(-4, 1, 17, AIR); set(-4, 1, 18, AIR);
+  for (let y = -3; y <= -1; y++) set(4, y, 18, LADDER + 2);
+  // supplies, roof radar, warning stripes around the jump pad, a teleporter pad in the vault (its partner by the ship turns on with the keycards)
+  set(5, 1, -21, CRATE); set(-5, 1, 21, CRATE); set(4, 7, -4, ANTENNA); set(-4, 7, 4, ANTENNA);
+  for (const [x, z] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) set(x, 0, z, STRIPE);
+  set(24, 0, -5, TELE); set(-20, 0, 4, HULL);
+  for (const [x, z] of [[-24, -5], [-24, 5], [-29, -5], [-29, 5]]) set(x, 1, z, LAMP);
+}
+function hudStationB() {
+  if (LS.got < 3) return ['Find 3 keycards', `${LS.got} of 3 · south door: airlock, use the console in the middle room · north: a pit with a crumbling bridge · roof: jump pad`];
+  if (!carrying) return ['Open the vault', 'East hall · the barrier is blue now · grab the artifact'];
+  return ['Back to your ship', 'Take the teleporter in the vault: it goes to your ship'];
+}
+// --- Lava hive: lava pools in the tunnels, crumbling bridges, vines, glowing ore, egg walls, a teleporter back up
+function genHiveB() {
+  genHive();
+  const along = (path, f) => { for (let i = 0; i < path.length - 1; i++) for (let k = 0; k <= 4; k++) { const a = new V3(...path[i]).lerp(new V3(...path[i + 1]), k / 4); f(Math.floor(a.x), Math.floor(a.y), Math.floor(a.z), i, k); } };
+  const floorY = (x, y, z) => { for (let q = y; q > y - 6; q--) if (get(x, q, z)) return q; return null; };
+  // lava pools on the tunnel floor, each with a crumbling bridge
+  for (const [x0, y0, z0, dir] of [[7, -2, -3, 1], [-5, -4, -6, 1], [9, -2, 1, 0]]) {
+    const fy = floorY(x0, y0, z0); if (fy === null) continue;
+    for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) { if (Math.hypot(dx, dz) > 2.2) continue; const fx = x0 + dx, fz = z0 + dz, f2 = floorY(fx, y0, fz); if (f2 !== null && f2 >= fy - 1 && get(fx, f2 + 1, fz) === AIR) set(fx, f2, fz, LAVA); }
+    for (let k = -2; k <= 2; k++) { const bx = dir ? x0 + k : x0, bz = dir ? z0 : z0 + k; if (get(bx, fy, bz) === LAVA) set(bx, fy, bz, CRUMBLE); }
+  }
+  // glowing ore in the tunnel walls (it lights up the dark)
+  const rnd = mulberry32(2207);
+  for (const path of HIVE_PATHS) along(path, (x, y, z) => {
+    for (const [dx, dz] of D4) { let q = 1; while (q < 5 && !get(x + dx * q, y, z + dz * q)) q++; const wx = x + dx * q, wz = z + dz * q; if (get(wx, y, wz) === ROCK && rnd() < 0.35) set(wx, y, wz, rnd() < 0.6 ? ORE_EN : ORE_GOLD); }
+  });
+  // vines on the walls of the steep way in (climb them to get out)
+  along(HIVE_PATHS[0], (x, y, z, i) => {
+    if (i > 2) return;
+    for (let k = 0; k < 4; k++) { const [dx, dz] = D4[k]; let q = 0; while (q < 4 && !get(x + dx * (q + 1), y, z + dz * (q + 1))) q++; const vx = x + dx * q, vz = z + dz * q;
+      if (q > 0 && get(vx + dx, y, vz + dz)) for (let h = -1; h <= 2; h++) if (!get(vx, y + h, vz) && get(vx + dx, y + h, vz + dz)) set(vx, y + h, vz, VINE + k); }
+  });
+  // alien egg walls at two dead ends: they hatch aliens while you are near
+  for (const [x, y, z] of [[-10, -4, 1], [-3, -2, 8]]) { let q = x; for (let s = 0; s < 4 && !get(q, y, z); s++) q--; set(q, y, z, EGGWALL); set(q, y + 1, z, EGGWALL); }
+  // teleporter in the middle room and next to the landing pad
+  { const fy = floorY(2, -1, 0); if (fy !== null) set(2, fy, 0, TELE); }
+  { const t = topAt(-5, -5); if (t !== null) set(-5, t, -5, TELE); }
+  alienPlants(-14, 14, -14, 14, 2208, (x, z) => Math.hypot(x - 6, z - 4) < 3 || Math.hypot(x + 3, z + 3) < 2 || Math.hypot(x + 5, z + 5) < 1.5);
+  putTree(-8, 8); putTree(9, -8); putTree(-9, -9);
+}
 const SKY0 = { earth: [1150, 230, -260], es: 1, hemi: [0x7cc4ff, 0x1d5a34, 0.62], sun: 0.95, spin: 0 };
+{ // the new missions (the old ones stay as legacy missions)
+  const k7 = lvBy('Asteroid K-7'), st = lvBy('Derelict station'), hv = lvBy('Hive tunnels');
+  LEVELS.push(
+    Object.assign({}, k7, { v2: true, name: 'K-7 mining outpost', gen: genK7b, update: updK7b, hud: hudK7b, par: 300,
+      brief: 'Mine the glowing ores (3 to 5 blocks each), build to the arena around the artifact, beat the aliens inside and fly the artifact home.',
+      tip: 'The orange boost pad on the edge throws you to the arena. The purple teleporter takes you to a little rock with ore and a supply crate.',
+      bonus: () => ['Mine 10 ore blocks', (LS.ore || 0) >= 10 ? 1 : 0],
+      netOut: () => [LS.arena ? (LS.arena.done ? 2 : LS.arena.on ? 1 : 0) : 0], netIn: (X) => { if (Array.isArray(X) && LS.arena && fin(X[0])) { LS.arena.on = X[0] === 1; LS.arena.done = X[0] === 2; } },
+      onOp: (k, a) => { if (k === 'arena') toast(a[0] === 1 ? 'ARENA! The barriers turned red. Break the egg walls and beat the aliens inside.' : 'Arena clear!', 2.5); } }),
+    Object.assign({}, st, { v2: true, name: 'Station Helios', gen: genStationB, hud: hudStationB, par: 380,
+      brief: 'A dark space station. Turn on the power, open the airlock from the console, cross the pit, find 3 keycards and take the artifact from the vault.',
+      tip: 'Aim at the console with your gun and tap to open the airlock. The crumbling bridge breaks 1 second after you step on it: run!' }),
+    Object.assign({}, hv, { v2: true, name: 'Lava hive', gen: genHiveB, par: 360,
+      brief: 'A hive in a lava rock. Burn the egg sacs, stay out of the lava, break the egg walls, then get out (the teleporter in the middle room takes you up).',
+      tip: 'Lava burns fast. Cross on the crumbling bridges, or build your own. Climb the vines on the way out.' }),
+  );
+}
 let L = LEVELS[0], LS = {}, meshDirty = false, o2 = 100, frost = 0, jam = 0;
 const upg = { dash: false, shield: false };
-const run = { order: [0, 1, 2, 3, 4, 5, 6], i: 0 };
+const run = { order: [0, 1, 2, 3, 4, 5, 6], i: 0, legacy: false };
 // difficulty scales how many aliens come and how fast; pickLv -1 = all solo missions in random order; pickCoop: co-op panel choice
 const DIFF = [{ n: 'Easy', m: 0.6 }, { n: 'Normal', m: 1 }, { n: 'Hard', m: 1.6 }, { n: 'Insane', m: 2.4 }];
 let diff = 1, pickLv = -1, pickCoop = -1;
-const VERSION = 'v3.7';
+const VERSION = 'v4.0';
 document.querySelectorAll('.ver').forEach((e) => { e.textContent = VERSION; });
 const cleanName = (n) => String(n || '').replace(/[^\p{L}\p{N} _.!?-]/gu, '').trim().slice(0, 12);
 let myName = ''; try { myName = cleanName(localStorage.getItem('starblock.name')); } catch (e) {}
@@ -2888,9 +3118,12 @@ let best = {};
 try { best = JSON.parse(localStorage.getItem('starblock.best') || '{}') || {}; } catch (e) {}
 const starStr = (n) => '★'.repeat(n) + '☆'.repeat(3 - n);
 function shuffle(o) { for (let i = o.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [o[i], o[j]] = [o[j], o[i]]; } return o; }
+// the mission list: the new missions; the old ones are 'legacy missions' (small list at the bottom of the menu)
+const soloList = (legacy) => LEVELS.map((_, i) => i).filter((i) => !LEVELS[i].coop && !!LEVELS[i].v2 !== !!legacy);
 function newRun() {
-  const solo = LEVELS.map((_, i) => i).filter((i) => !LEVELS[i].coop);
-  const pick = NET && NET.host && pickCoop >= 0 && LEVELS[pickCoop] ? pickCoop : LEVELS[pickLv] && !LEVELS[pickLv].coop ? pickLv : -1;
+  if (NET) run.legacy = false;
+  const solo = soloList(run.legacy);
+  const pick = NET && NET.host && pickCoop >= 0 && LEVELS[pickCoop] ? pickCoop : solo.includes(pickLv) ? pickLv : -1;
   let o = solo.slice();
   shuffle(o);
   if (pick >= 0) o = [pick, ...o.filter((i) => i !== pick)]; // the chosen mission first, the rest in a random order
@@ -2910,16 +3143,35 @@ function objTarget() { return (L.target && L.target()) || (carrying || netCarrie
 // You build here with the blocks you mined in missions. Saved on this device, and in a save picture.
 const HUB_TYPES = [ROCK, REGO, ICE, FROST, MOSS, CRYSTAL, SHARD, ALLOY, HULL, PANEL];
 // building blocks: made from your storage (each one uses 1 block of the type you have most of)
-const DECOR = [PLANK, LOG, BRICK, SBRICK, SLABW, SLABS, STAIRW, STAIRS, GLASS, LAMP, DOOR, LADDER, FENCE, TABLE, CHEST, SIGN, SAND, GRAVEL, SOIL, WATER, PLANT, FLOWER, AFLOWER, WOOL, WOOL + 1, WOOL + 2, WOOL + 3, WOOL + 4, WOOL + 5, WOOL + 6, WOOL + 7];
-const ALL_HUB = [...HUB_TYPES, ...DECOR];
+// every block you can place in the mothership, in groups (the order of the block picker)
+const BLOCK_CATS = [
+  ['Ground and ore', [ROCK, REGO, SOIL, SAND, GRAVEL, ICE, FROST, MOSS, CRYSTAL, SHARD, ORE_GOLD, ORE_EN, ORE_TECH]],
+  ['Plants and trees', [PLANT, FLOWER, APLANT, AFLOWER, VINE, LOG, ATREE, ALOG, ALEAF]],
+  ['Water and lava', [WATER, LAVA]],
+  ['Walls and floors', [PLANK, BRICK, SBRICK, PANEL, HULL, ALLOY, STRIPE, GLASS]],
+  ['Half blocks and stairs', [SLABW, SLABS, STAIRW, STAIRS, FENCE]],
+  ['Lights', [LAMP, STRIP]],
+  ['Doors and furniture', [DOOR, AIRLOCK, LADDER, TABLE, CHEST, SIGN]],
+  ['Space tech', [CONSOLE, PIPE, CABLE, ANTENNA]],
+  ['Movement', [PAD, BOOST, CONVEYOR, FAST, GRAVPAD, TELE, CRUMBLE]],
+  ['Combat', [BAR_BLUE, BAR_RED, CRATE, EGGWALL]],
+  ['Colours', [WOOL, WOOL + 1, WOOL + 2, WOOL + 3, WOOL + 4, WOOL + 5, WOOL + 6, WOOL + 7]],
+];
+const ALL_HUB = BLOCK_CATS.flatMap((c) => c[1]);
 const isHubBlock = (t) => ALL_HUB.includes(baseOf(t));
 const BLOCK_NAME = { [ROCK]: 'Rock', [REGO]: 'Moon dust', [ICE]: 'Ice', [FROST]: 'Deep frost', [MOSS]: 'Moss', [CRYSTAL]: 'Crystal', [SHARD]: 'Comet shard', [ALLOY]: 'Alien metal', [HULL]: 'Hull plate', [PANEL]: 'Build block',
   [PLANK]: 'Wood planks', [LOG]: 'Wood log', [BRICK]: 'Red bricks', [SBRICK]: 'Stone bricks', [SLABW]: 'Wood slab (half)', [SLABS]: 'Stone slab (half)', [STAIRW]: 'Wood stairs', [STAIRS]: 'Stone stairs',
   [GLASS]: 'Glass', [LAMP]: 'Lamp', [DOOR]: 'Door', [LADDER]: 'Ladder', [FENCE]: 'Fence', [TABLE]: 'Table', [CHEST]: 'Chest', [SIGN]: 'Sign', [SAND]: 'Sand', [GRAVEL]: 'Gravel', [SOIL]: 'Soil',
-  [WATER]: 'Water', [PLANT]: 'Grass', [FLOWER]: 'Flower', [AFLOWER]: 'Alien flower' };
+  [WATER]: 'Water', [PLANT]: 'Grass', [FLOWER]: 'Flower', [AFLOWER]: 'Alien flower',
+  [ORE_GOLD]: 'Gold ore (+3)', [ORE_EN]: 'Energy ore (+4)', [ORE_TECH]: 'Alien tech ore (+5)', [STRIPE]: 'Warning stripes', [LAVA]: 'Lava (hot!)', [APLANT]: 'Alien grass', [ALOG]: 'Alien wood',
+  [ALEAF]: 'Alien leaves', [ATREE]: 'Alien tree', [VINE]: 'Vines (climb)', [CONSOLE]: 'Console (opens airlocks)', [PIPE]: 'Pipe', [CABLE]: 'Cable', [STRIP]: 'Light strip', [ANTENNA]: 'Radar dish',
+  [AIRLOCK]: 'Airlock (2 × 2)', [PAD]: 'Jump pad', [BOOST]: 'Boost pad', [CONVEYOR]: 'Conveyor belt', [FAST]: 'Fast lane', [GRAVPAD]: 'Gravity pad', [TELE]: 'Teleporter', [CRUMBLE]: 'Crumbling block',
+  [BAR_BLUE]: 'Energy barrier (blue, open)', [BAR_RED]: 'Energy barrier (red, closed)', [CRATE]: 'Supply crate', [EGGWALL]: 'Alien egg wall' };
 ['White', 'Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Purple', 'Black'].forEach((n, k) => { BLOCK_NAME[WOOL + k] = n + ' block'; });
-let hubMode = false, hubType = ROCK, inv = {}, hubEdits = new Map(), signText = new Map();
-try { const o = JSON.parse(localStorage.getItem('starblock.inv') || '{}'); for (const t of ALL_HUB) if (o[t] > 0) inv[t] = Math.floor(o[t]); } catch (e) {}
+// one block storage: every block you mine adds 1, every block you place in the mothership (any type) uses 1
+let hubMode = false, hubType = ROCK, store = 0, hubEdits = new Map(), signText = new Map();
+const sumStore = (o) => (o && typeof o === 'object' ? Object.values(o).reduce((a, v) => a + (v > 0 ? Math.floor(v) : 0), 0) : 0); // old saves kept a count per type
+try { store = sumStore(JSON.parse(localStorage.getItem('starblock.inv') || '{}')); } catch (e) {}
 try { const o = JSON.parse(localStorage.getItem('starblock.signs') || '{}'); for (const k in o) signText.set(+k, String(o[k]).slice(0, 60)); } catch (e) {}
 // the mothership world: x -96..95, y -8..39, z -48..47
 const HUBD = [192, 48, 96, 96, 8, 48], HUB_LEN = HUBD[0] * HUBD[1] * HUBD[2];
@@ -2933,20 +3185,20 @@ let invSaveT = 0;
 function saveInvSoon() { clearTimeout(invSaveT); invSaveT = setTimeout(saveStore, 800); }
 function saveStore() {
   try {
-    localStorage.setItem('starblock.inv', JSON.stringify(inv));
+    localStorage.setItem('starblock.inv', JSON.stringify({ all: store }));
     const a = []; for (const [k, t] of hubEdits) a.push(k, t);
     localStorage.setItem('starblock.hub2', JSON.stringify(a));
     localStorage.setItem('starblock.signs', JSON.stringify(Object.fromEntries(signText)));
   } catch (e) {}
 }
-function addInv(t, n) { t = baseOf(t); if (!ALL_HUB.includes(t)) return; inv[t] = Math.max(0, (inv[t] || 0) + n); saveInvSoon(); if (L.hub) fillHubInv(); }
+function addInv(t, n) { if (!t) return; store = Math.max(0, store + n); saveInvSoon(); if (L.hub) fillHubInv(); }
 const HUB_SPAWN = new V3(43.5, 0, 0.5);
 // trophy room and costume room sit side by side across the hall from the hangar
 const TROPHY_ROOM = { x0: -36, x1: -14, z0: 4, z1: 13 };
 const COS_ROOM = { x0: -12, x1: 5, z0: 4, z1: 13 };
 // trophy cabinet on the far wall: 9 columns, 2 shelves high (lower shelf first)
 const TROPHY_SPOTS = [];
-for (const lv of [0, 1]) for (let k = 0; k < 9; k++) TROPHY_SPOTS.push([-24.5 + (k - 4) * 2.4, lv]);
+for (const lv of [0, 1, 2]) for (let k = 0; k < 9; k++) TROPHY_SPOTS.push([-24.5 + (k - 4) * 2.4, lv]);
 // shooting range next to the costume room
 const RANGE = { x0: 7, x1: 25, z0: 4, z1: 31, btnZ: 7, btn: [19, 16, 13] }; // seen from the shooting line: EASY left, HARD right
 // the bridge, with the statue of Luke and Simo
@@ -3036,7 +3288,7 @@ function genHub() {
   for (const [k, t] of [...hubEdits]) {
     if (!(k >= 0 && k < world.length)) { hubEdits.delete(k); continue; }
     if (t === AIR) { if (hubSoft[k]) world[k] = AIR; else hubEdits.delete(k); continue; } // soil you dug away
-    if (world[k] === AIR || hubSoft[k]) world[k] = t; else { hubEdits.delete(k); inv[t] = (inv[t] || 0) + 1; back++; }
+    if (world[k] === AIR || hubSoft[k]) world[k] = t; else { hubEdits.delete(k); store++; back++; }
   }
   if (back) { saveStore(); setTimeout(() => toast(`${back} of your blocks did not fit in the bigger ship. They are back in your storage.`, 3.5), 600); }
   spawn.copy(HUB_SPAWN); shipPos.set(0, -400, 0);
@@ -3226,12 +3478,13 @@ function trophyGeos() {
   return trophyGeo;
 }
 function buildTrophies() {
+  const order = [...LEVELS.map((_, i) => i).filter((i) => LEVELS[i].v2), ...LEVELS.map((_, i) => i).filter((i) => !LEVELS[i].v2)]; // the new missions on the lowest shelf
   const n = Math.min(LEVELS.length, TROPHY_SPOTS.length), G = trophyGeos(), o = new THREE.Object3D();
-  const spotM = (i) => { const [x, lv] = TROPHY_SPOTS[i]; o.position.set(x, lv ? 1.6 : 0, TROPHY_ROOM.z1 + 0.55); o.rotation.set(0, Math.PI, 0); o.scale.setScalar(1); o.updateMatrix(); return o.matrix.clone(); };
+  const spotM = (i) => { const [x, lv] = TROPHY_SPOTS[i]; o.position.set(x, lv * 1.6, TROPHY_ROOM.z1 + 0.55); o.rotation.set(0, Math.PI, 0); o.scale.setScalar(1); o.updateMatrix(); return o.matrix.clone(); };
   const cupLocal = new THREE.Matrix4().compose(new V3(0, 1.04, 0), new THREE.Quaternion(), new V3(0.95, 0.95, 0.95));
   const inst = (geo, mat, mats) => { if (!mats.length) return; const m = new THREE.InstancedMesh(geo, mat, mats.length); mats.forEach((q, k) => m.setMatrixAt(k, q)); m.instanceMatrix.needsUpdate = true; m.frustumCulled = false; lvlG.add(m); };
   const all = [], byTier = [[], [], [], []];
-  for (let i = 0; i < n; i++) { const S = spotM(i); all.push(S); const b = best[i]; byTier[b ? clamp(b.s, 1, 3) : 0].push(S.clone().multiply(cupLocal)); }
+  for (let k = 0; k < n; k++) { const S = spotM(k); all.push(S); const b = best[order[k]]; byTier[b ? clamp(b.s, 1, 3) : 0].push(S.clone().multiply(cupLocal)); }
   inst(G.wood, new THREE.MeshPhongMaterial({ color: 0x6a4a30, map: woodTexture(), shininess: 20 }), all);
   inst(G.back, new THREE.MeshPhongMaterial({ color: 0x1d2a3c, shininess: 30 }), all);
   const dark = new THREE.MeshPhongMaterial({ color: 0x2a1c14, shininess: 40 });
@@ -3240,7 +3493,7 @@ function buildTrophies() {
   const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 2048; const c = cv.getContext('2d'), CH = 150;
   const pos = [], uv = [], idxs = [];
   for (let i = 0; i < n; i++) {
-    const col = i % 2, row = i >> 1; c.save(); c.translate(col * 512, row * CH); drawPlaque(c, i, best[i]); c.restore();
+    const col = i % 2, row = i >> 1; c.save(); c.translate(col * 512, row * CH); drawPlaque(c, order[i], best[order[i]]); c.restore();
     const u0 = col * 0.5, u1 = u0 + 0.5, vt = 1 - row * CH / 2048, vb = 1 - (row + 1) * CH / 2048;
     const pl = new THREE.PlaneGeometry(1.6, 0.47); pl.applyMatrix4(all[i].clone().multiply(new THREE.Matrix4().makeTranslation(0, 0.68, 0.36)));
     const P = pl.attributes.position, U = pl.attributes.uv, base = pos.length / 3;
@@ -3509,7 +3762,7 @@ function setupHub() {
     m.position.set(Math.cos(a) * Math.cos(el) * d, Math.sin(el) * d, Math.sin(a) * Math.cos(el) * d);
     m.scale.setScalar(6 + rnd() * 22); m.userData.spin = (rnd() - 0.5) * 0.3; lvlG.add(m); LS.rocks.push(m);
   }
-  if (!ALL_HUB.includes(hubType) || (HUB_TYPES.includes(hubType) && !(inv[hubType] > 0))) hubType = HUB_TYPES.find((t) => inv[t] > 0) || PLANK;
+  if (!ALL_HUB.includes(hubType)) hubType = ROCK;
   blocks = 0; fillHubInv();
 }
 function updHub(dt) {
@@ -3524,8 +3777,7 @@ function hudHub() {
   const R = LS.range;
   if (R && R.phase === 'count') return [`Shooting range · ${RANGE_MODES[R.mode].n}`, `Get ready… ${Math.ceil(R.t)}`];
   if (R && R.phase === 'run') return [`Shooting range · ${RANGE_MODES[R.mode].n} · ${Math.ceil(R.t)} s`, `${R.hits} targets hit`];
-  const n = inv[hubType] || 0;
-  return ['Your mothership', DECOR.includes(hubType) ? `Building with: ${BLOCK_NAME[hubType]}${n ? ' ×' + n : ''} · made from your storage (${storeTotal()} blocks) · MORE BLOCKS to change` : `Building with: ${BLOCK_NAME[hubType]} ×${n} · B or tap below to change · blocks come from mining in missions`];
+  return ['Your mothership', `Building with: ${BLOCK_NAME[hubType]} · ${store} blocks in storage · every block you mine in missions adds 1`];
 }
 const HUB = { name: 'Your mothership', hub: true, brief: 'Your home. Build here with the blocks you mined in missions. Your trophies stand in the trophy room.',
   gen: genHub, setup: setupHub, update: updHub, hud: hudHub, secrets: () => {}, targets: rangeTargets, saucers: [], sc: [0, 0, 0], par: 9999, target: () => HUB_SPAWN,
@@ -3541,7 +3793,14 @@ function blockIcon(t) {
     if (shade) { c.fillStyle = `rgba(0,0,0,${shade})`; c.fillRect(0, 0, 16, 16); } c.restore();
   };
   const h = S / 2, q = S / 4, bt = baseOf(t);
-  if (CROSS.has(t) || bt === LADDER) { c.drawImage(img, tl[1] * 16, 0, 16, 16, 4, 4, S - 8, S - 8); return (blockIcons[t] = cv.toDataURL()); }
+  const ico = () => (blockIcons[t] = cv.toDataURL());
+  if (t === ATREE) { c.drawImage(img, 59 * 16, 0, 16, 16, 20, 24, 8, 22); c.drawImage(img, 61 * 16, 0, 16, 16, 6, 2, 36, 26); return ico(); }
+  if (t === ANTENNA) { c.fillStyle = '#96a0b0'; c.fillRect(22, 24, 4, 22); c.fillStyle = '#dfe6ee'; c.beginPath(); c.ellipse(24, 18, 16, 9, -0.4, 0, Math.PI); c.fill(); c.fillStyle = '#ff5a6a'; c.fillRect(27, 8, 4, 4); return ico(); }
+  if (bt === AIRLOCK) { c.drawImage(img, 68 * 16, 0, 16, 16, 4, 4, 20, 40); c.drawImage(img, 68 * 16, 0, 16, 16, 24, 4, 20, 40); return ico(); }
+  if (bt === PIPE) { c.drawImage(img, 65 * 16, 0, 16, 16, 2, 16, 44, 16); c.fillStyle = 'rgba(0,0,0,.25)'; c.fillRect(2, 28, 44, 4); c.fillRect(6, 14, 4, 20); c.fillRect(38, 14, 4, 20); return ico(); }
+  if (bt === CABLE) { for (const [col, w] of [['#9aa6b8', 8], ['#2a2e34', 5]]) { c.strokeStyle = col; c.lineWidth = w; c.beginPath(); c.moveTo(4, 30); c.bezierCurveTo(16, 6, 30, 42, 44, 16); c.stroke(); } c.fillStyle = '#4fb3ff'; c.fillRect(20, 22, 4, 4); return ico(); }
+  if (bt === STRIP) { c.fillStyle = '#5ff2ff'; c.fillRect(4, 20, 40, 8); c.fillStyle = '#ebfcff'; c.fillRect(4, 22, 40, 4); return ico(); }
+  if (CROSS.has(t) || bt === LADDER || bt === VINE) { c.drawImage(img, tl[1] * 16, 0, 16, 16, 4, 4, S - 8, S - 8); return (blockIcons[t] = cv.toDataURL()); }
   if (bt === DOOR) { c.drawImage(img, 49 * 16, 0, 16, 16, 12, 2, 24, 22); c.drawImage(img, 48 * 16, 0, 16, 16, 12, 24, 24, 22); return (blockIcons[t] = cv.toDataURL()); }
   if (bt === SIGN) { c.fillStyle = '#6a4220'; c.fillRect(21, 26, 6, 20); c.drawImage(img, 27 * 16, 0, 16, 16, 4, 6, 40, 22); c.fillStyle = '#2a1a0a'; c.fillRect(10, 13, 28, 3); c.fillRect(10, 19, 20, 3); return (blockIcons[t] = cv.toDataURL()); }
   if (bt === SLABW || bt === SLABS || bt === STAIRW || bt === STAIRS) { // a half-height cube (stairs get a step on top)
@@ -3554,28 +3813,32 @@ function blockIcon(t) {
   face(tl[1], h, -q, 0, h, h, h, 0.4);        // right side
   return (blockIcons[t] = cv.toDataURL());
 }
-const storeTotal = () => HUB_TYPES.reduce((a, t) => a + (inv[t] || 0), 0);
+const storeTotal = () => store;
+// block picker: the block in your hand, how many blocks you have, and a button that opens every block type
 function fillHubInv() {
   const el = $('hubInv'); el.innerHTML = '';
-  const chip = (t, label, big) => {
+  const chip = (t, big) => {
     const b = document.createElement('button'); b.className = 'hb' + (t === hubType ? ' on' : '') + (big ? ' big' : '');
-    b.innerHTML = `<img src="${blockIcon(t)}" alt="">${big ? `<span>${BLOCK_NAME[t]}</span>` : ''}${label}`;
+    b.innerHTML = `<img src="${blockIcon(t)}" alt=""><span>${BLOCK_NAME[t]}</span>`;
     b.title = BLOCK_NAME[t]; b.setAttribute('aria-label', BLOCK_NAME[t]);
     b.addEventListener('click', (e) => { e.stopPropagation(); hubType = t; $('hubMore').hidden = true; fillHubInv(); selectTool(2); });
     return b;
   };
-  for (const t of HUB_TYPES) el.appendChild(chip(t, inv[t] || 0));
-  if (DECOR.includes(hubType)) el.appendChild(chip(hubType, inv[hubType] > 0 ? inv[hubType] : ''));
-  const more = document.createElement('button'); more.className = 'hb more'; more.textContent = $('hubMore').hidden ? '▦ MORE BLOCKS' : '✕ CLOSE';
+  const cur = chip(hubType); cur.classList.add('on'); cur.addEventListener('click', () => { $('hubMore').hidden = false; fillHubInv(); }); el.appendChild(cur);
+  const cnt = document.createElement('span'); cnt.className = 'hcount'; cnt.textContent = `${store} blocks`; el.appendChild(cnt);
+  const more = document.createElement('button'); more.className = 'hb more'; more.textContent = $('hubMore').hidden ? '▦ ALL BLOCKS' : '✕ CLOSE';
   more.addEventListener('click', (e) => { e.stopPropagation(); $('hubMore').hidden = !$('hubMore').hidden; fillHubInv(); });
   el.appendChild(more);
-  const pm = $('hubMore'); pm.innerHTML = `<div class="hm-t">Building blocks · each one uses 1 block from your storage (you have ${storeTotal()})</div>`;
-  const grid = document.createElement('div'); grid.className = 'hm-g'; pm.appendChild(grid);
-  for (const t of DECOR) grid.appendChild(chip(t, inv[t] > 0 ? `<b>${inv[t]}</b>` : '', true));
+  const pm = $('hubMore'); pm.innerHTML = `<div class="hm-t">Pick a block · every block uses 1 from your storage (you have ${store})</div>`;
+  for (const [name, list] of BLOCK_CATS) {
+    const h = document.createElement('div'); h.className = 'hm-h'; h.textContent = name; pm.appendChild(h);
+    const grid = document.createElement('div'); grid.className = 'hm-g'; pm.appendChild(grid);
+    for (const t of list) grid.appendChild(chip(t, true));
+  }
   setHandTile(TILES[hubType] ? TILES[hubType][1] : 6);
 }
-function setHandTile(tile) { const m = tools[2].material; if (m && m.map) m.map.offset.set(tile / 64, 0); }
-function cycleHubType() { const i = ALL_HUB.indexOf(hubType); hubType = ALL_HUB[(i + 1) % ALL_HUB.length]; fillHubInv(); selectTool(2); toast(`${BLOCK_NAME[hubType]}${HUB_TYPES.includes(hubType) ? ' ×' + (inv[hubType] || 0) : ''}`, 1.2); }
+function setHandTile(tile) { const m = tools[2].material; if (m && m.map) m.map.offset.set(tile / ATW, 0); }
+function cycleHubType() { const i = ALL_HUB.indexOf(hubType); hubType = ALL_HUB[(i + 1) % ALL_HUB.length]; fillHubInv(); selectTool(2); toast(BLOCK_NAME[hubType], 1.2); }
 function enterHub() {
   if (NET) return;
   hubMode = true; paused = false; $('pause').hidden = true; state = 'play';
@@ -3597,7 +3860,7 @@ function packSave() {
   const keys = [...hubEdits.keys()].sort((a, b) => a - b), eb = [];
   let prev = 0;
   for (const k of keys) { let d = k - prev; prev = k; while (d >= 128) { eb.push((d & 127) | 128); d >>>= 7; } eb.push(d); eb.push(hubEdits.get(k)); }
-  const js = new TextEncoder().encode(JSON.stringify({ v: 2, n: myName, b: best, i: inv, c: costume, h: rangeBest, g: Object.fromEntries(signText) }));
+  const js = new TextEncoder().encode(JSON.stringify({ v: 2, n: myName, b: best, i: { all: store }, c: costume, h: rangeBest, g: Object.fromEntries(signText) }));
   const out = []; let n = js.length; while (n >= 128) { out.push((n & 127) | 128); n >>>= 7; } out.push(n);
   return new Uint8Array([...out, ...js, ...eb]);
 }
@@ -3692,7 +3955,7 @@ async function loadSaveImage(file) {
   if (!raw) throw new Error('This browser cannot unpack the save.');
   const d = unpackSave(raw);
   best = d.b && typeof d.b === 'object' ? d.b : {};
-  inv = {}; for (const t of ALL_HUB) if (d.i && d.i[t] > 0) inv[t] = Math.floor(d.i[t]);
+  store = sumStore(d.i);
   hubEdits = d.ed;
   signText = new Map(); if (d.g && typeof d.g === 'object') for (const k in d.g) signText.set(+k, String(d.g[k]).slice(0, 60));
   if (typeof d.n === 'string') setName(d.n);
@@ -3730,7 +3993,7 @@ function loadLevel() {
   buildMeshes(); applySky(); meshDirty = false;
   player.pos.copy(spawn); player.vel.set(0, 0, 0); player.yaw = -Math.PI / 2; player.pitch = -0.08; player.hp = 100; player.lastHurt = -99; player.jumped = false;
   carrying = false; mineKey = ''; mineProg = 0; frost = 0; jam = 0; o2 = 100;
-  abCd.fill(0); abOn.fill(0);
+  abCd.fill(0); abOn.fill(0); crumbles.clear(); eggT.clear(); gravT = 0; teleLock = '';
   aliens.forEach(a => scene.remove(a.mesh)); aliens = [];
   bolts.forEach(b => scene.remove(b.mesh)); bolts = [];
   saucers.forEach(s => scene.remove(s.mesh)); allSaucerMeshes.forEach((m) => scene.remove(m)); allSaucerMeshes.clear();
@@ -4093,6 +4356,11 @@ function breakBlock(hit) {
     const clear = (x, y, z) => { const kk = idx(x, y, z); set(x, y, z, AIR); if (hubSoft[kk]) hubEdits.set(kk, AIR); else hubEdits.delete(kk); signText.delete(kk); };
     clear(hit.x, hit.y, hit.z);
     if (isDoor(hit.type)) for (const dy of [-1, 1]) if (get(hit.x, hit.y + dy, hit.z) === hit.type) clear(hit.x, hit.y + dy, hit.z); // both halves of a door
+    if (isAirlock(hit.type)) { // the whole airlock
+      const todo = [[hit.x, hit.y, hit.z]];
+      for (let n = 0; todo.length && n < 8; n++) { const [ax, ay, az] = todo.pop(); for (const [dx, dy, dz] of [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]) if (isAirlock(get(ax + dx, ay + dy, az + dz))) { clear(ax + dx, ay + dy, az + dz); todo.push([ax + dx, ay + dy, az + dz]); } }
+    }
+    if (hit.type === CRATE) { abCd.fill(0); toast('Supply crate: powers recharged.', 1.6); }
     buildMeshes(); addInv(hit.type, 1); saveInvSoon();
     burst(new V3(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5), CHIP[hit.type] || 0x8fb4d6, 22, 3.5); sfx.break(); return;
   }
@@ -4108,34 +4376,52 @@ function breakBlock(hit) {
     burst(c, 0x5dffa8, 60, 6, 0);
     saucers.forEach(s => { if (!s.dead) s.drop = Math.min(s.drop, 1.5); });
   } else if (hit.type === WEB) sfx.break();
-  else { blocks++; mined++; sfx.break(); addInv(hit.type, 1); }
+  else {
+    const n = hit.type === ORE_GOLD ? 3 : hit.type === ORE_EN ? 4 : hit.type === ORE_TECH ? 5 : 1;
+    blocks += n; mined++; sfx.break(); addInv(hit.type, n); if (n > 1) LS.ore = (LS.ore || 0) + 1;
+    if (n > 1) { toast(`${BLOCK_NAME[hit.type].replace(/ \(.*/, '')}: +${n} blocks`, 1.4); sfx.pickup(); }
+    if (hit.type === CRATE) { player.hp = Math.min(100, player.hp + 50); abCd.fill(0); blocks += 4; toast('Supply crate: +50 health, powers recharged, +5 blocks', 2.2); sfx.repair(); }
+  }
 }
 // ---- building in the mothership
 const lookFacing = () => { const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw); return Math.abs(fx) > Math.abs(fz) ? (fx > 0 ? 1 : 3) : (fz < 0 ? 0 : 2); };
-function hubVariant(base, hit) { // which way stairs, ladders, doors and signs face
-  if (base === STAIRW || base === STAIRS || base === DOOR || base === SIGN) return base + lookFacing();
-  if (base === LADDER) { // against the wall you clicked
-    if (hit.nz === 1) return LADDER; if (hit.nx === -1) return LADDER + 1; if (hit.nz === -1) return LADDER + 2; if (hit.nx === 1) return LADDER + 3;
-    return LADDER + lookFacing();
-  }
+const wallFacing = (hit) => (hit.nz === 1 ? 0 : hit.nx === -1 ? 1 : hit.nz === -1 ? 2 : hit.nx === 1 ? 3 : -1); // the side of the cell where the wall you clicked is
+function hubVariant(base, hit) { // which way stairs, ladders, doors, signs, belts and pipes face
+  const lf = lookFacing();
+  if ([STAIRW, STAIRS, DOOR, SIGN, CONSOLE, CONVEYOR, BOOST].includes(base)) return base + lf;
+  if (base === LADDER || base === VINE) { const w = wallFacing(hit); return base + (w >= 0 ? w : lf); } // against the wall you clicked
+  if (base === PIPE || base === CABLE) return base + (hit.nx ? 0 : hit.nz ? 2 : 1); // along the side you clicked
+  if (base === STRIP) { const w = wallFacing(hit); return w >= 0 ? STRIP + 4 + w : STRIP + (hit.ny === -1 ? 2 : 0) + (lf % 2 ? 0 : 1); }
+  if (base === AIRLOCK) return AIRLOCK + (lf % 2 ? 1 : 0);
   return base;
 }
-function hubPay(base) { // use your own block of that type, or make one from your storage
-  if (inv[base] > 0) { inv[base]--; return true; }
-  if (!DECOR.includes(base)) return false;
-  const from = HUB_TYPES.filter((t) => inv[t] > 0).sort((a, b) => inv[b] - inv[a])[0];
-  if (from === undefined) return false;
-  inv[from]--; return true;
+function hubCells(t, x, y, z) { // the cells a block fills (doors 2 high, airlocks 2 x 2, a whole alien tree)
+  if (isDoor(t)) return [[x, y, z, t], [x, y + 1, z, t]];
+  if (t === AIRLOCK) return [[x, y, z, t], [x + 1, y, z, t], [x, y + 1, z, t], [x + 1, y + 1, z, t]];
+  if (t === AIRLOCK + 1) return [[x, y, z, t], [x, y, z + 1, t], [x, y + 1, z, t], [x, y + 1, z + 1, t]];
+  if (t === ATREE) {
+    const out = []; for (let k = 0; k < 4; k++) out.push([x, y + k, z, ALOG]);
+    for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) for (let dy = 3; dy <= 5; dy++) {
+      if (dx * dx + dz * dz + (dy - 4) * (dy - 4) * 1.6 > 5.2 || (!dx && !dz && dy === 3) || hash3(x + dx, y + dy, z + dz, 81) > 0.9) continue;
+      if (!get(x + dx, y + dy, z + dz) && inB(x + dx, y + dy, z + dz)) out.push([x + dx, y + dy, z + dz, ALEAF]);
+    }
+    return out;
+  }
+  return [[x, y, z, t]];
 }
+function hubPay() { if (store <= 0) return false; store--; return true; } // every block costs 1 from the storage
 function hubPlace(hit) {
   const base = hubType, t = hubVariant(base, hit);
   const x = hit.x + hit.nx, y = hit.y + hit.ny, z = hit.z + hit.nz;
-  const walk = COLL[t] && COLL[t].length === 0;
-  if (!inB(x, y, z) || get(x, y, z) || (!walk && playerOverlaps(x, y, z))) return;
-  if (isDoor(t) && (get(x, y + 1, z) || !inB(x, y + 1, z))) { toast('A door needs 2 free blocks of space.', 1.6); placeCd = 0.5; return; }
-  if (!hubPay(base)) { toast(DECOR.includes(base) ? 'Your block storage is empty. Mine blocks in missions first.' : `No ${BLOCK_NAME[base]} left. Mine more in missions, or pick another block.`); placeCd = 0.8; return; }
-  set(x, y, z, t); hubEdits.set(idx(x, y, z), t);
-  if (isDoor(t)) { set(x, y + 1, z, t); hubEdits.set(idx(x, y + 1, z), t); }
+  if (!inB(x, y, z) || get(x, y, z)) return;
+  const cells = hubCells(t, x, y, z);
+  if (t !== ATREE) for (const [cx, cy, cz, ct] of cells) {
+    const walk = COLL[ct] && COLL[ct].length === 0;
+    if (!inB(cx, cy, cz) || get(cx, cy, cz) || (!walk && playerOverlaps(cx, cy, cz))) { if (cells.length > 1) { toast(`${BLOCK_NAME[base]} needs more free space.`, 1.6); placeCd = 0.5; } return; }
+  }
+  else if (playerOverlaps(x, y, z) || get(x, y + 1, z) || get(x, y + 2, z)) { toast('A tree needs free space above.', 1.6); placeCd = 0.5; return; }
+  if (!hubPay()) { toast('Your block storage is empty. Mine blocks in missions first.'); placeCd = 0.8; return; }
+  for (const [cx, cy, cz, ct] of cells) { set(cx, cy, cz, ct); hubEdits.set(idx(cx, cy, cz), ct); }
   if (isSign(t)) {
     let txt = ''; try { input.act = false; txt = (window.prompt('Text for your sign:', myName ? `${myName}'s base` : 'My base') || '').trim().slice(0, 60); } catch (e) {}
     signText.set(idx(x, y, z), txt || 'Starblock');
@@ -4147,7 +4433,7 @@ function hubPlace(hit) {
 const tileTexCache = {};
 function tileTex(tile) {
   if (tileTexCache[tile]) return tileTexCache[tile];
-  const t = atlas.clone(); t.needsUpdate = true; t.repeat.set(1 / 64, 1); t.offset.set(tile / 64, 0); return (tileTexCache[tile] = t);
+  const t = atlas.clone(); t.needsUpdate = true; t.repeat.set(1 / ATW, 1); t.offset.set(tile / ATW, 0); return (tileTexCache[tile] = t);
 }
 function signTexture(text) {
   const cv = document.createElement('canvas'); cv.width = 256; cv.height = 128; const c = cv.getContext('2d');
@@ -4164,13 +4450,20 @@ function signTexture(text) {
 }
 function syncDecor() {
   if (LS.decorG) lvlG.remove(LS.decorG);
-  const G = new THREE.Group(); LS.decorG = G; LS.doors = []; lvlG.add(G);
+  const G = new THREE.Group(); LS.decorG = G; LS.doors = []; LS.dishes = []; lvlG.add(G);
   const plank = new THREE.MeshLambertMaterial({ map: tileTex(27) });
-  for (const [k, t] of hubEdits) {
-    if (!isDoor(t) && !isSign(t)) continue;
-    const x = k % NX - OX, y = Math.floor(k / NX) % NY - OY, z = Math.floor(k / (NX * NY)) - OZ;
-    if (get(x, y, z) !== t) continue;
+  for (const [x, y, z, t] of SPEC.ent) {
+    const k = idx(x, y, z);
     const f = t - baseOf(t), g = new THREE.Group(); g.position.set(x + 0.5, y, z + 0.5); g.rotation.y = -f * Math.PI / 2; G.add(g);
+    if (t === ANTENNA) { // radar dish on a mast, turning slowly
+      const metal = new THREE.MeshLambertMaterial({ map: tileTex(65) });
+      const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.1, 1, 8), metal); mast.position.y = 0.5; g.add(mast);
+      const head = new THREE.Group(); head.position.y = 1.0; g.add(head);
+      const dish = new THREE.Mesh(new THREE.SphereGeometry(0.55, 18, 8, 0, Math.PI * 2, 0, 0.9), new THREE.MeshLambertMaterial({ color: 0xdfe6ee, side: THREE.DoubleSide })); dish.rotation.x = -Math.PI / 2 + 0.5; dish.position.z = 0.15; head.add(dish);
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.5, 6), metal); arm.rotation.x = Math.PI / 2 - 0.5; arm.position.set(0, 0.12, -0.05); head.add(arm);
+      const tip = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff5a6a })); tip.position.set(0, 0.25, -0.25); head.add(tip);
+      (LS.dishes = LS.dishes || []).push(head); continue;
+    }
     if (isDoor(t)) {
       if (get(x, y - 1, z) === t) continue; // the top half is drawn with the bottom half
       const hinge = new THREE.Group(); hinge.position.set(-0.5, 0, 0); g.add(hinge);
@@ -4184,11 +4477,68 @@ function syncDecor() {
   }
 }
 function updDoors(dt) {
+  for (const d of LS.dishes || []) d.rotation.y += dt * 0.6;
   for (const d of LS.doors || []) {
     const near = Math.hypot(player.pos.x - d.c.x, player.pos.z - d.c.z) < 1.9 && Math.abs(player.pos.y - d.c.y) < 2;
     const was = d.open; d.open = clamp(d.open + (near ? dt : -dt) * 4, 0, 1);
     if (was === 0 && d.open > 0) tone(220, 160, 0.12, 'triangle', 0.03);
     d.hinge.rotation.y = -d.open * Math.PI * 0.5;
+  }
+}
+// ---- blocks that do something: belts, pads, teleporters, crumbling floors, lava, egg walls, airlocks, barriers
+let teleCd = 0, teleLock = '', gravT = 0, lavaT = 0;
+const crumbles = new Map(), eggT = new Map();
+const ckey = (x, y, z) => x + ',' + y + ',' + z;
+function changeCell(x, y, z, t) { // a block changes by itself (airlock, barrier, crumbling block)
+  set(x, y, z, t);
+  if (L.hub) { const k = idx(x, y, z); if (hubEdits.has(k)) hubEdits.set(k, t); } else myEdit(x, y, z, t);
+  meshDirty = true;
+}
+function consoleUse(c) { // open or close every airlock near the console
+  const near = SPEC.air.filter((a) => Math.hypot(a.x - c.x, a.y - c.y, a.z - c.z) < 12);
+  if (!near.length) { toast('No airlock near this console. Build one within 12 blocks.', 2); return; }
+  const open = isAirlock(get(near[0].x, near[0].y, near[0].z)) && get(near[0].x, near[0].y, near[0].z) < AIRLOCK + 2;
+  let blocked = false;
+  for (const a of near) { const t = get(a.x, a.y, a.z); if (!isAirlock(t)) continue; const k = (t - AIRLOCK) % 2;
+    if (!open && playerOverlaps(a.x, a.y, a.z)) { blocked = true; continue; } changeCell(a.x, a.y, a.z, AIRLOCK + k + (open ? 2 : 0)); }
+  tone(open ? 300 : 500, open ? 700 : 250, 0.3, 'sawtooth', 0.04); toast(open ? 'Airlock open' : blocked ? 'Airlock closing… step out of the door!' : 'Airlock closed', 1.5);
+}
+function arenaGates(lock) { // for combat arenas: blue = you can go in, red = aliens are still left (closed)
+  for (const c of SPEC.bar) { const t = get(c.x, c.y, c.z), nt = lock ? BAR_RED : BAR_BLUE; if (t !== nt && !(lock && playerOverlaps(c.x, c.y, c.z))) changeCell(c.x, c.y, c.z, nt); }
+}
+function updBlocks(dt) {
+  if (state !== 'play') return;
+  teleCd -= dt;
+  const p = player.pos, sx = Math.floor(p.x), sz = Math.floor(p.z), sy = player.flip ? Math.floor(p.y + PH + 0.05) : Math.floor(p.y - 0.05);
+  const u = player.onGround ? get(sx, sy, sz) : 0, bu = baseOf(u), here = ckey(sx, sy, sz);
+  if (u !== TELE) teleLock = '';
+  if (bu === CONVEYOR) { const [dx, dz] = D4[u - CONVEYOR]; moveAxis('x', dx * 3.2 * dt); moveAxis('z', dz * 3.2 * dt); }
+  else if (bu === BOOST) { const [dx, dz] = D4[u - BOOST]; player.vel.set(dx * 17, 5.5, dz * 17); player.onGround = false; player.jumped = true; sfx.drop(); burst(new V3(p.x, p.y + 0.2, p.z), 0xff7828, 20, 3, 0); }
+  else if (u === GRAVPAD && teleCd <= 0 && L.gen !== genGravity) {
+    setFlip(!player.flip); gravT = player.flip ? 10 : 0; teleCd = 1; sfx.drop(); burst(new V3(p.x, p.y + 0.5, p.z), 0x9a5cff, 24, 3, 0);
+    toast(player.flip ? 'Gravity flipped for 10 s! Find a gravity pad on the ceiling to come back.' : 'Gravity back to normal.', 2);
+  } else if (u === TELE && teleCd <= 0 && teleLock !== here) {
+    let best = null, bd = Infinity; for (const q of SPEC.tele) { if (q.x === sx && q.y === sy && q.z === sz) continue; const d = Math.hypot(q.x - sx, q.y - sy, q.z - sz); if (d < bd) { bd = d; best = q; } }
+    if (!best) { if (!LS.teleTip) { LS.teleTip = true; toast('Build a second teleporter: this one takes you to the nearest other one.', 2.5); } }
+    else { burst(new V3(p.x, p.y + 1, p.z), 0xff78ff, 30, 3, 0); p.set(best.x + 0.5, best.y + 1.001, best.z + 0.5); player.vel.set(0, 0, 0); teleCd = 0.6; teleLock = ckey(best.x, best.y, best.z);
+      burst(new V3(p.x, p.y + 1, p.z), 0xff78ff, 30, 3, 0); tone(400, 1600, 0.25, 'sine', 0.05); }
+  } else if (u === CRUMBLE && !crumbles.has(here)) { crumbles.set(here, { x: sx, y: sy, z: sz, t: 1, gone: false }); tone(140, 90, 0.4, 'square', 0.02); }
+  if (gravT > 0) { gravT -= dt; if (gravT <= 0 && player.flip && L.gen !== genGravity) { setFlip(false); toast('Gravity back to normal.', 1.5); } }
+  for (const [k, c] of crumbles) {
+    c.t -= dt; if (c.t > 0) continue;
+    if (!c.gone) { if (get(c.x, c.y, c.z) === CRUMBLE) { set(c.x, c.y, c.z, AIR); meshDirty = true; burst(new V3(c.x + 0.5, c.y + 0.5, c.z + 0.5), 0x96826e, 22, 3); sfx.break(); } c.gone = true; c.t = 5; }
+    else if (get(c.x, c.y, c.z) || playerOverlaps(c.x, c.y, c.z)) c.t = 0.5; else { set(c.x, c.y, c.z, CRUMBLE); meshDirty = true; crumbles.delete(k); } // it grows back after 5 s
+  }
+  // lava burns
+  const ft = get(sx, Math.floor(p.y + 0.3), sz), bt = get(sx, Math.floor(p.y + 1.1), sz);
+  lavaT -= dt;
+  if ((ft === LAVA || bt === LAVA) && lavaT <= 0) { lavaT = 0.4; hurt(L.hub ? 2 : 10); burst(new V3(p.x, p.y + 0.4, p.z), 0xff7a1e, 12, 2, 0); if (!LS.lavaTip) { LS.lavaTip = true; toast('Lava! It burns. Get out!', 1.6); } }
+  // alien egg walls hatch an alien every 9 s while you are near (max 3 around each wall)
+  if (!isGuest() && !(LS.arena && !LS.arena.on)) for (const e of SPEC.egg) {
+    const k = ckey(e.x, e.y, e.z), t = (eggT.get(k) ?? 4) - dt; eggT.set(k, t); if (t > 0) continue; eggT.set(k, 9);
+    const c = new V3(e.x + 0.5, e.y + 0.5, e.z + 0.5); if (c.distanceTo(p) > 26 || aliens.filter((a) => a.hp > 0 && a.pos.distanceTo(c) < 10).length >= 3) continue;
+    const spot = [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], [0, 1, 0]].find(([dx, dy, dz]) => !get(e.x + dx, e.y + dy, e.z + dz) && !get(e.x + dx, e.y + dy + 1, e.z + dz));
+    if (spot) { spawnAlien(new V3(e.x + spot[0] + 0.5, e.y + spot[1] + 0.6, e.z + spot[2] + 0.5), 'biter'); burst(c, 0xb4ff5a, 20, 3); }
   }
 }
 // bridge assist: looking down at an edge places the next block in front of your feet
@@ -4605,7 +4955,7 @@ function updateWorldEntities(dt, eye) {
   beacon.position.set(bt.x, bt.y + 40.6, bt.z);
   beacon.material.opacity = 0.16 + Math.sin(clock * 3) * 0.06;
 
-  updateMovers(dt); updateRockets(dt); updateItems(dt);
+  updateMovers(dt); updateRockets(dt); updateItems(dt); updBlocks(dt);
   // win
   if (L.update) L.update(dt);
   if (state === 'play' && carrying && (!L.canWin || L.canWin()) && player.pos.distanceTo(ship.position) < 5.2) winAll();
@@ -4647,7 +4997,7 @@ const promptEl = $('prompt'), ring = $('ring'), marker = $('marker'), mdist = $(
 let markerMode = '';
 function updateHud() {
   $('hpfill').style.width = Math.max(0, player.hp) + '%';
-  $('blockCount').textContent = L.hub ? (inv[hubType] || 0) : blocks;
+  $('blockCount').textContent = L.hub ? store : blocks;
   $('kills').textContent = kills;
   $('time').textContent = fmtTime(playTime);
   const h = (L.hud && L.hud()) || (carrying ? ['Return to your ship', 'Aliens are swarming'] : netCarried ? ['Escort the artifact', 'A crewmate has it · meet at the ship'] : ['Reach the artifact', L.sub || 'Mine rock · build a bridge']);
@@ -4783,7 +5133,9 @@ function pauseGame() {
   if (!NET) state = 'paused';
   if (document.pointerLockElement) document.exitPointerLock();
   const sel = $('pauseLvl'); sel.innerHTML = '';
-  LEVELS.forEach((lv, i) => { if (lv.coop && !(NET && NET.host)) return; const o = document.createElement('option'); o.value = i; o.textContent = lv.name + (lv.coop ? ' (co-op)' : ''); sel.appendChild(o); });
+  const og = document.createElement('optgroup'); og.label = 'Legacy missions';
+  LEVELS.forEach((lv, i) => { if (lv.coop && !(NET && NET.host)) return; const o = document.createElement('option'); o.value = i; o.textContent = lv.name + (lv.coop ? ' (co-op)' : ''); (lv.v2 || lv.coop ? sel : og).appendChild(o); });
+  sel.appendChild(og);
   sel.value = String(LEVELS.indexOf(L)); if (sel.selectedIndex < 0) sel.selectedIndex = 0;
   const guest = !!(NET && !NET.host);
   sel.disabled = $('pauseGo').disabled = guest;
@@ -4804,7 +5156,7 @@ document.querySelectorAll('.loadBtn').forEach((b) => b.addEventListener('click',
 $('codeFile').addEventListener('change', async () => {
   const f = $('codeFile').files[0]; if (!f) return;
   codeOverlay(true, 'Reading the save picture…');
-  try { const d = await loadSaveImage(f); codeOverlay(true, `Save loaded! ${Object.keys(best).length} missions, ${[...d.ed.values()].filter(Boolean).length} built blocks, ${Object.values(inv).reduce((a, b) => a + b, 0)} blocks in storage.`); }
+  try { const d = await loadSaveImage(f); codeOverlay(true, `Save loaded! ${Object.keys(best).length} missions, ${[...d.ed.values()].filter(Boolean).length} built blocks, ${store} blocks in storage.`); }
   catch (e) { codeOverlay(true, 'Could not load: ' + e.message); }
 });
 $('codeClose').addEventListener('click', () => { $('codeOv').hidden = true; });
@@ -4813,12 +5165,17 @@ $('pauseGo').addEventListener('click', () => {
   if (NET && !NET.host) return;
   const k = +$('pauseLvl').value; if (!LEVELS[k]) return;
   paused = false; $('pause').hidden = true; state = 'play'; leaveHub();
-  run.order = [k, ...shuffle(LEVELS.map((_, i) => i).filter((i) => i !== k && !LEVELS[i].coop))]; run.i = 0;
+  if (!LEVELS[k].coop) run.legacy = !LEVELS[k].v2;
+  run.order = [k, ...shuffle(soloList(run.legacy).filter((i) => i !== k))]; run.i = 0;
   if (NET) coopReset(); else { loadLevel(); begin(); }
 });
 document.addEventListener('pointerlockchange', () => { if (!document.pointerLockElement && state === 'play' && !paused && hadLock) pauseGame(); hadLock = !!document.pointerLockElement; });
 let hadLock = false;
-$('start').addEventListener('click', () => { if (NET && NET.guest && !NET.synced) return; begin(); });
+$('start').addEventListener('click', () => { if (NET && NET.guest && !NET.synced) return; if (run.legacy && !NET) { run.legacy = false; newRun(); loadLevel(); } begin(); });
+$('legacyGo').addEventListener('click', () => { // play an old mission (then the other old ones in a random order)
+  if (NET) return; const k = +$('legacySel').value; if (!LEVELS[k] || LEVELS[k].v2) return;
+  run.legacy = true; newRun(); run.order = [k, ...run.order.filter((i) => i !== k)]; run.i = 0; leaveHub(); loadLevel(); begin();
+});
 $('again').addEventListener('click', () => { if (NET) { if (NET.host) { if (run.i >= run.order.length - 1) newRun(); else run.i++; coopReset(); } return; } if (run.i >= run.order.length - 1) newRun(); else run.i++; loadLevel(); begin(); });
 
 // ---------------------------------------------------------------- co-op (claude.ai room capability, or PeerJS elsewhere)
@@ -5390,6 +5747,7 @@ function frame(now) {
   let hit = null, press = null;
   if (state === 'play') hit = raycast(eye, camDir, REACH);
   if (state === 'play' && L.hub && LS.press) { let bt = 6; for (const q of LS.press) { const t = raySphere(eye, camDir, q.p, q.r); if (t >= 0 && t < bt && (!hit || t < hit.t + 0.3)) { bt = t; press = q; } } }
+  if (!press && hit && baseOf(hit.type) === CONSOLE && curTool !== 0) { const c = hit; press = { label: () => 'Console · tap to open or close the airlocks (the pickaxe digs it)', fn: () => consoleUse(c) }; }
   if (press) hit = null;
   if (state === 'play') {
     if (press) { if (input.act && !prevAct) press.fn(); mineProg = 0; mineKey = ''; }
@@ -5506,12 +5864,14 @@ function fillPickers() {
   while (sel.options.length > 1) sel.remove(1);
   co.innerHTML = '';
   let n = 0;
+  const lg = $('legacySel'); lg.innerHTML = ''; let m = 0;
   LEVELS.forEach((lv, i) => {
     const o = document.createElement('option'); o.value = i;
     if (lv.coop) { o.textContent = lv.name + tag(i); co.appendChild(o); }
-    else { o.textContent = `${++n} · ${lv.name}${tag(i)}`; sel.appendChild(o); }
+    else if (lv.v2) { o.textContent = `${++n} · ${lv.name}${tag(i)}`; sel.appendChild(o); }
+    else { o.textContent = `${++m} · ${lv.name}${tag(i)}`; lg.appendChild(o); }
   });
-  sel.value = String(LEVELS[pickLv] && !LEVELS[pickLv].coop ? pickLv : -1);
+  sel.value = String(soloList(false).includes(pickLv) ? pickLv : -1);
   $('coopLvl').value = String(pickCoop);
 }
 fillPickers();
@@ -5532,7 +5892,7 @@ function setDiff(d, save) {
 function menuInfo() { $('firstMission').textContent = `First mission: ${L.name}.`; }
 $('lvlSel').addEventListener('change', () => {
   if (NET && NET.guest) return;
-  pickLv = +$('lvlSel').value; savePick();
+  pickLv = +$('lvlSel').value; savePick(); run.legacy = false;
   newRun(); loadLevel(); menuInfo();
   if (NET && NET.host) { NET.ep++; NET.edits.clear(); sendPresence(); }
 });
@@ -5540,7 +5900,7 @@ document.querySelectorAll('#diffSel button').forEach((b) => b.addEventListener('
 setDiff(diff, false);
 newRun(); loadLevel(); menuInfo();
 requestAnimationFrame(frame);
-window.__game = { set vmFreeze(v) { vmFreezePh = v; }, hubPlace, breakBlock, get signs() { return signText; }, giveAll() { hasMinigun = hasRocket = hasFreeze = true; }, kit: () => myKit(), restoreKit, get costume() { return costume; }, hub: { enterHub, get inv() { return inv; }, set inv(v) { inv = v; }, get edits() { return hubEdits; }, get type() { return hubType; }, set type(v) { hubType = v; }, makeSaveBytes, drawCode, decodeCode, loadSaveImage, showSaveCode, packSave, unpackSave, saveStore, setBest: (b) => { best = b; } }, setBlock: (x, y, z, t) => { set(x, y, z, t); meshDirty = true; }, downSaucer: (s) => { s.hp = 0.1; hitSaucer(s, 1, s.mesh.position.clone()); }, fire: (o) => fireGun(eye, o), rocket: () => fireRocket(eye), GUN, FREEZE, saucerGate: () => saucerGate, eyeV: () => eye, lv: () => ({ lvlTime, dmgTaken }), get best() { return best; }, secrets: () => [secretsFound(), secretsTotal()], movers: () => movers, get flip() { return player.flip; }, setFlip, takeAll: () => (LS.items || []).forEach((it) => takeItem(it, true)), get hasRocket() { return hasRocket; }, get hp() { return player.hp; }, turretList: () => turrets, queenHit: (i, d) => queenHit(i, d, LS.q.g.position.clone()), get diff() { return diff; }, get stasisNet() { return stasisNet; }, spawnAlien: (p, k) => spawnAlien(new THREE.Vector3(...p), k), ship, get carrying() { return carrying; }, get: (x, y, z) => get(x, y, z), run, LEVELS, get L() { return L; }, get LS() { return LS; }, load(i) { run.order[run.i] = i; loadLevel(); }, win, get o2() { return o2; }, get frost() { return frost; }, upg, player, get state() { return state; }, selectTool, input, begin, world: () => world, get blocks() { return blocks; }, set blocks(v) { blocks = v; }, turrets: () => turrets, useAbility, abCd, abOn, get hasMinigun() { return hasMinigun; }, minigunSpot, aliens: () => aliens, get NET() { return NET; }, avatars, hitAlien, breakAt: (x, y, z) => breakBlock({ x, y, z, type: get(x, y, z) }), saucers: () => saucers };
+window.__game = { set vmFreeze(v) { vmFreezePh = v; }, hubPlace, breakBlock, consoleUse, SPEC, get store() { return store; }, get signs() { return signText; }, giveAll() { hasMinigun = hasRocket = hasFreeze = true; }, kit: () => myKit(), restoreKit, get costume() { return costume; }, hub: { enterHub, get inv() { return { all: store }; }, set inv(v) { store = sumStore(v); }, get edits() { return hubEdits; }, get type() { return hubType; }, set type(v) { hubType = v; }, makeSaveBytes, drawCode, decodeCode, loadSaveImage, showSaveCode, packSave, unpackSave, saveStore, setBest: (b) => { best = b; } }, setBlock: (x, y, z, t) => { set(x, y, z, t); meshDirty = true; }, downSaucer: (s) => { s.hp = 0.1; hitSaucer(s, 1, s.mesh.position.clone()); }, fire: (o) => fireGun(eye, o), rocket: () => fireRocket(eye), GUN, FREEZE, saucerGate: () => saucerGate, eyeV: () => eye, lv: () => ({ lvlTime, dmgTaken }), get best() { return best; }, secrets: () => [secretsFound(), secretsTotal()], movers: () => movers, get flip() { return player.flip; }, setFlip, takeAll: () => (LS.items || []).forEach((it) => takeItem(it, true)), get hasRocket() { return hasRocket; }, get hp() { return player.hp; }, turretList: () => turrets, queenHit: (i, d) => queenHit(i, d, LS.q.g.position.clone()), get diff() { return diff; }, get stasisNet() { return stasisNet; }, spawnAlien: (p, k) => spawnAlien(new THREE.Vector3(...p), k), ship, get carrying() { return carrying; }, get: (x, y, z) => get(x, y, z), run, LEVELS, get L() { return L; }, get LS() { return LS; }, load(i) { run.order[run.i] = i; loadLevel(); }, win, get o2() { return o2; }, get frost() { return frost; }, upg, player, get state() { return state; }, selectTool, input, begin, world: () => world, get blocks() { return blocks; }, set blocks(v) { blocks = v; }, turrets: () => turrets, useAbility, abCd, abOn, get hasMinigun() { return hasMinigun; }, minigunSpot, aliens: () => aliens, get NET() { return NET; }, avatars, hitAlien, breakAt: (x, y, z) => breakBlock({ x, y, z, type: get(x, y, z) }), saucers: () => saucers };
 })();
 </script>
 <!-- GAME-END -->
