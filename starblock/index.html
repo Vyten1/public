@@ -290,6 +290,9 @@ body.down #downFx { display: grid; }
       <svg viewBox="0 0 24 24"><path d="M2 10h15v4H2z" fill="#3a4d6b"></path><path d="M17 9l5 3-5 3z" fill="#ff9f5a"></path><path d="M5 9.5h1.4v5H5zM9 9.5h1.4v5H9z" fill="#5dffa8"></path><path d="M7 14h3l-1 5H7z" fill="#1d3a5e"></path></svg></button>
     <button class="slot" data-tool="6" id="slotFreeze" aria-label="Freeze ray" hidden><span class="key">7</span>
       <svg viewBox="0 0 24 24"><path d="M2 9h12v6H2z" fill="#dbe8f5"></path><circle cx="17" cy="12" r="3.2" fill="#9ff3ff"></circle><path d="M20 12h3M19.5 9.5l2-2M19.5 14.5l2 2" stroke="#e4f3ff" stroke-width="1.5"></path><path d="M5 15h3l-1 5H5z" fill="#2d6fb8"></path></svg></button>
+    <button class="slot" data-tool="7" id="slotCons" aria-label="Construction: ladder"><span class="key">8</span>
+      <svg viewBox="0 0 24 24"><path d="M6 2h2.4v20H6zM15.6 2H18v20h-2.4z" fill="#c8924e"></path><path d="M8 5h8v2H8zM8 10h8v2H8zM8 15h8v2H8z" fill="#ffd166"></path></svg>
+      <span class="count cost">5</span></button>
   </div>
   <div id="chat" hidden><button data-m="0">HELP!</button><button data-m="1">HERE</button><button data-m="2">FOLLOW ME</button></div>
   <div id="upg" hidden><div class="lbl">Pick an upgrade · first tap wins</div><div class="row"><button data-u="0">LANDER SHIELD</button><button data-u="1">FAST TURRETS</button><button data-u="2">+15 BLOCKS</button></div></div>
@@ -330,7 +333,6 @@ body.down #downFx { display: grid; }
       <div><b>Powers</b>Buttons on the left, or Q and E. Q: far jump (dash). E: hero power — shock wave, heal, shield and +50% damage for 6 seconds. Each one needs time to load again.</div>
     </div>
     <div class="hint" id="rotHint">Best with the phone sideways. <span id="firstMission"></span></div>
-    <div class="legacy"><span>Legacy missions (the old versions)</span><select id="legacySel" aria-label="Legacy missions"></select><button id="legacyGo">PLAY</button></div>
   </div>
 </div>
 
@@ -423,7 +425,7 @@ const NTYPES = 124;
 const BASE = Array.from({ length: 256 }, (_, i) => i);
 for (const [b, n] of [[48, 4], [52, 4], [57, 4], [61, 4], [69, 4], [VINE, 4], [CONSOLE, 4], [PIPE, 3], [CABLE, 3], [STRIP, 8], [AIRLOCK, 4], [CONVEYOR, 4], [BOOST, 4]]) for (let k = 0; k < n; k++) BASE[b + k] = b;
 const baseOf = (t) => BASE[t] ?? t;
-const isDoor = (t) => t >= 61 && t < 65, isSign = (t) => t >= 69 && t < 73, isLadder = (t) => (t >= 57 && t < 61) || (t >= VINE && t < VINE + 4);
+const isDoor = (t) => t >= 61 && t < 65, isSign = (t) => t >= 69 && t < 73, isLadder = (t) => t >= 57 && t < 61; // vines are only for looks
 const isAirlock = (t) => t >= AIRLOCK && t < AIRLOCK + 4, isBar = (t) => t === BAR_BLUE || t === BAR_RED;
 const ATW = 128; // block texture atlas: 128 tiles of 16 x 16
 const INVIS = (t) => t === ARTIFACT || t === TURRET;
@@ -1281,10 +1283,17 @@ let muzzleFlash;
   g.scale.setScalar(0.85); g.userData.base = { p: new V3(0.26, -0.26, -0.56), r: new THREE.Euler(0.03, 0.08, 0) };
   tools.push(g);
 }
+{ // construction: a small ladder
+  const g = new THREE.Group(), wood = phong(0xa8763f), rung = phong(0xd8a25e);
+  for (const x of [-0.07, 0.07]) { const r = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.3, 0.025), wood); r.position.x = x; g.add(r); }
+  for (let i = 0; i < 4; i++) { const r = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.018, 0.018), rung); r.position.y = -0.11 + i * 0.075; g.add(r); }
+  g.userData.base = { p: new V3(0.32, -0.3, -0.62), r: new THREE.Euler(0.3, 0.5, -0.15) };
+  tools.push(g);
+}
 tools.forEach((t, i) => { vm.add(t); t.visible = i === 0; });
 // where the hand holds each tool, and where shots come out (in the tool's own space)
-[[0, -0.06, 0], [0, -0.2, 0.13], [0.02, -0.1, 0.08], [0, -0.07, 0.15], [0, 0.1, 0.4], [0, -0.2, 0.08], [0, -0.19, 0.13]].forEach((g, i) => { tools[i].userData.grip = new V3(...g); });
-[null, [0, 0, -0.47], null, [0, 0, -0.69], null, [0, 0, -0.46], [0, 0, -0.46]].forEach((m, i) => { tools[i].userData.muzzle = m && new V3(...m); });
+[[0, -0.06, 0], [0, -0.2, 0.13], [0.02, -0.1, 0.08], [0, -0.07, 0.15], [0, 0.1, 0.4], [0, -0.2, 0.08], [0, -0.19, 0.13], [0.07, -0.08, 0]].forEach((g, i) => { tools[i].userData.grip = new V3(...g); });
+[null, [0, 0, -0.47], null, [0, 0, -0.69], null, [0, 0, -0.46], [0, 0, -0.46], null].forEach((m, i) => { tools[i].userData.muzzle = m && new V3(...m); });
 tools[1].userData.rings = tools[1].children.filter((c) => c.geometry && c.geometry.type === 'TorusGeometry');
 tools[1].userData.cell = tools[1].children[tools[1].children.length - 2];
 tools[3].userData.barrelMeshes = tools[3].userData.barrels.children.filter((c) => c.geometry && c.geometry.type === 'CylinderGeometry');
@@ -1390,7 +1399,7 @@ function animViewmodel(dt, act) {
     const rl = gunCd > 0 ? 1 - gunCd / 1.22 : 1;
     if (rl > 0.25 && rl < 1) { const sn = Math.sin((rl - 0.25) / 0.75 * Math.PI); rx -= sn * 0.22; py -= sn * 0.13; px += sn * 0.03; rz += sn * 0.18; }
     u.tip.visible = rl >= 0.45; u.tip.position.z = -0.38 + (1 - clamp((rl - 0.45) / 0.3, 0, 1)) * 0.35;
-  } else if (curTool === 2 || curTool === 4) { const sn = Math.sin(useAnim * Math.PI); pz -= sn * 0.09; rx -= sn * 0.3; ry += sn * 0.4; }
+  } else if (curTool === 2 || curTool === 4 || curTool === 7) { const sn = Math.sin(useAnim * Math.PI); pz -= sn * 0.09; rx -= sn * 0.3; ry += sn * 0.4; }
   if (T.impact > 0) { px += (Math.random() - 0.5) * 0.025 * T.impact; py += (Math.random() - 0.5) * 0.025 * T.impact; }
   tool.position.set(px, py, pz); tool.rotation.set(rx, ry, rz, curTool === 0 ? 'YZX' : 'XYZ'); // the pickaxe swings in its own plane, toward the middle of the screen
   // energy gun: the rings go dark after a shot and light up again one by one while it recharges
@@ -1423,6 +1432,7 @@ function animViewmodel(dt, act) {
 const FIRE_ICONS_X = [
   '<path d="M2 10h15v4H2z" fill="#3a4d6b"/><path d="M17 9l5 3-5 3z" fill="#ff9f5a"/>',
   '<circle cx="12" cy="12" r="5" fill="#9ff3ff"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5M5 5l3 3M16 16l3 3M19 5l-3 3M8 16l-3 3" stroke="#e4f3ff" stroke-width="1.6"/>',
+  '<path d="M6 2h2.4v20H6zM15.6 2H18v20h-2.4z" fill="#c8924e"/><path d="M8 5h8v2H8zM8 10h8v2H8zM8 15h8v2H8z" fill="#ffd166"/>',
 ];
 const FIRE_ICONS = [
   '<path d="M3 7c5-4 13-4 18 0l-1.6 1.4C15.5 5.6 8.5 5.6 4.6 8.4z" fill="#5dffa8"/><path d="M11 6.5h2.4l-1 15h-1z" fill="#9fd8ff"/>',
@@ -1762,7 +1772,7 @@ function stationKey(k, mine) {
   if (k.got) return;
   k.got = true; k.m.visible = false; LS.got++; sfx.pickup(); burst(k.p, 0x5dffa8, 40, 4, 0);
   if (mine) netOp(['c', LS.keys.indexOf(k)]);
-  if (LS.got === 3) { box(14, 1, -1, 14, 3, 1, L.v2 ? BAR_BLUE : AIR); if (L.v2) { set(-20, 0, 4, TELE); toast('All 3 keycards! The vault barrier is open, and a teleporter by your ship turned on.', 4); } else toast('All 3 keycards! The vault door is open.', 3.5); meshDirty = true; }
+  if (LS.got === 3) { box(14, 1, -1, 14, 3, 1, AIR); toast('All 3 keycards! The vault door is open.', 3.5); meshDirty = true; }
   else toast(mine ? `Keycard ${LS.got} of 3` : `A crewmate found keycard ${LS.got} of 3`);
 }
 function updStation(dt) {
@@ -2215,7 +2225,7 @@ function updHive(dt) {
   LS.spT -= dt;
   if (LS.spT <= 0 && aliens.length < capA(6)) {
     LS.spT = 18 / DM();
-    const pts = HIVE_PATHS.flat().map((q) => new V3(q[0] + 0.5, q[1] + 0.5, q[2] + 0.5)).filter((v) => v.distanceTo(player.pos) > 10 && crewTargets.every((c) => v.distanceTo(c) > 10));
+    const pts = HIVE_PATHS.flat().map((q) => new V3(q[0] + 0.5, q[1] + 0.5, q[2] + 0.5)).filter((v) => !get(Math.floor(v.x), Math.floor(v.y), Math.floor(v.z)) && v.distanceTo(player.pos) > 10 && crewTargets.every((c) => v.distanceTo(c) > 10));
     if (pts.length) spawnAlien(pts[Math.floor(Math.random() * pts.length)]);
   }
   if (cellsLeft(LS.eggCells, EGG) + hiveBurned() < need) failMission('Too many eggs hatched. The hive is lost. Mission restarts.');
@@ -2937,137 +2947,75 @@ function oreVeins(n, seed, pick, ok) { // ore cells near the surface, where you 
   const rnd = mulberry32(seed);
   for (let k = 0; k < n; k++) { const c = pick(rnd); if (!c) continue; const [x, y, z] = c; if (ok(get(x, y, z))) set(x, y, z, rnd() < 0.45 ? ORE_GOLD : rnd() < 0.6 ? ORE_EN : ORE_TECH); }
 }
-// --- K-7 mining outpost: ores, alien trees, a teleporter, a boost pad and a combat arena around the artifact
-function genK7b() {
-  genWorld();
-  const nearPad = (x, z) => (x < -1 && z < 0) || Math.hypot(x, z) < 2.2 || Math.abs(x) <= 1 || Math.hypot(x - 3, z + 3) < 1.6 || Math.hypot(x + 3, z - 4) < 1.6;
-  oreVeins(55, 7101, (r) => { const x = Math.floor(r() * 19) - 9, z = Math.floor(r() * 19) - 9, t = topAt(x, z); return t === null ? null : [x, t - Math.floor(r() * 3), z]; }, (b) => b === ROCK || b === MOSS);
-  alienPlants(-10, 10, -10, 10, 7102, nearPad);
-  putTree(6, 6); putTree(-7, 6); putTree(7, -6);
-  // teleporter: main rock <-> the little rock with ore and a supply crate
-  { const t = topAt(2, 2); set(2, t, 2, TELE); set(2, t + 1, 2, AIR); }
-  { const t = topAt(-15, 10); if (t !== null) { set(-15, t, 10, TELE); for (const [x, z] of [[-14, 10], [-16, 10], [-15, 9], [-15, 11]]) { const q = topAt(x, z); if (q !== null) set(x, q, z, ORE_TECH); } const c = topAt(-14, 9); if (c !== null) set(-14, c + 1, 9, CRATE); } }
-  // a radar dish and light strips at the landing pad
-  for (const [x, z] of [[-9, -1], [-8, 0], [-7, 1], [-9, -7], [-5, 2]]) { const t = topAt(x, z); if (t !== null && !get(x, t + 1, z)) { set(x, t + 1, z, ANTENNA); break; } }
-  // boost pad on the edge facing the artifact: it throws you to the arena
-  { let xe = 9; while (xe > 0 && topAt(xe, 3) === null) xe--; const t = topAt(xe - 1, 3); if (t !== null) { set(xe - 1, t, 3, BOOST + 1); set(xe - 2, t, 3, STRIPE); } }
-  // the arena: a stone floor around the caged artifact, a ring of energy barriers, 2 alien egg walls
-  const base = artifactCell.y - 1, A = { x: AX + 0.5, z: AZ + 0.5, y: base, eggs: [], on: false, done: false };
-  for (let dx = -7; dx <= 7; dx++) for (let dz = -7; dz <= 7; dz++) {
-    const d = Math.hypot(dx, dz), x = AX + dx, z = AZ + dz; if (d > 6.6) continue;
-    const inCage = Math.abs(dx) <= 1 && Math.abs(dz) <= 1;
-    if (!inCage) { set(x, base - 1, z, get(x, base - 1, z) ? get(x, base - 1, z) : SBRICK); for (let y = base; y <= base + 4; y++) set(x, y, z, AIR); }
-    if (d >= 5.7) for (let y = base; y <= base + 2; y++) set(x, y, z, BAR_BLUE);
-    else if (!inCage) set(x, base - 1, z, d > 4.6 && d < 5.4 ? STRIPE : SBRICK);
-  }
-  for (const [dx, dz] of [[0, -4], [0, 4]]) { for (let y = 0; y < 2; y++) { set(AX + dx, base + y, AZ + dz, EGGWALL); A.eggs.push([AX + dx, base + y, AZ + dz]); } }
-  set(AX + 4, base, AZ, CRATE);
-  for (const [dx, dz] of [[-3, -3], [3, 3], [-3, 3], [3, -3]]) set(AX + dx, base, AZ + dz, STRIP);
-  LS.arena = A;
-}
-function updK7b(dt) {
-  updK7();
-  const A = LS.arena; if (!A || A.done || isGuest()) return;
-  const inside = Math.hypot(player.pos.x - A.x, player.pos.z - A.z) < 5.2 && Math.abs(player.pos.y - A.y) < 4;
-  if (!A.on && (inside || crewTargets.some((c) => Math.hypot(c.x - A.x, c.z - A.z) < 5.2 && Math.abs(c.y - A.y) < 5))) {
-    A.on = true; arenaGates(true); sfx.drop(); netOp(['L', 'arena', 1]);
-    for (let k = 0; k < capA(4); k++) { const a = k / capA(4) * Math.PI * 2; spawnAlien(new V3(A.x + Math.cos(a) * 3.5, A.y + 0.6, A.z + Math.sin(a) * 3.5)); }
-    toast('ARENA! The barriers turned red. Break the 2 egg walls and beat every alien inside.', 3.5);
-  }
-  if (A.on) {
-    A.eggsLeft = cellsLeft(A.eggs, EGGWALL); A.near = aliens.filter((a) => a.hp > 0 && Math.hypot(a.pos.x - A.x, a.pos.z - A.z) < 7.5).length;
-    if (!A.eggsLeft && !A.near) { A.on = false; A.done = true; arenaGates(false); sfx.win(); netOp(['L', 'arena', 2]); toast('Arena clear! The barriers are blue again.', 3); }
-  }
-}
-function hudK7b() {
-  const A = LS.arena;
-  if (A && A.on) return ['Clear the arena', `${A.eggsLeft ?? 2} egg wall blocks · ${A.near ?? 0} aliens left · red barriers stay closed until then`];
-  if (carrying) return null;
-  return ['Reach the artifact', 'Bridge to the arena, or use the orange boost pad · ores give 3 to 5 blocks'];
-}
-// --- Station Helios: airlock and console, conveyor, light strips, pipes, a pit with a crumbling bridge, an energy-barrier vault
-function genStationB() {
-  genStation();
-  box(14, 1, -1, 14, 3, 1, BAR_RED); // vault: red barrier until you have the 3 keycards
-  for (let x = -17; x <= -8; x++) set(x, 0, 0, CONVEYOR + 1); // the west hall carries you to the middle room
-  for (let x = -17; x <= -7; x++) { set(x, 1, -1, STRIP); set(x, 3, 1, PIPE); set(x, 3, -1, CABLE); }
-  for (let x = 7; x <= 13; x++) { set(x, 1, 1, STRIP); set(x, 3, -1, PIPE); }
-  for (let z = -13; z <= -6; z++) { set(1, 1, z, STRIP + 1); set(-1, 3, z, PIPE + 2); }
-  for (let z = 6; z <= 12; z++) { set(-1, 1, z, STRIP + 1); set(1, 3, z, CABLE + 2); }
-  // south hall: an airlock, opened from the console in the middle room
-  box(-1, 1, -10, 1, 3, -10, HULL); for (const [x, y] of [[-1, 1], [0, 1], [-1, 2], [0, 2]]) set(x, y, -10, AIRLOCK);
-  set(-2, 1, -5, CONSOLE); for (const x of [-3, -1]) set(x, 0, -5, STRIPE);
-  // north wing: a pit across the room, a crumbling bridge and a ladder to climb out
-  box(-6, -4, 16, 6, -1, 19, HULL); box(-5, -3, 17, 5, -1, 18, AIR); box(-5, 0, 17, 5, 0, 18, AIR);
-  for (let x = -5; x <= 5; x++) { set(x, 0, 16, STRIPE); set(x, 0, 19, STRIPE); }
-  set(0, 0, 17, CRUMBLE); set(0, 0, 18, CRUMBLE); set(-4, 1, 17, AIR); set(-4, 1, 18, AIR);
-  for (let y = -3; y <= -1; y++) set(4, y, 18, LADDER + 2);
-  // supplies, roof radar, warning stripes around the jump pad, a teleporter pad in the vault (its partner by the ship turns on with the keycards)
-  set(5, 1, -21, CRATE); set(-5, 1, 21, CRATE); set(4, 7, -4, ANTENNA); set(-4, 7, 4, ANTENNA);
-  for (const [x, z] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) set(x, 0, z, STRIPE);
-  set(24, 0, -5, TELE); set(-20, 0, 4, HULL);
-  for (const [x, z] of [[-24, -5], [-24, 5], [-29, -5], [-29, 5]]) set(x, 1, z, LAMP);
-}
-function hudStationB() {
-  if (LS.got < 3) return ['Find 3 keycards', `${LS.got} of 3 · south door: airlock, use the console in the middle room · north: a pit with a crumbling bridge · roof: jump pad`];
-  if (!carrying) return ['Open the vault', 'East hall · the barrier is blue now · grab the artifact'];
-  return ['Back to your ship', 'Take the teleporter in the vault: it goes to your ship'];
-}
-// --- Lava hive: lava pools in the tunnels, crumbling bridges, vines, glowing ore, egg walls, a teleporter back up
+// --- Lava hive: a big cave (main hall, side rooms, tunnels), lava lakes with crumbling bridges, glowing ore,
+// egg walls, all egg sacs on the cave walls (findable from inside), and a ladder shaft up to the surface
+const HIVE_ROOMS = [[0, -1, 0, 5.5], [9, -3, -2, 3.6], [-9, -5, -4, 3.4], [-3, -2, 8, 3.2], [6, -1, 8, 3], [10, -2, 4, 2.6]];
 function genHiveB() {
-  genHive();
-  const along = (path, f) => { for (let i = 0; i < path.length - 1; i++) for (let k = 0; k <= 4; k++) { const a = new V3(...path[i]).lerp(new V3(...path[i + 1]), k / 4); f(Math.floor(a.x), Math.floor(a.y), Math.floor(a.z), i, k); } };
-  const floorY = (x, y, z) => { for (let q = y; q > y - 6; q--) if (get(x, q, z)) return q; return null; };
-  // lava pools on the tunnel floor, each with a crumbling bridge
-  for (const [x0, y0, z0, dir] of [[7, -2, -3, 1], [-5, -4, -6, 1], [9, -2, 1, 0]]) {
+  world.fill(0); LS.eggCells = [];
+  genAsteroid(0, 0, 0, 16, 1901, 3, true);
+  const cave = new Set(), at = (x, y, z) => idx(x, y, z);
+  const hole = (c, r) => { const R = Math.ceil(r);
+    for (let x = Math.floor(c.x) - R; x <= Math.floor(c.x) + R; x++) for (let y = Math.floor(c.y) - R; y <= Math.floor(c.y) + R; y++) for (let z = Math.floor(c.z) - R; z <= Math.floor(c.z) + R; z++)
+      if ((x + 0.5 - c.x) ** 2 + ((y + 0.5 - c.y) * 1.15) ** 2 + (z + 0.5 - c.z) ** 2 < r * r && inB(x, y, z)) { set(x, y, z, AIR); cave.add(at(x, y, z)); } };
+  const dig = (pts, r) => { for (let i = 0; i < pts.length - 1; i++) { const a = new V3(...pts[i]), b = new V3(...pts[i + 1]), n = Math.ceil(a.distanceTo(b) * 2); for (let k = 0; k <= n; k++) hole(a.clone().lerp(b, k / n), r); } };
+  for (const p of HIVE_PATHS.slice(1)) dig(p, 2.4);
+  dig(HIVE_PATHS[0].slice(2), 2.4);
+  for (const [x, y, z, r] of HIVE_ROOMS) hole(new V3(x + 0.5, y + 0.5, z + 0.5), r);
+  // the way in: a 2 x 2 shaft from the main hall up to the surface, with a ladder all the way to the top
+  const SX = 1, SZ = -4;
+  for (let y = -3; y < 22; y++) for (let x = SX; x <= SX + 1; x++) for (let z = SZ; z <= SZ + 1; z++) if (inB(x, y, z)) { set(x, y, z, AIR); if (y < 12) cave.add(at(x, y, z)); }
+  mossTops(-31, 31, -31, 31);
+  const top = topAt(SX + 2, SZ); let ly = -3; while (ly > -12 && !get(SX + 1, ly - 1, SZ)) ly--;
+  for (let y = ly; y <= top; y++) { set(SX + 1, y, SZ, LADDER + 1); if (!get(SX + 2, y, SZ)) set(SX + 2, y, SZ, ROCK); }
+  LS.shaft = [SX + 1, SZ];
+  const floorY = (x, y, z) => { for (let q = y; q > y - 10; q--) if (get(x, q, z)) return q; return null; };
+  // lava: a lake in the main hall and pools in the rooms and tunnels, each with a crumbling bridge
+  for (const [x0, y0, z0, r, dir] of [[-1, -1, 1, 2.8, 1], [9, -3, -2, 2.2, 0], [-9, -5, -4, 2.2, 1], [-3, -2, 8, 2, 1], [7, -2, -3, 1.8, 1], [-5, -4, -6, 1.8, 1], [6, -1, 8, 1.6, 0], [10, -2, 4, 1.4, 1]]) {
     const fy = floorY(x0, y0, z0); if (fy === null) continue;
-    for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) { if (Math.hypot(dx, dz) > 2.2) continue; const fx = x0 + dx, fz = z0 + dz, f2 = floorY(fx, y0, fz); if (f2 !== null && f2 >= fy - 1 && get(fx, f2 + 1, fz) === AIR) set(fx, f2, fz, LAVA); }
-    for (let k = -2; k <= 2; k++) { const bx = dir ? x0 + k : x0, bz = dir ? z0 : z0 + k; if (get(bx, fy, bz) === LAVA) set(bx, fy, bz, CRUMBLE); }
+    const R = Math.ceil(r);
+    for (let dx = -R; dx <= R; dx++) for (let dz = -R; dz <= R; dz++) { if (Math.hypot(dx, dz) > r) continue; const fx = x0 + dx, fz = z0 + dz, f2 = floorY(fx, y0, fz);
+      if (f2 !== null && f2 >= fy - 1 && f2 <= fy + 1 && get(fx, f2 + 1, fz) === AIR && get(fx, f2, fz) !== LADDER + 1) set(fx, f2, fz, LAVA); }
+    for (let k = -R; k <= R; k++) { const bx = dir ? x0 + k : x0, bz = dir ? z0 : z0 + k; for (let q = fy + 1; q >= fy - 1; q--) if (get(bx, q, bz) === LAVA) set(bx, q, bz, CRUMBLE); }
   }
-  // glowing ore in the tunnel walls (it lights up the dark)
-  const rnd = mulberry32(2207);
-  for (const path of HIVE_PATHS) along(path, (x, y, z) => {
-    for (const [dx, dz] of D4) { let q = 1; while (q < 5 && !get(x + dx * q, y, z + dz * q)) q++; const wx = x + dx * q, wz = z + dz * q; if (get(wx, y, wz) === ROCK && rnd() < 0.35) set(wx, y, wz, rnd() < 0.6 ? ORE_EN : ORE_GOLD); }
-  });
-  // vines on the walls of the steep way in (climb them to get out)
-  along(HIVE_PATHS[0], (x, y, z, i) => {
-    if (i > 2) return;
-    for (let k = 0; k < 4; k++) { const [dx, dz] = D4[k]; let q = 0; while (q < 4 && !get(x + dx * (q + 1), y, z + dz * (q + 1))) q++; const vx = x + dx * q, vz = z + dz * q;
-      if (q > 0 && get(vx + dx, y, vz + dz)) for (let h = -1; h <= 2; h++) if (!get(vx, y + h, vz) && get(vx + dx, y + h, vz + dz)) set(vx, y + h, vz, VINE + k); }
-  });
-  // alien egg walls at two dead ends: they hatch aliens while you are near
-  for (const [x, y, z] of [[-10, -4, 1], [-3, -2, 8]]) { let q = x; for (let s = 0; s < 4 && !get(q, y, z); s++) q--; set(q, y, z, EGGWALL); set(q, y + 1, z, EGGWALL); }
-  // teleporter in the middle room and next to the landing pad
-  { const fy = floorY(2, -1, 0); if (fy !== null) set(2, fy, 0, TELE); }
-  { const t = topAt(-5, -5); if (t !== null) set(-5, t, -5, TELE); }
-  alienPlants(-14, 14, -14, 14, 2208, (x, z) => Math.hypot(x - 6, z - 4) < 3 || Math.hypot(x + 3, z + 3) < 2 || Math.hypot(x + 5, z + 5) < 1.5);
+  // egg sacs (the alien nests): only on rock walls next to the cave, so you find all of them from inside
+  const rnd = mulberry32(1909), cand = [];
+  for (let x = -16; x <= 16; x++) for (let y = -10; y <= 8; y++) for (let z = -16; z <= 16; z++) {
+    if (get(x, y, z) !== ROCK || !get(x, y - 1, z) || (x === SX + 2 && z === SZ)) continue;
+    if (D4.some(([a, c]) => cave.has(at(x + a, y, z + c)) && !get(x + a, y, z + c) && get(x + a, y - 1, z + c) !== LAVA)) cand.push([x, y, z]);
+  }
+  for (let k = 0; k < 900 && LS.eggCells.length < 12 && cand.length; k++) {
+    const c = cand[Math.floor(rnd() * cand.length)];
+    if (LS.eggCells.some((q) => Math.hypot(q[0] - c[0], q[1] - c[1], q[2] - c[2]) < 4.5)) continue;
+    set(c[0], c[1], c[2], EGG); LS.eggCells.push(c);
+  }
+  // glowing ore in the cave walls (it lights up the dark)
+  const r2 = mulberry32(2207);
+  for (const k of cave) { if (r2() > 0.05) continue; const x = (k % NX) - OX, y = (Math.floor(k / NX) % NY) - OY, z = Math.floor(k / (NX * NY)) - OZ; for (const [dx, dz] of D4) if (get(x + dx, y, z + dz) === ROCK) { set(x + dx, y, z + dz, r2() < 0.6 ? ORE_EN : ORE_GOLD); break; } }
+  // vines on some cave walls (only for looks: you walk through them)
+  for (const k of cave) { if (r2() > 0.03) continue; const x = (k % NX) - OX, y = (Math.floor(k / NX) % NY) - OY, z = Math.floor(k / (NX * NY)) - OZ; if (get(x, y, z)) continue;
+    for (let f = 0; f < 4; f++) { const [dx, dz] = D4[f]; if (get(x + dx, y, z + dz) === ROCK) { for (let h = 0; h < 3 && !get(x, y + h, z) && get(x + dx, y + h, z + dz); h++) set(x, y + h, z, VINE + f); break; } } }
+  // alien egg walls in two side rooms: they hatch aliens while you are near
+  for (const [x, y, z] of [[-9, -5, -4], [-3, -2, 8]]) { let q = x; while (q > x - 9 && !get(q - 1, y, z)) q--; const fy = floorY(q, y, z); const yy = fy === null ? y : fy + 1; set(q - 1, yy, z, EGGWALL); set(q - 1, yy + 1, z, EGGWALL); }
+  landAt(6, 4); spawn.set(SX + 3.5, topAt(SX + 3, SZ - 2) + 1, SZ - 1.5);
+  alienPlants(-16, 16, -16, 16, 2208, (x, z) => Math.hypot(x - 6, z - 4) < 3 || (x >= SX - 1 && x <= SX + 3 && z >= SZ - 1 && z <= SZ + 2));
   putTree(-8, 8); putTree(9, -8); putTree(-9, -9);
 }
 const SKY0 = { earth: [1150, 230, -260], es: 1, hemi: [0x7cc4ff, 0x1d5a34, 0.62], sun: 0.95, spin: 0 };
-{ // the new missions (the old ones stay as legacy missions)
-  const k7 = lvBy('Asteroid K-7'), st = lvBy('Derelict station'), hv = lvBy('Hive tunnels');
+{ // remade missions (the old version is retired)
+  const hv = lvBy('Hive tunnels'); hv.retired = true;
   LEVELS.push(
-    Object.assign({}, k7, { v2: true, name: 'K-7 mining outpost', gen: genK7b, update: updK7b, hud: hudK7b, par: 300,
-      brief: 'Mine the glowing ores (3 to 5 blocks each), build to the arena around the artifact, beat the aliens inside and fly the artifact home.',
-      tip: 'The orange boost pad on the edge throws you to the arena. The purple teleporter takes you to a little rock with ore and a supply crate.',
-      bonus: () => ['Mine 10 ore blocks', (LS.ore || 0) >= 10 ? 1 : 0],
-      netOut: () => [LS.arena ? (LS.arena.done ? 2 : LS.arena.on ? 1 : 0) : 0], netIn: (X) => { if (Array.isArray(X) && LS.arena && fin(X[0])) { LS.arena.on = X[0] === 1; LS.arena.done = X[0] === 2; } },
-      onOp: (k, a) => { if (k === 'arena') toast(a[0] === 1 ? 'ARENA! The barriers turned red. Break the egg walls and beat the aliens inside.' : 'Arena clear!', 2.5); } }),
-    Object.assign({}, st, { v2: true, name: 'Station Helios', gen: genStationB, hud: hudStationB, par: 380,
-      brief: 'A dark space station. Turn on the power, open the airlock from the console, cross the pit, find 3 keycards and take the artifact from the vault.',
-      tip: 'Aim at the console with your gun and tap to open the airlock. The crumbling bridge breaks 1 second after you step on it: run!' }),
-    Object.assign({}, hv, { v2: true, name: 'Lava hive', gen: genHiveB, par: 360,
-      brief: 'A hive in a lava rock. Burn the egg sacs, stay out of the lava, break the egg walls, then get out (the teleporter in the middle room takes you up).',
-      tip: 'Lava burns fast. Cross on the crumbling bridges, or build your own. Climb the vines on the way out.' }),
+    Object.assign({}, hv, { v2: true, retired: false, name: 'Lava hive', gen: genHiveB, par: 360,
+      brief: 'A big hive cave in a lava rock. Climb down the ladder, burn the egg sacs on the cave walls, stay out of the lava, then climb back up to your ship.',
+      tip: 'Lava burns fast. Cross on the crumbling bridges, build your own, or freeze the lava with the freeze gun. A rocket kills egg sacs and egg walls.' }),
   );
 }
 let L = LEVELS[0], LS = {}, meshDirty = false, o2 = 100, frost = 0, jam = 0;
 const upg = { dash: false, shield: false };
-const run = { order: [0, 1, 2, 3, 4, 5, 6], i: 0, legacy: false };
+const run = { order: [0, 1, 2, 3, 4, 5, 6], i: 0 };
 // difficulty scales how many aliens come and how fast; pickLv -1 = all solo missions in random order; pickCoop: co-op panel choice
 const DIFF = [{ n: 'Easy', m: 0.6 }, { n: 'Normal', m: 1 }, { n: 'Hard', m: 1.6 }, { n: 'Insane', m: 2.4 }];
 let diff = 1, pickLv = -1, pickCoop = -1;
-const VERSION = 'v4.0';
+const VERSION = 'v4.1';
 document.querySelectorAll('.ver').forEach((e) => { e.textContent = VERSION; });
 const cleanName = (n) => String(n || '').replace(/[^\p{L}\p{N} _.!?-]/gu, '').trim().slice(0, 12);
 let myName = ''; try { myName = cleanName(localStorage.getItem('starblock.name')); } catch (e) {}
@@ -3118,11 +3066,10 @@ let best = {};
 try { best = JSON.parse(localStorage.getItem('starblock.best') || '{}') || {}; } catch (e) {}
 const starStr = (n) => '★'.repeat(n) + '☆'.repeat(3 - n);
 function shuffle(o) { for (let i = o.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [o[i], o[j]] = [o[j], o[i]]; } return o; }
-// the mission list: the new missions; the old ones are 'legacy missions' (small list at the bottom of the menu)
-const soloList = (legacy) => LEVELS.map((_, i) => i).filter((i) => !LEVELS[i].coop && !!LEVELS[i].v2 !== !!legacy);
+// the mission list: every solo mission (retired ones were remade as new missions)
+const soloList = () => LEVELS.map((_, i) => i).filter((i) => !LEVELS[i].coop && !LEVELS[i].retired);
 function newRun() {
-  if (NET) run.legacy = false;
-  const solo = soloList(run.legacy);
+  const solo = soloList();
   const pick = NET && NET.host && pickCoop >= 0 && LEVELS[pickCoop] ? pickCoop : solo.includes(pickLv) ? pickLv : -1;
   let o = solo.slice();
   shuffle(o);
@@ -3154,7 +3101,7 @@ const BLOCK_CATS = [
   ['Doors and furniture', [DOOR, AIRLOCK, LADDER, TABLE, CHEST, SIGN]],
   ['Space tech', [CONSOLE, PIPE, CABLE, ANTENNA]],
   ['Movement', [PAD, BOOST, CONVEYOR, FAST, GRAVPAD, TELE, CRUMBLE]],
-  ['Combat', [BAR_BLUE, BAR_RED, CRATE, EGGWALL]],
+  ['Combat', [BAR_BLUE, BAR_RED, EGGWALL]],
   ['Colours', [WOOL, WOOL + 1, WOOL + 2, WOOL + 3, WOOL + 4, WOOL + 5, WOOL + 6, WOOL + 7]],
 ];
 const ALL_HUB = BLOCK_CATS.flatMap((c) => c[1]);
@@ -3164,9 +3111,9 @@ const BLOCK_NAME = { [ROCK]: 'Rock', [REGO]: 'Moon dust', [ICE]: 'Ice', [FROST]:
   [GLASS]: 'Glass', [LAMP]: 'Lamp', [DOOR]: 'Door', [LADDER]: 'Ladder', [FENCE]: 'Fence', [TABLE]: 'Table', [CHEST]: 'Chest', [SIGN]: 'Sign', [SAND]: 'Sand', [GRAVEL]: 'Gravel', [SOIL]: 'Soil',
   [WATER]: 'Water', [PLANT]: 'Grass', [FLOWER]: 'Flower', [AFLOWER]: 'Alien flower',
   [ORE_GOLD]: 'Gold ore (+3)', [ORE_EN]: 'Energy ore (+4)', [ORE_TECH]: 'Alien tech ore (+5)', [STRIPE]: 'Warning stripes', [LAVA]: 'Lava (hot!)', [APLANT]: 'Alien grass', [ALOG]: 'Alien wood',
-  [ALEAF]: 'Alien leaves', [ATREE]: 'Alien tree', [VINE]: 'Vines (climb)', [CONSOLE]: 'Console (opens airlocks)', [PIPE]: 'Pipe', [CABLE]: 'Cable', [STRIP]: 'Light strip', [ANTENNA]: 'Radar dish',
+  [ALEAF]: 'Alien leaves', [ATREE]: 'Alien tree', [VINE]: 'Vines', [CONSOLE]: 'Console (opens airlocks)', [PIPE]: 'Pipe', [CABLE]: 'Cable', [STRIP]: 'Light strip', [ANTENNA]: 'Radar dish',
   [AIRLOCK]: 'Airlock (2 × 2)', [PAD]: 'Jump pad', [BOOST]: 'Boost pad', [CONVEYOR]: 'Conveyor belt', [FAST]: 'Fast lane', [GRAVPAD]: 'Gravity pad', [TELE]: 'Teleporter', [CRUMBLE]: 'Crumbling block',
-  [BAR_BLUE]: 'Energy barrier (blue, open)', [BAR_RED]: 'Energy barrier (red, closed)', [CRATE]: 'Supply crate', [EGGWALL]: 'Alien egg wall' };
+  [BAR_BLUE]: 'Energy barrier (blue, open)', [BAR_RED]: 'Energy barrier (red, closed)', [EGGWALL]: 'Alien egg wall' };
 ['White', 'Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Purple', 'Black'].forEach((n, k) => { BLOCK_NAME[WOOL + k] = n + ' block'; });
 // one block storage: every block you mine adds 1, every block you place in the mothership (any type) uses 1
 let hubMode = false, hubType = ROCK, store = 0, hubEdits = new Map(), signText = new Map();
@@ -3287,6 +3234,7 @@ function genHub() {
   let back = 0;
   for (const [k, t] of [...hubEdits]) {
     if (!(k >= 0 && k < world.length)) { hubEdits.delete(k); continue; }
+    if (t === CRATE) { hubEdits.delete(k); store++; continue; } // supply crates were removed from the game: give the block back
     if (t === AIR) { if (hubSoft[k]) world[k] = AIR; else hubEdits.delete(k); continue; } // soil you dug away
     if (world[k] === AIR || hubSoft[k]) world[k] = t; else { hubEdits.delete(k); store++; back++; }
   }
@@ -3983,7 +3931,7 @@ async function showSaveCode() {
 }
 
 function loadLevel() {
-  L = hubMode && !NET ? HUB : LEVELS[run.order[run.i]]; LS = {}; webHp.clear(); netCarried = false; stasisNet = 0;
+  L = hubMode && !NET ? HUB : LEVELS[run.order[run.i]]; LS = {}; webHp.clear(); frozenLava = []; netCarried = false; stasisNet = 0;
   while (lvlG.children.length) lvlG.remove(lvlG.children[0]);
   artifactCell = null; turretSpots = []; minigunSpot.set(0, -999, 0);
   movers = []; rockets.forEach((r) => scene.remove(r.m)); rockets = []; saucerGate = 0; lvlTime = 0; dmgTaken = 0; setFlip(false); player.roll = 0; player.down = 0;
@@ -4012,7 +3960,7 @@ function loadLevel() {
   worldMini.position.copy(minigunSpot); miniBeacon.position.set(minigunSpot.x, minigunSpot.y + 30, minigunSpot.z);
   $('o2wrap').hidden = !L.o2;
   $('stormFx').style.opacity = 0;
-  $('slotRocket').hidden = !hasRocket; $('slotFreeze').hidden = !hasFreeze; $('upg').hidden = true;
+  $('slotRocket').hidden = !hasRocket; $('slotFreeze').hidden = !hasFreeze; $('slotCons').hidden = !!L.hub; if (L.hub && curTool === 7) selectTool(0); $('upg').hidden = true;
   setDark(!!L.dark);
   if (L.setup) L.setup();
   if (L.items) for (const it of L.items()) addItem(it);
@@ -4096,7 +4044,7 @@ function enemyTurret(t, dt) { // a mothership defence turret shoots at the crew 
 }
 
 function selectTool(i) {
-  if ((i === 3 && !hasMinigun) || (i === 5 && !hasRocket) || (i === 6 && !hasFreeze)) return;
+  if ((i === 3 && !hasMinigun) || (i === 5 && !hasRocket) || (i === 6 && !hasFreeze) || (i === 7 && L.hub)) return;
   if (i !== curTool) switchAnim = 0;
   curTool = i;
   tools.forEach((t, k) => t.visible = k === i);
@@ -4305,7 +4253,17 @@ function updatePlayer(dt) {
   const jumpKey = input.jump || keys.has('Space'), pcx = Math.floor(player.pos.x), pcz = Math.floor(player.pos.z);
   const feetT = get(pcx, Math.floor(player.pos.y + 0.3), pcz), bodyT = get(pcx, Math.floor(player.pos.y + 1.1), pcz);
   const inWater = feetT === WATER || bodyT === WATER; player.climb = !player.flip && (isLadder(feetT) || isLadder(bodyT));
-  if (player.climb) { player.vel.y = jumpKey || my > 0.2 ? 3.2 : my < -0.2 ? -3.2 : 0; player.jumped = false; } // ladder: forward or jump climbs up, back climbs down
+  if (player.climb) {
+    player.vel.y = jumpKey || my > 0.2 ? 3.2 : my < -0.2 ? -3.2 : 0; player.jumped = false; // ladder: forward or jump climbs up, back climbs down
+    const lt = isLadder(bodyT) ? bodyT : feetT, [lx, lz] = D4[lt - LADDER], gap = PW + 0.2; // keep the eye a little away from the wall (no black screen)
+    if (lx > 0) { player.pos.x = Math.min(player.pos.x, pcx + 1 - gap); player.vel.x = Math.min(player.vel.x, 0); } else if (lx < 0) { player.pos.x = Math.max(player.pos.x, pcx + gap); player.vel.x = Math.max(player.vel.x, 0); }
+    if (lz > 0) { player.pos.z = Math.min(player.pos.z, pcz + 1 - gap); player.vel.z = Math.min(player.vel.z, 0); } else if (lz < 0) { player.pos.z = Math.max(player.pos.z, pcz + gap); player.vel.z = Math.max(player.vel.z, 0); }
+    player.ladF = [lx, lz];
+  } else if (player.ladF && player.vel.y > 0 && (jumpKey || my > 0.2)) { // the top of a ladder: a little hop onto the block above
+    player.vel.y = Math.max(player.vel.y, 4.6); player.vel.x += player.ladF[0] * 2.5; player.vel.z += player.ladF[1] * 2.5; player.ladF = null; player.jumped = true;
+  }
+  if (!player.climb) player.ladF = null;
+  if (player.climb) {}
   else if (inWater && jumpKey) player.vel.y = 3.4 * fs; // swim up
   else if (jumpKey && player.onGround && !player.down) { player.vel.y = JUMP * fs; player.onGround = false; player.jumped = true; }
   if (!player.climb) player.vel.y = clamp(player.vel.y - GRAV * (L.grav || 1) * (inWater ? 0.3 : 1) * dt * fs, inWater ? -3 : -30, 30);
@@ -4360,7 +4318,6 @@ function breakBlock(hit) {
       const todo = [[hit.x, hit.y, hit.z]];
       for (let n = 0; todo.length && n < 8; n++) { const [ax, ay, az] = todo.pop(); for (const [dx, dy, dz] of [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]) if (isAirlock(get(ax + dx, ay + dy, az + dz))) { clear(ax + dx, ay + dy, az + dz); todo.push([ax + dx, ay + dy, az + dz]); } }
     }
-    if (hit.type === CRATE) { abCd.fill(0); toast('Supply crate: powers recharged.', 1.6); }
     buildMeshes(); addInv(hit.type, 1); saveInvSoon();
     burst(new V3(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5), CHIP[hit.type] || 0x8fb4d6, 22, 3.5); sfx.break(); return;
   }
@@ -4380,7 +4337,6 @@ function breakBlock(hit) {
     const n = hit.type === ORE_GOLD ? 3 : hit.type === ORE_EN ? 4 : hit.type === ORE_TECH ? 5 : 1;
     blocks += n; mined++; sfx.break(); addInv(hit.type, n); if (n > 1) LS.ore = (LS.ore || 0) + 1;
     if (n > 1) { toast(`${BLOCK_NAME[hit.type].replace(/ \(.*/, '')}: +${n} blocks`, 1.4); sfx.pickup(); }
-    if (hit.type === CRATE) { player.hp = Math.min(100, player.hp + 50); abCd.fill(0); blocks += 4; toast('Supply crate: +50 health, powers recharged, +5 blocks', 2.2); sfx.repair(); }
   }
 }
 // ---- building in the mothership
@@ -4529,7 +4485,8 @@ function updBlocks(dt) {
     if (!c.gone) { if (get(c.x, c.y, c.z) === CRUMBLE) { set(c.x, c.y, c.z, AIR); meshDirty = true; burst(new V3(c.x + 0.5, c.y + 0.5, c.z + 0.5), 0x96826e, 22, 3); sfx.break(); } c.gone = true; c.t = 5; }
     else if (get(c.x, c.y, c.z) || playerOverlaps(c.x, c.y, c.z)) c.t = 0.5; else { set(c.x, c.y, c.z, CRUMBLE); meshDirty = true; crumbles.delete(k); } // it grows back after 5 s
   }
-  // lava burns
+  // lava burns (frozen lava melts back after 10 s)
+  meltLava();
   const ft = get(sx, Math.floor(p.y + 0.3), sz), bt = get(sx, Math.floor(p.y + 1.1), sz);
   lavaT -= dt;
   if ((ft === LAVA || bt === LAVA) && lavaT <= 0) { lavaT = 0.4; hurt(L.hub ? 2 : 10); burst(new V3(p.x, p.y + 0.4, p.z), 0xff7a1e, 12, 2, 0); if (!LS.lavaTip) { LS.lavaTip = true; toast('Lava! It burns. Get out!', 1.6); } }
@@ -4555,6 +4512,21 @@ function bridgeCell() {
     return touches ? { x, y: fy, z, nx: 0, ny: 0, nz: 0, type: 0, assist: true } : null;
   }
   return null;
+}
+// construction (missions): special blocks that cost more than one block. Only the ladder for now.
+const CONS = [{ t: LADDER, cost: 5, name: 'Ladder' }];
+function consCell(hit) { // aim at a wall: a ladder on it. Aim at a ladder: the next one on top of it
+  let x = hit.x + hit.nx, y = hit.y + hit.ny, z = hit.z + hit.nz, f = wallFacing(hit);
+  if (isLadder(hit.type)) { f = hit.type - LADDER; x = hit.x; z = hit.z; y = hit.y; while (isLadder(get(x, y, z)) && y < hit.y + 40) y++; }
+  if (f < 0) { f = lookFacing(); const [dx, dz] = D4[f]; if (!get(x + dx, y, z + dz)) { const g = (f + 2) % 4; if (get(x + D4[g][0], y, z + D4[g][1])) f = g; } }
+  return { x, y, z, f, ok: inB(x, y, z) && !get(x, y, z) };
+}
+function buildCons(hit) {
+  const c = consCell(hit), k = CONS[0];
+  if (!c.ok) return;
+  if (blocks < k.cost) { toast(`A ladder costs ${k.cost} blocks. Dig some rock with the pickaxe.`); placeCd = 0.8; return; }
+  const t = k.t + c.f; set(c.x, c.y, c.z, t); buildMeshes(); myEdit(c.x, c.y, c.z, t);
+  blocks -= k.cost; placed++; sfx.place(); burst(new V3(c.x + 0.5, c.y + 0.5, c.z + 0.5), CHIP[t], 8, 1.5);
 }
 function placeBlock(hit) {
   if (L.hub) { hubPlace(hit); return; }
@@ -4715,8 +4687,24 @@ function fireGun(eye, o) {
   } else if (best && best.s) { if (o.freeze) freezeSaucer(best.s); hitSaucer(best.s, o.dmg, end); } else if (best && best.q !== undefined) queenHit(best.q, o.dmg, end);
   else if (best && best.tg) best.tg.hit(o.dmg, end);
   else if (vh && vh.type === EGG) breakBlock(vh);
+  else if (vh && o.freeze && vh.type === LAVA) freezeLava(vh);
   else if (vh && vh.type === WEB) webHit(vh, o.dmg, end);
   else if (vh) burst(end, 0xc8ffe6, 6, 2);
+}
+// freeze gun on lava: it turns to ice for 10 seconds (walk on it), then melts back
+var frozenLava = [];
+function freezeLava(c) {
+  let n = 0;
+  for (let x = c.x - 1; x <= c.x + 1; x++) for (let z = c.z - 1; z <= c.z + 1; z++) for (let y = c.y - 1; y <= c.y + 1; y++) {
+    if (get(x, y, z) !== LAVA || Math.hypot(x - c.x, y - c.y, z - c.z) > 1.5) continue;
+    set(x, y, z, ICE); myEdit(x, y, z, ICE); frozenLava.push({ x, y, z, t: clock + 10 }); n++;
+  }
+  if (n) { meshDirty = true; burst(new V3(c.x + 0.5, c.y + 1, c.z + 0.5), 0xe4ffff, 10, 2, 0); if (!LS.iceTip) { LS.iceTip = true; toast('The lava froze! You can walk on it for 10 seconds.', 2.2); } }
+}
+function meltLava() {
+  if (!frozenLava.length) return;
+  frozenLava = frozenLava.filter((f) => { if (clock < f.t) return true;
+    if (get(f.x, f.y, f.z) === ICE) { set(f.x, f.y, f.z, LAVA); myEdit(f.x, f.y, f.z, LAVA); meshDirty = true; burst(new V3(f.x + 0.5, f.y + 1, f.z + 0.5), 0xff7a1e, 4, 1.5, 0); } return false; });
 }
 // alien web: no pickaxe, shoot it (3 gun hits) or blow it up
 const webHp = new Map();
@@ -4728,7 +4716,9 @@ function webHit(vh, dmg, end) {
 function webBlast(p) {
   let n = 0;
   for (let x = Math.floor(p.x - 2); x <= Math.floor(p.x + 2); x++) for (let y = Math.floor(p.y - 2); y <= Math.floor(p.y + 2); y++) for (let z = Math.floor(p.z - 2); z <= Math.floor(p.z + 2); z++)
-    if (get(x, y, z) === WEB && new V3(x + 0.5, y + 0.5, z + 0.5).distanceTo(p) < 2.4) { set(x, y, z, AIR); myEdit(x, y, z, AIR); burst(new V3(x + 0.5, y + 0.5, z + 0.5), 0x8dff5a, 10, 3); n++; }
+  { const t = get(x, y, z); if ((t === WEB || t === EGG || t === EGGWALL) && new V3(x + 0.5, y + 0.5, z + 0.5).distanceTo(p) < 2.4) { // webs, egg sacs and egg walls blow up
+      if (t === EGG && L.onBreak) L.onBreak({ x, y, z, type: t });
+      set(x, y, z, AIR); myEdit(x, y, z, AIR); burst(new V3(x + 0.5, y + 0.5, z + 0.5), 0x8dff5a, 10, 3); n++; } }
   if (n) buildMeshes();
 }
 // exploding alien: hurts everyone close (each page hurts its own player), breaks soft blocks
@@ -5101,7 +5091,7 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyP' && !e.repeat) { if (paused) resumeGame(); else pauseGame(); return; }
   if (state !== 'play' || paused) return;
   keys.add(e.code);
-  const km = { Digit1: 0, Digit2: 1, Digit3: 3, Digit4: 2, Digit5: 4, Digit6: 5, Digit7: 6 };
+  const km = { Digit1: 0, Digit2: 1, Digit3: 3, Digit4: 2, Digit5: 4, Digit6: 5, Digit7: 6, Digit8: 7 };
   const ak = { KeyQ: 0, KeyE: 1, KeyR: 1, KeyG: 1 };
   if (L.hub && e.code === 'KeyB' && !e.repeat) { cycleHubType(); return; }
   if (e.code in km) selectTool(km[e.code]);
@@ -5133,9 +5123,7 @@ function pauseGame() {
   if (!NET) state = 'paused';
   if (document.pointerLockElement) document.exitPointerLock();
   const sel = $('pauseLvl'); sel.innerHTML = '';
-  const og = document.createElement('optgroup'); og.label = 'Legacy missions';
-  LEVELS.forEach((lv, i) => { if (lv.coop && !(NET && NET.host)) return; const o = document.createElement('option'); o.value = i; o.textContent = lv.name + (lv.coop ? ' (co-op)' : ''); (lv.v2 || lv.coop ? sel : og).appendChild(o); });
-  sel.appendChild(og);
+  LEVELS.forEach((lv, i) => { if ((lv.coop && !(NET && NET.host)) || lv.retired) return; const o = document.createElement('option'); o.value = i; o.textContent = lv.name + (lv.coop ? ' (co-op)' : ''); sel.appendChild(o); });
   sel.value = String(LEVELS.indexOf(L)); if (sel.selectedIndex < 0) sel.selectedIndex = 0;
   const guest = !!(NET && !NET.host);
   sel.disabled = $('pauseGo').disabled = guest;
@@ -5165,17 +5153,12 @@ $('pauseGo').addEventListener('click', () => {
   if (NET && !NET.host) return;
   const k = +$('pauseLvl').value; if (!LEVELS[k]) return;
   paused = false; $('pause').hidden = true; state = 'play'; leaveHub();
-  if (!LEVELS[k].coop) run.legacy = !LEVELS[k].v2;
-  run.order = [k, ...shuffle(soloList(run.legacy).filter((i) => i !== k))]; run.i = 0;
+  run.order = [k, ...shuffle(soloList().filter((i) => i !== k))]; run.i = 0;
   if (NET) coopReset(); else { loadLevel(); begin(); }
 });
 document.addEventListener('pointerlockchange', () => { if (!document.pointerLockElement && state === 'play' && !paused && hadLock) pauseGame(); hadLock = !!document.pointerLockElement; });
 let hadLock = false;
-$('start').addEventListener('click', () => { if (NET && NET.guest && !NET.synced) return; if (run.legacy && !NET) { run.legacy = false; newRun(); loadLevel(); } begin(); });
-$('legacyGo').addEventListener('click', () => { // play an old mission (then the other old ones in a random order)
-  if (NET) return; const k = +$('legacySel').value; if (!LEVELS[k] || LEVELS[k].v2) return;
-  run.legacy = true; newRun(); run.order = [k, ...run.order.filter((i) => i !== k)]; run.i = 0; leaveHub(); loadLevel(); begin();
-});
+$('start').addEventListener('click', () => { if (NET && NET.guest && !NET.synced) return; begin(); });
 $('again').addEventListener('click', () => { if (NET) { if (NET.host) { if (run.i >= run.order.length - 1) newRun(); else run.i++; coopReset(); } return; } if (run.i >= run.order.length - 1) newRun(); else run.i++; loadLevel(); begin(); });
 
 // ---------------------------------------------------------------- co-op (claude.ai room capability, or PeerJS elsewhere)
@@ -5798,6 +5781,8 @@ function frame(now) {
       if (input.act && placeCd <= 0 && hit) { placeBlock(hit); placeCd = 0.24; useAnim = 1; }
     } else if (curTool === 4) {
       if (input.act && placeCd <= 0 && hit) { turretAction(hit); placeCd = 0.5; useAnim = 1; }
+    } else if (curTool === 7) {
+      if (input.act && placeCd <= 0 && hit) { buildCons(hit); placeCd = 0.3; useAnim = 1; }
     }
     updateWorldEntities(dt, eye);
   } else if (state === 'menu') {
@@ -5818,12 +5803,14 @@ function frame(now) {
   else if (hit && curTool === 0 && L.hub && !hubDig(hit.x, hit.y, hit.z)) pr = 'Ship wall · you can only dig soil and blocks you built';
   else if (hit && curTool === 0 && hardOf(hit.type) >= 50) pr = hit.type === FIELD ? 'Force field · you cannot dig it' : hit.type === WEB ? 'Alien web · shoot it or use a rocket' : 'Too hard to dig';
   else if (hit && curTool === 4) pr = hit.ny === 1 ? `Build turret here · ${TURRET_COST} blocks` : '';
+  else if (curTool === 7) pr = `Construction: ladder · ${CONS[0].cost} blocks (you have ${Math.floor(blocks)})`;
   if (press) pr = press.label();
   if (revivePrompt) pr = revivePrompt;
   if (promptEl.textContent !== pr) promptEl.textContent = pr;
   ghost.visible = false;
-  if (hit && curTool === 2) { // blocks: outline the cell where the new block goes, not the block you look at
-    const x = hit.x + hit.nx, y = hit.y + hit.ny, z = hit.z + hit.nz, ok = inB(x, y, z) && !get(x, y, z) && !playerOverlaps(x, y, z);
+  const cs = hit && curTool === 7 ? consCell(hit) : null;
+  if (hit && (curTool === 2 || cs)) { // blocks: outline the cell where the new block goes, not the block you look at
+    const x = cs ? cs.x : hit.x + hit.nx, y = cs ? cs.y : hit.y + hit.ny, z = cs ? cs.z : hit.z + hit.nz, ok = cs ? cs.ok : inB(x, y, z) && !get(x, y, z) && !playerOverlaps(x, y, z);
     hiBox.visible = true; hiBox.position.set(x + 0.5, y + 0.5, z + 0.5); hiBox.material.color.setHex(ok ? 0x5dffa8 : 0xff5a6a);
     ghost.visible = true; ghost.position.copy(hiBox.position); ghost.material.color.setHex(ok ? 0x5dffa8 : 0xff5a6a); ghost.material.opacity = 0.16 + Math.sin(clock * 6) * 0.05;
     crack.visible = false;
@@ -5864,14 +5851,12 @@ function fillPickers() {
   while (sel.options.length > 1) sel.remove(1);
   co.innerHTML = '';
   let n = 0;
-  const lg = $('legacySel'); lg.innerHTML = ''; let m = 0;
   LEVELS.forEach((lv, i) => {
     const o = document.createElement('option'); o.value = i;
     if (lv.coop) { o.textContent = lv.name + tag(i); co.appendChild(o); }
-    else if (lv.v2) { o.textContent = `${++n} · ${lv.name}${tag(i)}`; sel.appendChild(o); }
-    else { o.textContent = `${++m} · ${lv.name}${tag(i)}`; lg.appendChild(o); }
+    else if (!lv.retired) { o.textContent = `${++n} · ${lv.name}${tag(i)}`; sel.appendChild(o); }
   });
-  sel.value = String(soloList(false).includes(pickLv) ? pickLv : -1);
+  sel.value = String(soloList().includes(pickLv) ? pickLv : -1);
   $('coopLvl').value = String(pickCoop);
 }
 fillPickers();
@@ -5892,7 +5877,7 @@ function setDiff(d, save) {
 function menuInfo() { $('firstMission').textContent = `First mission: ${L.name}.`; }
 $('lvlSel').addEventListener('change', () => {
   if (NET && NET.guest) return;
-  pickLv = +$('lvlSel').value; savePick(); run.legacy = false;
+  pickLv = +$('lvlSel').value; savePick();
   newRun(); loadLevel(); menuInfo();
   if (NET && NET.host) { NET.ep++; NET.edits.clear(); sendPresence(); }
 });
