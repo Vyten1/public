@@ -21,6 +21,9 @@ p.lead{color:var(--muted);margin:0 0 12px;font-size:.92rem}
 button{font:inherit;padding:10px 16px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer}
 button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
 button:disabled{opacity:.5;cursor:default}
+.tabs{display:flex;gap:6px;margin-top:14px;border-bottom:1px solid var(--line)}
+.tab{border-radius:8px 8px 0 0;border-bottom:none;color:var(--muted)}
+.tab[aria-selected="true"]{color:var(--fg);border-color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent)}
 #hist{display:flex;align-items:flex-end;gap:3px;height:96px;margin-top:6px}
 #hist i{flex:1;background:var(--accent);opacity:.8;min-height:1px;border-radius:2px 2px 0 0}
 #strip{font:14px/1.5 ui-monospace,Menlo,monospace;word-break:break-all;color:var(--muted)}
@@ -29,6 +32,11 @@ button:disabled{opacity:.5;cursor:default}
 input[type=range]{width:100%;grid-column:1/3}
 #status{color:var(--muted);font-size:.92rem;min-height:1.4em;margin:8px 0}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.avg{display:grid;grid-template-columns:1fr auto auto;gap:8px 16px;align-items:baseline}
+.avg .win{color:var(--muted)}
+.avg .val{font:600 1.5rem ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;color:var(--accent)}
+.avg .n{color:var(--muted);font-size:.82rem;min-width:7em;text-align:right}
+[hidden]{display:none!important}
 </style>
 </head>
 <body>
@@ -39,51 +47,72 @@ input[type=range]{width:100%;grid-column:1/3}
   <div class="row">
     <button id="start" class="primary">Start</button>
     <button id="stop" disabled>Stop</button>
+    <button id="reset">Reset numbers</button>
   </div>
   <div id="status">Press Start, then allow microphone access. Use a quiet room; the noise is what provides randomness.</div>
 
-  <div class="card">
-    <div class="big" id="value">-</div>
-    <p class="lead" style="margin:6px 0 0">Latest value in [0, 1). Its running average should settle near 0.5.</p>
+  <div class="tabs" role="tablist">
+    <button role="tab" class="tab" id="tabLive" data-tab="live" aria-selected="true" aria-controls="panelLive">Live</button>
+    <button role="tab" class="tab" id="tabAvg" data-tab="avg" aria-selected="false" aria-controls="panelAvg">Averages</button>
   </div>
 
-  <div class="card">
-    <div class="grid">
-      <div><span>Running mean (target 0.5)</span><b id="mean">-</b></div>
-      <div><span>Values produced</span><b id="count">0</b></div>
-      <div><span>Bits produced</span><b id="bits">0</b></div>
-      <div><span>Bit rate</span><b id="rate">0 /s</b></div>
-      <div><span>Ones in bits (target 50%)</span><b id="ones">-</b></div>
-      <div><span>Frames accepted</span><b id="accepted">0%</b></div>
-      <div><span>Rejected: clicks</span><b id="rejClick">0</b></div>
-      <div><span>Rejected: tones / silence</span><b id="rejTone">0</b></div>
+  <section id="panelLive" role="tabpanel">
+    <div class="card">
+      <div class="big" id="value">-</div>
+      <p class="lead" style="margin:6px 0 0">Latest value in [0, 1). Its running average should settle near 0.5.</p>
     </div>
-  </div>
 
-  <div class="card">
-    <span class="lead" style="margin:0">Distribution of values (20 bins, ideally flat)</span>
-    <div id="hist"></div>
-  </div>
-
-  <div class="card">
-    <span class="lead" style="margin:0">Last 64 bits</span>
-    <div id="strip">-</div>
-  </div>
-
-  <div class="card">
-    <strong>Filter settings</strong>
-    <div class="setting">
-      <label for="crest">Click threshold (peak / average level)</label><b id="crestVal">6.0</b>
-      <input id="crest" type="range" min="3" max="20" step="0.5" value="6">
-      <small>Lower = stricter: rejects more spiky sounds like clicks and clock ticks.</small>
-      <label for="flat">Tone threshold (spectral flatness)</label><b id="flatVal">0.25</b>
-      <input id="flat" type="range" min="0" max="0.5" step="0.01" value="0.25">
-      <small>Higher = stricter: rejects frames with a strong steady tone (clock hum, whine).</small>
-      <label for="block">Samples per bit</label><b id="blockVal">16</b>
-      <input id="block" type="range" min="4" max="64" step="4" value="16">
-      <small>More samples per bit = less bias, slower output.</small>
+    <div class="card">
+      <div class="grid">
+        <div><span>Running mean (target 0.5)</span><b id="mean">-</b></div>
+        <div><span>Values produced</span><b id="count">0</b></div>
+        <div><span>Bits produced</span><b id="bits">0</b></div>
+        <div><span>Bit rate</span><b id="rate">0 /s</b></div>
+        <div><span>Ones in bits (target 50%)</span><b id="ones">-</b></div>
+        <div><span>Frames accepted</span><b id="accepted">0%</b></div>
+        <div><span>Rejected: clicks</span><b id="rejClick">0</b></div>
+        <div><span>Rejected: tones / silence</span><b id="rejTone">0</b></div>
+      </div>
     </div>
-  </div>
+
+    <div class="card">
+      <span class="lead" style="margin:0">Distribution of values (20 bins, ideally flat)</span>
+      <div id="hist"></div>
+    </div>
+
+    <div class="card">
+      <span class="lead" style="margin:0">Last 64 bits</span>
+      <div id="strip">-</div>
+    </div>
+
+    <div class="card">
+      <strong>Filter settings</strong>
+      <div class="setting">
+        <label for="crest">Click threshold (peak / average level)</label><b id="crestVal">6.0</b>
+        <input id="crest" type="range" min="3" max="20" step="0.5" value="6">
+        <small>Lower = stricter: rejects more spiky sounds like clicks and clock ticks.</small>
+        <label for="flat">Tone threshold (spectral flatness)</label><b id="flatVal">0.25</b>
+        <input id="flat" type="range" min="0" max="0.5" step="0.01" value="0.25">
+        <small>Higher = stricter: rejects frames with a strong steady tone (clock hum, whine).</small>
+        <label for="block">Samples per bit</label><b id="blockVal">16</b>
+        <input id="block" type="range" min="4" max="64" step="4" value="16">
+        <small>More samples per bit = less bias, slower output.</small>
+      </div>
+    </div>
+  </section>
+
+  <section id="panelAvg" role="tabpanel" hidden>
+    <div class="card">
+      <p class="lead" style="margin:0 0 12px">Mean of the values produced in the last N seconds (target 0.5). Short windows fluctuate more.</p>
+      <div class="avg">
+        <span class="win">Last 1 s</span><b class="val" id="avg1">-</b><span class="n" id="n1"></span>
+        <span class="win">Last 3 s</span><b class="val" id="avg3">-</b><span class="n" id="n3"></span>
+        <span class="win">Last 5 s</span><b class="val" id="avg5">-</b><span class="n" id="n5"></span>
+        <span class="win">Last 7 s</span><b class="val" id="avg7">-</b><span class="n" id="n7"></span>
+        <span class="win">Last 10 s</span><b class="val" id="avg10">-</b><span class="n" id="n10"></span>
+      </div>
+    </div>
+  </section>
 </main>
 
 <script src="rng-core.js"></script>
@@ -91,15 +120,18 @@ input[type=range]{width:100%;grid-column:1/3}
 const $ = id => document.getElementById(id);
 const CFG = { bandLo: 300, bandHi: 8000, crestMax: 6, flatMin: 0.25, block: 16 };
 const HIST_BINS = 20;
+const AVG_WINDOWS = [1, 3, 5, 7, 10];      // seconds
+const AVG_KEEP_MS = 10000;                  // keep 10 s of history
 
 let ctx = null, stream = null, tap = null, srcNode = null, muteNode = null, uiTimer = null;
 const frameBuf = new Float32Array(RNG_FRAME);
 let fill = 0;
 let bits = [], head = 0;
 const hist = new Array(HIST_BINS).fill(0);
+let recent = [];                            // {t: ms, v: value} for the averages
 let nValues = 0, sumValues = 0, lastValue = null;
 let nBits = 0, nOnes = 0, nFrames = 0, nAccepted = 0, nClick = 0, nTone = 0;
-let startTime = 0;
+let startTime = 0, running = false;
 
 function feed(chunk) {
   let i = 0;
@@ -134,6 +166,7 @@ function processFrame() {
 }
 
 function drain() {
+  const now = performance.now();
   while (bits.length - head >= 53) {
     const v = bitsToValue(bits, head);
     head += 53;
@@ -141,6 +174,7 @@ function drain() {
     nValues++;
     sumValues += v;
     hist[Math.min(HIST_BINS - 1, Math.floor(v * HIST_BINS))]++;
+    recent.push({ t: now, v });
   }
   // Drop consumed bits so the array does not grow forever.
   if (head > 65536) {
@@ -149,8 +183,36 @@ function drain() {
   }
 }
 
+function resetNumbers() {
+  hist.fill(0);
+  recent = [];
+  bits = [];
+  head = 0;
+  fill = 0;
+  lastValue = null;
+  nValues = 0; sumValues = 0;
+  nBits = 0; nOnes = 0; nFrames = 0; nAccepted = 0; nClick = 0; nTone = 0;
+  startTime = running ? performance.now() : 0;
+  render();
+}
+
+function averageOver(seconds, now) {
+  const cutoff = now - seconds * 1000;
+  let sum = 0, n = 0;
+  for (const x of recent) {
+    if (x.t >= cutoff) { sum += x.v; n++; }
+  }
+  return { mean: n ? sum / n : null, n };
+}
+
 function render() {
-  const elapsed = startTime ? (performance.now() - startTime) / 1000 : 0;
+  const now = performance.now();
+  const elapsed = startTime ? (now - startTime) / 1000 : 0;
+
+  // Keep only the history the averages need.
+  const cutoff = now - AVG_KEEP_MS;
+  if (recent.length && recent[0].t < cutoff) recent = recent.filter(x => x.t >= cutoff);
+
   $('value').textContent = lastValue === null ? '-' : lastValue.toFixed(10);
   $('mean').textContent = nValues ? (sumValues / nValues).toFixed(5) : '-';
   $('count').textContent = nValues.toLocaleString();
@@ -166,6 +228,12 @@ function render() {
 
   const last = bits.slice(-64);
   $('strip').textContent = last.length ? last.join('') : '-';
+
+  for (const w of AVG_WINDOWS) {
+    const a = averageOver(w, now);
+    $('avg' + w).textContent = a.mean === null ? '-' : a.mean.toFixed(5);
+    $('n' + w).textContent = a.n ? a.n.toLocaleString() + ' values' : 'no values yet';
+  }
 }
 
 async function start() {
@@ -187,7 +255,8 @@ async function start() {
     muteNode.gain.value = 0; // keep the graph running without playing sound
     srcNode.connect(tap).connect(muteNode).connect(ctx.destination);
 
-    startTime = performance.now();
+    running = true;
+    if (!startTime) startTime = performance.now();
     uiTimer = setInterval(render, 250);
     $('stop').disabled = false;
     $('status').textContent = 'Collecting microphone noise...';
@@ -198,6 +267,7 @@ async function start() {
     if (stream) stream.getTracks().forEach(t => t.stop());
     if (ctx) await ctx.close();
     stream = null; tap = null; srcNode = null; muteNode = null; ctx = null;
+    running = false;
   }
 }
 
@@ -207,16 +277,29 @@ async function stop() {
   if (tap) tap.port.onmessage = null;
   if (ctx) await ctx.close();
   stream = null; tap = null; srcNode = null; muteNode = null; ctx = null;
+  running = false;
   $('stop').disabled = true;
   $('start').disabled = false;
   $('status').textContent = 'Stopped. Results stay on screen.';
   render();
 }
 
+function selectTab(name) {
+  for (const b of document.querySelectorAll('.tab')) {
+    b.setAttribute('aria-selected', String(b.dataset.tab === name));
+  }
+  $('panelLive').hidden = name !== 'live';
+  $('panelAvg').hidden = name !== 'avg';
+}
+
 $('start').addEventListener('click', start);
 $('stop').addEventListener('click', stop);
+$('reset').addEventListener('click', resetNumbers);
+for (const b of document.querySelectorAll('.tab')) {
+  b.addEventListener('click', () => selectTab(b.dataset.tab));
+}
 
-function bindSlider(id, key, fmt, apply) {
+function bindSlider(id, fmt, apply) {
   const el = $(id);
   el.addEventListener('input', () => {
     const v = parseFloat(el.value);
@@ -224,9 +307,9 @@ function bindSlider(id, key, fmt, apply) {
     $(id + 'Val').textContent = fmt(v);
   });
 }
-bindSlider('crest', 'crestMax', v => v.toFixed(1), v => CFG.crestMax = v);
-bindSlider('flat', 'flatMin', v => v.toFixed(2), v => CFG.flatMin = v);
-bindSlider('block', 'block', v => String(v), v => CFG.block = v);
+bindSlider('crest', v => v.toFixed(1), v => CFG.crestMax = v);
+bindSlider('flat', v => v.toFixed(2), v => CFG.flatMin = v);
+bindSlider('block', v => String(v), v => CFG.block = v);
 </script>
 </body>
 </html>
